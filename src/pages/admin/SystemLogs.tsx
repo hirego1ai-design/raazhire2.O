@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Terminal, AlertTriangle, Info, CheckCircle, Search, Filter, Download, RefreshCw } from 'lucide-react';
+import { endpoints } from '../../lib/api';
 
 interface LogEntry {
     id: number;
@@ -19,6 +20,8 @@ const MOCK_LOGS: LogEntry[] = [
     { id: 6, timestamp: '2025-11-20 10:42:30', level: 'WARNING', message: 'Rate limit approaching for OpenAI GPT-4', source: 'AIProvider' },
     { id: 7, timestamp: '2025-11-20 10:45:00', level: 'SUCCESS', message: 'Database backup completed successfully', source: 'System' },
     { id: 8, timestamp: '2025-11-20 10:48:12', level: 'ERROR', message: 'Payment gateway timeout: Transaction #9982', source: 'BillingService' },
+    { id: 9, timestamp: '2025-11-20 10:50:05', level: 'SUCCESS', message: 'Credit purchase successful: 500 Credits (Employer #E001)', source: 'CreditSystem' },
+    { id: 10, timestamp: '2025-11-20 10:55:18', level: 'INFO', message: 'Credits deducted: 25 Credits for Premium Job Post', source: 'CreditSystem' },
 ];
 
 const SystemLogs: React.FC = () => {
@@ -28,7 +31,7 @@ const SystemLogs: React.FC = () => {
 
     const fetchLogs = async () => {
         try {
-            const response = await fetch('http://localhost:3000/api/logs');
+            const response = await fetch(endpoints.logs);
             if (!response.ok) throw new Error('Failed to fetch');
             const data = await response.json();
             setLogs(data);

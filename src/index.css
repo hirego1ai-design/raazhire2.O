@@ -4,22 +4,70 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --bg-primary: #0a0e27;
-    --text-primary: #ffffff;
-    --text-secondary: #9ca3af;
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --card-bg: rgba(255, 255, 255, 0.05);
+  :root[data-theme='light'] {
+    /* Light theme palette */
+    --bg-primary: #FAFAFA;
+    /* page background */
+    --text-primary: #1A1A1A;
+    /* headings */
+    --text-secondary: #555555;
+    /* secondary text */
+    --card-bg: #FFFFFF;
+    /* card background */
+    --card-border: #E4E4E4;
+    /* card border */
+    --card-shadow: 0px 4px 12px rgba(0, 0, 0, 0.06);
+    /* soft shadow */
+    --input-bg: #F7F7F7;
+    /* input background */
+    --input-border: #E4E4E4;
+    /* input border */
+    --button-primary-bg: #000000;
+    /* black button for both themes */
+    --button-primary-text: #FFFFFF;
+    /* white text */
+    --button-primary-border: #D8D8D8;
+    /* subtle border in light mode */
+    --button-secondary-bg: #D4AF37;
+    /* optional gold accent */
+    --button-secondary-text: #FFFFFF;
+    /* white text on gold */
+    --button-secondary-border: #D4AF37;
+    /* gold border */
+    --navbar-bg: #F1F1F1;
+    /* navbar/sidebar background */
+    --navbar-text: #2A2A2A;
+    /* navbar text */
   }
 
-  [data-theme='light'] {
-    --bg-primary: #f8fafc;
-    --text-primary: #111827;
-    --text-secondary: #4b5563;
-    --glass-bg: rgba(255, 255, 255, 0.8);
-    --glass-border: rgba(0, 0, 0, 0.1);
-    --card-bg: #ffffff;
+  :root {
+    /* Dark (neon) theme palette */
+    --bg-primary: #0a0e27;
+    /* dark navy */
+    --text-primary: #ffffff;
+    /* white */
+    --text-secondary: #9ca3af;
+    /* gray */
+    --card-bg: rgba(255, 255, 255, 0.05);
+    /* dark glass effect */
+    --card-border: rgba(255, 255, 255, 0.1);
+    --card-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+    /* deeper shadow */
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-border: rgba(255, 255, 255, 0.1);
+    --button-primary-bg: #000000;
+    /* black button */
+    --button-primary-text: #ffffff;
+    /* white text */
+    --button-primary-border: transparent;
+    /* no border in dark */
+    --button-secondary-bg: #D4AF37;
+    /* gold accent */
+    --button-secondary-text: #ffffff;
+    --button-secondary-border: #D4AF37;
+    --navbar-bg: #0a0e27;
+    /* keep dark background */
+    --navbar-text: #ffffff;
   }
 
   body {
@@ -39,10 +87,12 @@
 
 @layer utilities {
   .glass {
-    background-color: var(--glass-bg);
+    background-color: var(--card-bg);
+    /* Changed from --glass-bg */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--card-border);
+    /* Changed from --glass-border */
   }
 
   .glass-hover {
@@ -50,7 +100,8 @@
   }
 
   .glass-hover:hover {
-    background-color: var(--glass-border);
+    background-color: var(--card-border);
+    /* Changed from --glass-border */
     /* slightly lighter/darker depending on border var */
   }
 
@@ -77,122 +128,239 @@
   border-radius: 5px;
 }
 
-/* Global button reset - apply soft 3D minimal design to all buttons */
-button {
-  @apply btn-3d btn-primary px-3 py-1.5 rounded-full text-xs;
-  font-weight: 600;
-  transition: all 0.2s;
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #bc13fe, #ff006e);
 }
 
+/* Custom scrollbar class for specific elements */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
 
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
 
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #00f3ff, #bc13fe);
+  border-radius: 10px;
+}
 
-/* Soft 3D Button Styles - Modern & Minimal */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #bc13fe, #ff006e);
+}
+
+/* Fully Carved 3D Button Styles - Modern & Minimal */
+/* Fully Carved 3D Button Styles - Modern & Minimal */
 .btn-3d {
   position: relative;
   border: none;
   outline: none;
   cursor: pointer;
   user-select: none;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    0 1px 2px rgba(0, 0, 0, 0.06);
-  transform: translateY(0);
+  border-radius: 9999px;
+  /* Fully rounded */
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-3d:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.12),
-    0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
 }
 
 .btn-3d:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.1),
-    0 1px 1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-/* Primary Button - Soft Blue/Cyan */
+/* Primary Button - Minimal & Professional */
 .btn-primary {
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border: 1px solid var(--button-primary-border);
+  /* Updated */
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  opacity: 0.9;
 }
 
 [data-theme='light'] .btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border: 1px solid var(--button-primary-border);
+  /* Updated */
 }
 
 [data-theme='light'] .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  opacity: 0.9;
 }
 
 /* Secondary Button - Soft Gray */
 .btn-secondary {
-  background: var(--card-bg);
-  color: var(--text-primary);
-  border: 1px solid var(--glass-border);
+  background-color: var(--button-secondary-bg);
+  /* Updated */
+  color: var(--button-secondary-text);
+  /* Updated */
+  border: 1px solid var(--button-secondary-border);
+  /* Updated */
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--glass-border);
-  border-color: rgba(156, 163, 175, 0.3);
+  opacity: 0.9;
+  /* Added for consistency */
 }
 
 [data-theme='light'] .btn-secondary {
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background-color: var(--button-secondary-bg);
+  /* Updated */
+  color: var(--button-secondary-text);
+  /* Updated */
+  border: 1px solid var(--button-secondary-border);
+  /* Updated */
 }
 
 [data-theme='light'] .btn-secondary:hover:not(:disabled) {
-  background: #e5e7eb;
-  border-color: #d1d5db;
+  opacity: 0.9;
+  /* Added for consistency */
 }
 
-/* Ghost Button - Transparent */
+/* Ghost Button – keep minimal style */
 .btn-ghost {
   background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--button-primary-border);
+  /* Updated */
+  border-radius: 9999px;
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: var(--glass-bg);
-  color: var(--text-primary);
-  border-color: var(--glass-border);
+  background: rgba(0, 0, 0, 0.05);
 }
 
-/* Danger Button - Soft Red */
+/* Danger Button – keep minimal red */
 .btn-danger {
-  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: transparent;
+  color: #ff4757;
+  border: 1px solid #ff4757;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background-color: rgba(255, 71, 71, 0.1);
 }
 
 [data-theme='light'] .btn-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background-color: #ffffff;
+  color: #ff4757;
+  border: 1px solid #ff4757;
 }
 
 [data-theme='light'] .btn-danger:hover:not(:disabled) {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  background-color: #fff5f5;
+}
+
+/* Success Button - Green gradient with 3D effect */
+.btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 0 rgb(21, 128, 61), 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-success:hover:not(:disabled) {
+  box-shadow: 0 4px 0 rgb(21, 128, 61), 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-success:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(4px);
+}
+
+[data-theme='light'] .btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 0 rgb(21, 128, 61), 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Warning Button - Orange/Yellow gradient with 3D effect */
+.btn-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 0 rgb(180, 83, 9), 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-warning:hover:not(:disabled) {
+  box-shadow: 0 4px 0 rgb(180, 83, 9), 0 8px 20px rgba(245, 158, 11, 0.4);
+}
+
+.btn-warning:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(4px);
+}
+
+[data-theme='light'] .btn-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 0 rgb(180, 83, 9), 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Info Button - Cyan gradient with 3D effect */
+.btn-info {
+  background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 0 rgb(8, 145, 178), 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-info:hover:not(:disabled) {
+  box-shadow: 0 4px 0 rgb(8, 145, 178), 0 8px 20px rgba(6, 182, 212, 0.4);
+}
+
+.btn-info:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(4px);
+}
+
+[data-theme='light'] .btn-info {
+  background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 0 rgb(8, 145, 178), 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Purple Button - Purple gradient with 3D effect */
+.btn-purple {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 0 rgb(50, 30, 150), 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-purple:hover:not(:disabled) {
+  box-shadow: 0 4px 0 rgb(50, 30, 150), 0 8px 20px rgba(124, 58, 237, 0.4);
+}
+
+.btn-purple:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(4px);
+}
+
+[data-theme='light'] .btn-purple {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 0 rgb(50, 30, 150), 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Icon-only buttons */
 .btn-icon {
-  padding: 0.5rem;
+  padding: 0.75rem;
   aspect-ratio: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 12px;
 }

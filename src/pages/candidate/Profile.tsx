@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
     User, Mail, Phone, MapPin, Briefcase, GraduationCap, Folder,
     Share2, Edit2, Camera, UserPlus, MessageSquare, Trophy, Star,
-    Zap, Shield, Check, Github, Linkedin, Globe, Twitter, Award, Target, Code, Play, Clock
+    Zap, Shield, Check, Github, Linkedin, Globe, Twitter, Code, Play, Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SkillRadar, SkillCategories, SkillBar } from '../../components/SkillCharts';

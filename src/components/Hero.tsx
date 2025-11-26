@@ -66,7 +66,7 @@ export default function Hero() {
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
-                                    className="px-8 py-3 bg-gradient-to-r from-neon-cyan to-neon-purple rounded-xl font-semibold shadow-neon-cyan hover:shadow-neon-purple transition-all duration-300 flex items-center gap-2 justify-center"
+                                    className="btn-3d btn-primary px-8 py-3 flex items-center gap-2 justify-center"
                                 >
                                     <Search size={20} />
                                     Search

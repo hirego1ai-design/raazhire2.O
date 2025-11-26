@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import '../../styles/premium-dark-theme.css';
 
 const CandidateDashboard: React.FC = () => {
     const stats = [
@@ -11,7 +12,7 @@ const CandidateDashboard: React.FC = () => {
     ];
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 bg-black/90 p-6 rounded-2xl glass">
             {/* Welcome Section */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -40,7 +41,7 @@ const CandidateDashboard: React.FC = () => {
                             <div className={`p-3 rounded-lg bg-white/5 ${stat.color}`}>
                                 <stat.icon size={24} />
                             </div>
-                            <span className="text-2xl font-bold">{stat.value}</span>
+                            <span className="text-2xl font-bold text-white">{stat.value}</span>
                         </div>
                         <p className="text-gray-400 text-sm">{stat.label}</p>
                     </motion.div>
@@ -49,6 +50,7 @@ const CandidateDashboard: React.FC = () => {
 
             {/* Recent Activity / Recommended Jobs Placeholder */}
             <div className="grid lg:grid-cols-2 gap-6">
+                {/* Recommended Jobs */}
                 <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -64,15 +66,14 @@ const CandidateDashboard: React.FC = () => {
                                         <h4 className="font-semibold text-neon-cyan">Senior React Developer</h4>
                                         <p className="text-sm text-gray-400">TechCorp Inc. • Remote</p>
                                     </div>
-                                    <span className="text-xs px-2 py-1 rounded-full bg-neon-purple/20 text-neon-purple">
-                                        98% Match
-                                    </span>
+                                    <span className="text-xs px-2 py-1 rounded-full bg-neon-purple/20 text-neon-purple">98% Match</span>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </motion.div>
 
+                {/* Upcoming Actions */}
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -84,9 +85,7 @@ const CandidateDashboard: React.FC = () => {
                         <div className="p-4 rounded-lg border border-neon-purple/30 bg-neon-purple/5">
                             <h4 className="font-semibold text-white">Complete Video Assessment</h4>
                             <p className="text-sm text-gray-400 mb-3">For Frontend Developer Role at TechCorp</p>
-                            <button className="btn-3d btn-primary">
-                                Start Assessment
-                            </button>
+                            <button className="btn-premium">Start Assessment</button>
                         </div>
                     </div>
                 </motion.div>

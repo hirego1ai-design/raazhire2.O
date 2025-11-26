@@ -8,7 +8,6 @@ import {
     Briefcase,
     LogOut,
     Menu,
-    X,
     Trophy
 } from 'lucide-react';
 

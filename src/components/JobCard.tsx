@@ -65,7 +65,7 @@ export default function JobCard({ title, company, location, salary, type, logo, 
                 <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    className="px-6 py-2 rounded-xl bg-gradient-to-r from-neon-cyan to-neon-purple font-semibold text-sm shadow-neon-cyan hover:shadow-neon-purple transition-all"
+                    className="btn-3d btn-primary px-6 py-2 text-sm"
                 >
                     Apply
                 </motion.button>

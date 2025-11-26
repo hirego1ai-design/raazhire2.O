@@ -10,6 +10,7 @@ export default {
                 'neon-cyan': '#00f3ff',
                 'neon-purple': '#bc13fe',
                 'neon-pink': '#ff006e',
+                'neon-green': '#39FF14',
                 'space-dark': '#0a0e27',
                 'space-blue': '#1a1f3a',
             },

@@ -11,6 +11,7 @@ interface SkillData {
 }
 
 interface CategoryData {
+    [key: string]: any;
     name: string;
     value: number;
     color: string;

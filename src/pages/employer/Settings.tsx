@@ -104,7 +104,7 @@ const Settings: React.FC = () => {
                                 </div>
 
                                 <div className="pt-4 border-t border-white/10 flex justify-end">
-                                    <button className="flex items-center gap-2 px-6 py-2 bg-neon-cyan text-black font-bold rounded-lg hover:bg-neon-cyan/90 transition-colors">
+                                    <button className="btn-3d btn-primary flex items-center gap-2">
                                         <Save size={18} />
                                         Save Changes
                                     </button>
@@ -116,7 +116,7 @@ const Settings: React.FC = () => {
                             <div className="space-y-6">
                                 <div className="flex justify-between items-center mb-6">
                                     <h2 className="text-xl font-semibold">Team Members</h2>
-                                    <button className="px-4 py-2 bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20 rounded-lg hover:bg-neon-cyan/20 transition-colors text-sm font-medium flex items-center gap-2">
+                                    <button className="btn-3d btn-secondary flex items-center gap-2">
                                         <Users size={16} />
                                         Invite Member
                                     </button>
@@ -142,7 +142,7 @@ const Settings: React.FC = () => {
                                                 <span className="px-3 py-1 rounded-full text-xs bg-white/10 border border-white/10 text-gray-300">
                                                     {member.role}
                                                 </span>
-                                                <button className="text-gray-400 hover:text-red-400 transition-colors text-sm">
+                                                <button className="btn-3d btn-danger text-xs px-3 py-1">
                                                     Remove
                                                 </button>
                                             </div>

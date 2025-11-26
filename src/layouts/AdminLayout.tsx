@@ -7,7 +7,14 @@ import {
     Database,
     Shield,
     LogOut,
-    Menu
+    Menu,
+    Mail,
+    Bot,
+    Eye,
+    CreditCard,
+    Briefcase,
+    Coins,
+    Video
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -22,7 +29,14 @@ const AdminLayout: React.FC = () => {
 
     const navItems = [
         { icon: LayoutDashboard, label: 'Overview', path: '/admin/dashboard' },
+        { icon: Bot, label: 'AI System Control', path: '/admin/ai-control' },
+        { icon: Eye, label: 'Proctoring & Security', path: '/admin/proctoring' },
+        { icon: Video, label: 'Interview Management', path: '/admin/interviews' },
+        { icon: CreditCard, label: 'Payment Gateway', path: '/admin/payment-config' },
+        { icon: Briefcase, label: 'Job & Pricing', path: '/admin/job-pricing' },
+        { icon: Coins, label: 'Credit System', path: '/admin/credit-system' },
         { icon: Settings, label: 'API Configuration', path: '/admin/api-config' },
+        { icon: Mail, label: 'Email Configuration', path: '/admin/email-config' },
         { icon: Users, label: 'User Management', path: '/admin/users' },
         { icon: Database, label: 'System Logs', path: '/admin/logs' },
     ];

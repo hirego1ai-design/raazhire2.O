@@ -5,6 +5,7 @@ import SocialButton from './SocialButton';
 import ToggleSwitch from './ToggleSwitch';
 import InputField from './InputField';
 import './LoginCard.css';
+import { supabase } from '../lib/supabase';
 
 interface LoginCardProps {
     onClose?: () => void;
@@ -34,6 +35,25 @@ const LoginCard = ({ onClose }: LoginCardProps) => {
         if (onClose) onClose();
     };
 
+    const handleSocialLogin = async (provider: 'google' | 'linkedin' | 'facebook') => {
+        if (!supabase) {
+            alert('Social login is not configured. Please contact the administrator.');
+            return;
+        }
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: provider,
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                },
+            });
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error logging in:', error);
+            alert('Error logging in with ' + provider);
+        }
+    };
+
     return (
         <div className="login-card">
             {/* Close Button */}
@@ -53,9 +73,9 @@ const LoginCard = ({ onClose }: LoginCardProps) => {
                 </div>
 
                 <div className="social-buttons">
-                    <SocialButton icon="google" />
-                    <SocialButton icon="facebook" />
-                    <SocialButton icon="linkedin" />
+                    <SocialButton icon="google" onClick={() => handleSocialLogin('google')} />
+                    <SocialButton icon="facebook" onClick={() => handleSocialLogin('facebook')} />
+                    <SocialButton icon="linkedin" onClick={() => handleSocialLogin('linkedin')} />
                 </div>
 
                 <div className="user-type-toggle-container">

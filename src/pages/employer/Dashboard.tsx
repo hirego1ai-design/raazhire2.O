@@ -1,127 +1,205 @@
-import React from 'react';
+// Employer Dashboard - Premium Dark Theme
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Briefcase, Calendar, TrendingUp, MoreVertical } from 'lucide-react';
-
+import { Users, Briefcase, Calendar, DollarSign, FileText, CreditCard, Plus, CheckCircle, Eye, ChevronRight, Search, Filter, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Button from '../../components/Button';
+import '../../styles/premium-dark-theme.css';
+
+type PricingModel = 'subscription' | 'pph';
+
+interface StatCard {
+    label: string;
+    value: string;
+    icon: any;
+    color: string;
+    onClick?: () => void;
+}
 
 const EmployerDashboard: React.FC = () => {
     const navigate = useNavigate();
-    const stats = [
+    const [pricingModel, setPricingModel] = useState<PricingModel>('subscription');
+
+    // Navigation handlers
+    const handleTotalCandidatesClick = () => navigate('/employer/candidates');
+    const handleShortlistedClick = () => navigate('/employer/candidates?filter=shortlisted');
+    const handleRejectedClick = () => navigate('/employer/candidates?filter=rejected');
+    const handlePendingClick = () => navigate('/employer/candidates?filter=pending');
+    const handleInterviewsClick = () => navigate('/employer/interviews');
+    const handleMakeAgreementClick = () => navigate('/employer/make-agreement');
+    const handlePostPPHJobClick = () => navigate('/employer/post-job?model=pph');
+    const handlePostSubscriptionJobClick = () => navigate('/employer/post-job?model=subscription');
+
+    const subscriptionStats: StatCard[] = [
+        { label: 'Total Candidates', value: '1,234', icon: Users, color: 'text-neon-purple', onClick: handleTotalCandidatesClick },
         { label: 'Active Jobs', value: '12', icon: Briefcase, color: 'text-neon-cyan' },
-        { label: 'Total Candidates', value: '1,234', icon: Users, color: 'text-neon-purple' },
-        { label: 'Interviews Scheduled', value: '45', icon: Calendar, color: 'text-neon-pink' },
-        { label: 'Hiring Rate', value: '+15%', icon: TrendingUp, color: 'text-green-400' },
+        { label: 'Shortlisted', value: '156', icon: CheckCircle, color: 'text-green-400', onClick: handleShortlistedClick },
+        { label: 'Interviews', value: '45', icon: Calendar, color: 'text-yellow-400', onClick: handleInterviewsClick },
+        { label: 'Pending', value: '89', icon: Clock, color: 'text-orange-400', onClick: handlePendingClick },
+    ];
+
+    const pphStats: StatCard[] = [
+        { label: 'Hires', value: '8', icon: CheckCircle, color: 'text-green-400' },
+        { label: 'Due', value: '₹24k', icon: DollarSign, color: 'text-yellow-400' },
+        { label: 'Shortlisted', value: '15', icon: Users, color: 'text-neon-purple', onClick: handleShortlistedClick },
+        { label: 'Pending', value: '23', icon: Clock, color: 'text-orange-400', onClick: handlePendingClick },
+        { label: 'HIA', value: '45', icon: FileText, color: 'text-blue-400' },
     ];
 
     const recentApplicants = [
-        { name: 'Sarah Johnson', role: 'Senior Frontend Developer', score: 95, status: 'Shortlisted', date: '2h ago' },
-        { name: 'Michael Chen', role: 'UX/UI Designer', score: 88, status: 'Reviewing', date: '4h ago' },
-        { name: 'Emily Davis', role: 'Product Manager', score: 92, status: 'Interview', date: '5h ago' },
-        { name: 'David Wilson', role: 'DevOps Engineer', score: 78, status: 'New', date: '1d ago' },
+        { name: 'Sarah Johnson', role: 'Senior Frontend Developer', score: 95, status: 'Shortlisted', date: '2h ago', price: 25000, isPremium: true },
+        { name: 'Michael Chen', role: 'UX/UI Designer', score: 88, status: 'Reviewing', date: '4h ago', price: 18000, isPremium: false },
+        { name: 'Emily Davis', role: 'Product Manager', score: 92, status: 'Interview', date: '5h ago', price: 30000, isPremium: true },
+        { name: 'David Wilson', role: 'DevOps Engineer', score: 78, status: 'New', date: '1d ago', price: 20000, isPremium: false },
     ];
 
     return (
-        <div className="space-y-8">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex justify-between items-center"
-            >
+        <div className="space-y-6 pb-20 bg-black/90 p-6 rounded-2xl glass">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md sticky top-0 z-20">
                 <div>
-                    <h1 className="text-3xl font-bold mb-2">Dashboard Overview</h1>
-                    <p className="text-gray-400">Welcome back, TechCorp Inc. Here's what's happening today.</p>
+                    <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+                    <p className="text-xs text-gray-400">Welcome back, TechCorp Inc.</p>
                 </div>
-                <button
-                    onClick={() => navigate('/employer/post-job')}
-                    className="btn-3d btn-primary"
-                >
-                    + Post New Job
-                </button>
-            </motion.div>
+                {/* Pricing Toggle */}
+                <div className="bg-black/40 p-1.5 rounded-full flex items-center border border-white/10 shadow-inner">
+                    <button
+                        onClick={() => setPricingModel('subscription')}
+                        className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${pricingModel === 'subscription'
+                            ? 'bg-gradient-to-r from-neon-cyan to-blue-500 text-white shadow-[0_4px_15px_rgba(6,182,212,0.4)] transform scale-105'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <Briefcase size={16} /> Subscription
+                    </button>
+                    <button
+                        onClick={() => setPricingModel('pph')}
+                        className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${pricingModel === 'pph'
+                            ? 'bg-gradient-to-r from-green-400 to-emerald-600 text-white shadow-[0_4px_15px_rgba(34,197,94,0.4)] transform scale-105'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <DollarSign size={16} /> Pay-Per-Hire
+                    </button>
+                </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap gap-4">
+                {pricingModel === 'pph' ? (
+                    <>
+                        <Button onClick={handleMakeAgreementClick} variant="purple" size="md" icon={<FileText size={18} />}>New Agreement</Button>
+                        <Button variant="ghost" size="md" icon={<Eye size={18} />}>Status</Button>
+                        <Button variant="warning" size="md" icon={<CreditCard size={18} />}>Pay Due</Button>
+                        <Button onClick={handlePostPPHJobClick} variant="success" size="md" icon={<Plus size={18} />} className="ml-auto">Post PPH Job</Button>
+                    </>
+                ) : (
+                    <>
+                        <Button variant="ghost" size="md" icon={<Plus size={18} />}>Buy Credits</Button>
+                        <Button onClick={handlePostSubscriptionJobClick} variant="info" size="md" icon={<Plus size={18} />} className="ml-auto">Post Job</Button>
+                    </>
+                )}
+            </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, index) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {(pricingModel === 'subscription' ? subscriptionStats : pphStats).map((stat, idx) => (
                     <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="p-6 rounded-xl glass hover:border-neon-cyan/50 transition-colors"
+                        key={idx}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: idx * 0.05 }}
+                        onClick={stat.onClick}
+                        className={`p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all cursor-pointer group relative overflow-hidden ${stat.onClick ? 'hover:-translate-y-1' : ''}`}
                     >
-                        <div className="flex items-center justify-between mb-4">
-                            <div className={`p-3 rounded-lg bg-white/5 ${stat.color}`}>
-                                <stat.icon size={24} />
-                            </div>
-                            <span className="text-2xl font-bold">{stat.value}</span>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">{stat.label}</span>
+                            <stat.icon size={16} className={`${stat.color} opacity-70 group-hover:opacity-100 transition-opacity`} />
                         </div>
-                        <p className="text-gray-400 text-sm">{stat.label}</p>
+                        <div className="flex items-end gap-2">
+                            <span className="text-2xl font-bold text-white leading-none">{stat.value}</span>
+                        </div>
+                        <div className={`absolute inset-0 bg-gradient-to-br ${stat.color.replace('text-', 'from-')}/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`} />
                     </motion.div>
                 ))}
             </div>
 
-            {/* Recent Applicants Table */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="rounded-xl glass border border-white/10 overflow-hidden"
-            >
-                <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                    <h3 className="text-xl font-bold">Recent Applicants</h3>
-                    <button
-                        onClick={() => navigate('/employer/candidates')}
-                        className="btn-3d btn-ghost px-3 py-1"
-                    >
-                        View All
-                    </button>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-white/5 text-gray-400 text-sm uppercase">
-                            <tr>
-                                <th className="p-6 font-medium">Candidate</th>
-                                <th className="p-6 font-medium">Role Applied</th>
-                                <th className="p-6 font-medium">AI Score</th>
-                                <th className="p-6 font-medium">Status</th>
-                                <th className="p-6 font-medium">Date</th>
-                                <th className="p-6 font-medium"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {recentApplicants.map((applicant, index) => (
-                                <tr key={index} className="hover:bg-white/5 transition-colors">
-                                    <td className="p-6 font-medium">{applicant.name}</td>
-                                    <td className="p-6 text-gray-300">{applicant.role}</td>
-                                    <td className="p-6">
-                                        <span className={`font-bold ${applicant.score >= 90 ? 'text-green-400' :
-                                            applicant.score >= 80 ? 'text-neon-cyan' :
-                                                'text-yellow-400'
-                                            }`}>
-                                            {applicant.score}%
-                                        </span>
-                                    </td>
-                                    <td className="p-6">
-                                        <span className={`px-3 py-1 rounded-full text-xs border ${applicant.status === 'Shortlisted' ? 'border-green-500/30 text-green-400 bg-green-500/10' :
-                                            applicant.status === 'Interview' ? 'border-neon-purple/30 text-neon-purple bg-neon-purple/10' :
-                                                applicant.status === 'Reviewing' ? 'border-yellow-500/30 text-yellow-400 bg-yellow-500/10' :
-                                                    'border-gray-500/30 text-gray-400 bg-gray-500/10'
-                                            }`}>
-                                            {applicant.status}
-                                        </span>
-                                    </td>
-                                    <td className="p-6 text-gray-400 text-sm">{applicant.date}</td>
-                                    <td className="p-6 text-right">
-                                        <button className="btn-3d btn-icon btn-ghost p-1.5">
-                                            <MoreVertical size={14} className="text-gray-400" />
-                                        </button>
-                                    </td>
+            {/* Main Content */}
+            <div className="grid lg:grid-cols-3 gap-6">
+                {/* Recent Applicants */}
+                <div className="lg:col-span-2 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2"><Users size={18} className="text-neon-cyan" /> Recent Applicants</h3>
+                        <div className="flex gap-2">
+                            <div className="relative">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                                <input type="text" placeholder="Search..." className="pl-9 pr-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white focus:border-neon-cyan outline-none w-40" />
+                            </div>
+                            <button className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white"><Filter size={14} /></button>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-black/20 text-gray-400 uppercase text-xs">
+                                <tr>
+                                    <th className="p-4 font-medium">Candidate</th>
+                                    <th className="p-4 font-medium">Role</th>
+                                    <th className="p-4 font-medium">Score</th>
+                                    <th className="p-4 font-medium">Status</th>
+                                    <th className="p-4 font-medium text-right">Action</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {recentApplicants.map((app, i) => (
+                                    <tr key={i} className="hover:bg-white/5 transition-colors group">
+                                        <td className="p-4">
+                                            <div className="font-bold text-white">{app.name}</div>
+                                            {app.isPremium && <span className="text-[10px] text-yellow-400">★ Premium</span>}
+                                        </td>
+                                        <td className="p-4 text-gray-300">{app.role}</td>
+                                        <td className="p-4"><span className={`font-bold ${app.score >= 90 ? 'text-green-400' : 'text-yellow-400'}`}>{app.score}%</span></td>
+                                        <td className="p-4">
+                                            <span className={`px-2 py-0.5 rounded text-[10px] border ${app.status === 'Shortlisted' ? 'border-green-500/30 text-green-400 bg-green-500/10' : app.status === 'Interview' ? 'border-neon-purple/30 text-neon-purple bg-neon-purple/10' : 'border-yellow-500/30 text-yellow-400 bg-yellow-500/10'}`}>{app.status}</span>
+                                        </td>
+                                        <td className="p-4 text-right"><button className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"><ChevronRight size={16} /></button></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <div className="p-3 border-t border-white/10 text-center">
+                            <button onClick={() => navigate('/employer/candidates')} className="text-xs text-gray-400 hover:text-white transition-colors">View All Candidates</button>
+                        </div>
+                    </div>
                 </div>
-            </motion.div>
+                {/* Side Panel */}
+                <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2"><Clock size={18} className="text-orange-400" /> Activity & Alerts</h3>
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
+                        <div className="flex gap-3 items-start">
+                            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 mt-1"><FileText size={14} /></div>
+                            <div>
+                                <h4 className="text-sm font-bold text-white">New Agreement Signed</h4>
+                                <p className="text-xs text-gray-400 mt-0.5">PPH Agreement #2024-01 active.</p>
+                                <span className="text-[10px] text-gray-500">2 hours ago</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 items-start">
+                            <div className="p-2 rounded-lg bg-yellow-500/10 text-yellow-400 mt-1"><DollarSign size={14} /></div>
+                            <div>
+                                <h4 className="text-sm font-bold text-white">Payment Pending</h4>
+                                <p className="text-xs text-gray-400 mt-0.5">Invoice #INV-002 is due.</p>
+                                <button className="mt-2 text-[10px] font-bold text-black bg-yellow-400 px-2 py-1 rounded hover:bg-yellow-300 transition-colors">Pay Now</button>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 items-start">
+                            <div className="p-2 rounded-lg bg-neon-purple/10 text-neon-purple mt-1"><Calendar size={14} /></div>
+                            <div>
+                                <h4 className="text-sm font-bold text-white">Interview Reminder</h4>
+                                <p className="text-xs text-gray-400 mt-0.5">Sarah Johnson at 3:00 PM.</p>
+                                <span className="text-[10px] text-gray-500">In 45 mins</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Clock, AlertCircle, Play, Award, Timer, CheckCircle, Calendar } from 'lucide-react';
+import { FileText, Clock, AlertCircle, Play, Timer, CheckCircle, Calendar } from 'lucide-react';
 import ProctoringWrapper from '../../components/ProctoringWrapper';
 
 const Assessments: React.FC = () => {

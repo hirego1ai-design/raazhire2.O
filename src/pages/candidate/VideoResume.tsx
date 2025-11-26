@@ -3,6 +3,7 @@ import Webcam from 'react-webcam';
 import { motion } from 'framer-motion';
 import { Video, Upload, Mic, StopCircle, Play, Loader, TrendingUp } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { endpoints } from '../../lib/api';
 
 const VideoResume: React.FC = () => {
     const [mode, setMode] = useState<'upload' | 'record'>('record');
@@ -60,7 +61,7 @@ const VideoResume: React.FC = () => {
     const startAnalysis = async () => {
         setIsAnalyzing(true);
         try {
-            const response = await fetch('http://localhost:3000/api/analyze-video', {
+            const response = await fetch(endpoints.analyzeVideo, {
                 method: 'POST',
             });
             if (!response.ok) throw new Error('Analysis failed');
