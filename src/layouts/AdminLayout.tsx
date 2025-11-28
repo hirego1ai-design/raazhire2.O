@@ -14,7 +14,8 @@ import {
     CreditCard,
     Briefcase,
     Coins,
-    Video
+    Video,
+    Youtube
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -37,6 +38,7 @@ const AdminLayout: React.FC = () => {
         { icon: Coins, label: 'Credit System', path: '/admin/credit-system' },
         { icon: Settings, label: 'API Configuration', path: '/admin/api-config' },
         { icon: Mail, label: 'Email Configuration', path: '/admin/email-config' },
+        { icon: Youtube, label: 'Video Storage', path: '/admin/video-storage' },
         { icon: Users, label: 'User Management', path: '/admin/users' },
         { icon: Database, label: 'System Logs', path: '/admin/logs' },
     ];

@@ -4,6 +4,8 @@ import Navbar from './components/Navbar';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
 import LoginCard from './components/LoginCard';
+import CandidateRegister from './pages/auth/CandidateRegister';
+import EmployerRegister from './pages/auth/EmployerRegister';
 import DashboardLayout from './layouts/DashboardLayout';
 import CandidateDashboard from './pages/candidate/Dashboard';
 import Profile from './pages/candidate/Profile';
@@ -11,12 +13,15 @@ import VideoResume from './pages/candidate/VideoResume';
 import Assessments from './pages/candidate/Assessments';
 import Jobs from './pages/candidate/Jobs';
 import GamificationDashboard from './pages/candidate/GamificationDashboard';
+import CandidateInterviews from './pages/candidate/CandidateInterviews';
+import InterviewPage from './pages/candidate/Interview';
 import EmployerLayout from './layouts/EmployerLayout';
 import EmployerDashboard from './pages/employer/Dashboard';
 import JobPostingForm from './pages/employer/JobPostingForm';
 import Candidates from './pages/employer/Candidates';
 import CandidateProfileView from './pages/employer/CandidateProfileView';
 import Interviews from './pages/employer/Interviews';
+import ProctoredInterview from './pages/employer/ProctoredInterview';
 import Settings from './pages/employer/Settings';
 import MakeAgreement from './pages/employer/MakeAgreement';
 import AdminLayout from './layouts/AdminLayout';
@@ -31,6 +36,7 @@ import PaymentConfig from './pages/admin/PaymentConfig';
 import JobPricingControl from './pages/admin/JobPricingControl';
 import CreditSystemControl from './pages/admin/CreditSystemControl';
 import InterviewManagement from './pages/admin/InterviewManagement';
+import VideoStorageConfig from './pages/admin/VideoStorageConfig';
 
 function App() {
   const [showLogin, setShowLogin] = React.useState(false);
@@ -42,6 +48,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/register/candidate" element={<CandidateRegister />} />
+          <Route path="/register/employer" element={<EmployerRegister />} />
 
           {/* Candidate Routes */}
           <Route path="/candidate" element={<DashboardLayout />}>
@@ -51,6 +59,8 @@ function App() {
             <Route path="assessments" element={<Assessments />} />
             <Route path="jobs" element={<Jobs />} />
             <Route path="gamification" element={<GamificationDashboard />} />
+            <Route path="interviews" element={<CandidateInterviews />} />
+            <Route path="interview/:id" element={<InterviewPage />} />
           </Route>
 
           {/* Employer Routes */}
@@ -60,6 +70,7 @@ function App() {
             <Route path="candidates" element={<Candidates />} />
             <Route path="candidate/:id" element={<CandidateProfileView />} />
             <Route path="interviews" element={<Interviews />} />
+            <Route path="proctored-interview/:id" element={<ProctoredInterview />} />
             <Route path="settings" element={<Settings />} />
             <Route path="make-agreement" element={<MakeAgreement />} />
           </Route>
@@ -77,6 +88,7 @@ function App() {
             <Route path="credit-system" element={<CreditSystemControl />} />
             <Route path="interviews" element={<InterviewManagement />} />
             <Route path="logs" element={<SystemLogs />} />
+            <Route path="video-storage" element={<VideoStorageConfig />} />
           </Route>
         </Routes>
         {showLogin && (

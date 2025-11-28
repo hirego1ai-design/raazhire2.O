@@ -89,6 +89,82 @@ const VideoResume: React.FC = () => {
         { name: 'Technical', value: 88, color: '#ff006e' },
     ];
 
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [isUploading, setIsUploading] = useState(false);
+
+    const uploadToYouTube = async () => {
+        const config = JSON.parse(localStorage.getItem('youtube_config') || '{}');
+
+        if (!config.accessToken) {
+            alert('YouTube Access Token is missing. Please configure it in the Admin Panel > Video Storage.');
+            return;
+        }
+
+        if (!videoUrl) return;
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+            // Convert Blob URL to Blob
+            const response = await fetch(videoUrl);
+            const videoBlob = await response.blob();
+
+            const metadata = {
+                snippet: {
+                    title: `Candidate Video Resume - ${new Date().toLocaleDateString()}`,
+                    description: 'Uploaded via HireGo AI Candidate Portal',
+                    tags: ['interview', 'candidate', 'hirego'],
+                    categoryId: '22' // People & Blogs
+                },
+                status: {
+                    privacyStatus: config.privacyStatus || 'private'
+                }
+            };
+
+            const formData = new FormData();
+            formData.append('snippet', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            formData.append('video', videoBlob);
+
+            // Note: This is a simplified upload. For large files, resumable upload is better.
+            // Using XMLHttpRequest for progress tracking
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status&uploadType=multipart', true);
+            xhr.setRequestHeader('Authorization', `Bearer ${config.accessToken}`);
+
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    setUploadProgress(Math.round(percentComplete));
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    const result = JSON.parse(xhr.responseText);
+                    alert(`Video uploaded successfully! Video ID: ${result.id}`);
+                    setUploadProgress(100);
+                } else {
+                    console.error('Upload failed:', xhr.responseText);
+                    alert('Upload failed. Check console for details. Ensure your Access Token is valid and has "https://www.googleapis.com/auth/youtube.upload" scope.');
+                }
+                setIsUploading(false);
+            };
+
+            xhr.onerror = () => {
+                console.error('Upload error');
+                alert('Network error during upload.');
+                setIsUploading(false);
+            };
+
+            xhr.send(formData);
+
+        } catch (error) {
+            console.error('Error preparing upload:', error);
+            setIsUploading(false);
+        }
+    };
+
     return (
         <div className="max-w-6xl mx-auto space-y-8">
             <motion.div
@@ -179,21 +255,43 @@ const VideoResume: React.FC = () => {
                         )}
 
                         {videoUrl && !analysisResult && (
-                            <div className="mt-6 flex justify-center gap-4">
-                                <button
-                                    onClick={() => setVideoUrl(null)}
-                                    className="btn-3d btn-ghost"
-                                >
-                                    Retake / Reupload
-                                </button>
-                                <button
-                                    onClick={startAnalysis}
-                                    disabled={isAnalyzing}
-                                    className="btn-3d btn-primary flex items-center gap-1.5"
-                                >
-                                    {isAnalyzing ? <Loader className="animate-spin" size={14} /> : <Play size={14} />}
-                                    {isAnalyzing ? 'Analyzing...' : 'Analyze Video'}
-                                </button>
+                            <div className="mt-6 space-y-4">
+                                <div className="flex justify-center gap-4">
+                                    <button
+                                        onClick={() => setVideoUrl(null)}
+                                        className="btn-3d btn-ghost"
+                                        disabled={isUploading}
+                                    >
+                                        Retake / Reupload
+                                    </button>
+                                    <button
+                                        onClick={startAnalysis}
+                                        disabled={isAnalyzing || isUploading}
+                                        className="btn-3d btn-primary flex items-center gap-1.5"
+                                    >
+                                        {isAnalyzing ? <Loader className="animate-spin" size={14} /> : <Play size={14} />}
+                                        {isAnalyzing ? 'Analyzing...' : 'Analyze Video'}
+                                    </button>
+                                </div>
+
+                                <div className="flex justify-center">
+                                    <button
+                                        onClick={uploadToYouTube}
+                                        disabled={isUploading || isAnalyzing}
+                                        className="btn-3d bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5 w-full justify-center max-w-xs"
+                                    >
+                                        {isUploading ? <Loader className="animate-spin" size={14} /> : <Upload size={14} />}
+                                        {isUploading ? `Uploading ${uploadProgress}%` : 'Upload to YouTube'}
+                                    </button>
+                                </div>
+                                {isUploading && (
+                                    <div className="w-full max-w-xs mx-auto h-1 bg-white/10 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-red-600 transition-all duration-300"
+                                            style={{ width: `${uploadProgress}%` }}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

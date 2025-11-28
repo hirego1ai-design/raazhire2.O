@@ -1,25 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Key, RefreshCw, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Save, Key, RefreshCw, AlertTriangle, Eye, EyeOff, CheckCircle, XCircle, Loader, Database } from 'lucide-react';
+import { endpoints } from '../../lib/api';
 
 interface AIProvider {
     id: string;
     name: string;
     apiKey: string;
-    status: 'connected' | 'disconnected' | 'error';
+    status: 'connected' | 'disconnected' | 'error' | 'testing';
     latency: string;
 }
 
 const APIConfig: React.FC = () => {
     const [providers, setProviders] = useState<AIProvider[]>([
-        { id: 'gemini', name: 'Google Gemini Pro', apiKey: '**********************', status: 'connected', latency: '120ms' },
-        { id: 'gpt4', name: 'OpenAI GPT-4', apiKey: '**********************', status: 'connected', latency: '250ms' },
+        { id: 'gemini', name: 'Google Gemini Pro', apiKey: '', status: 'disconnected', latency: '-' },
+        { id: 'gpt4', name: 'OpenAI GPT-4', apiKey: '', status: 'disconnected', latency: '-' },
         { id: 'claude', name: 'Anthropic Claude 3', apiKey: '', status: 'disconnected', latency: '-' },
-        { id: 'deepseek', name: 'DeepSeek R1', apiKey: '**********************', status: 'connected', latency: '180ms' },
-        { id: 'kimi', name: 'Kimi AI', apiKey: '', status: 'disconnected', latency: '-' },
+        { id: 'deepseek', name: 'DeepSeek R1', apiKey: '', status: 'disconnected', latency: '-' },
     ]);
 
     const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Load from backend on mount
+    useEffect(() => {
+        loadAPIKeys();
+    }, []);
+
+    const loadAPIKeys = async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/api-keys`);
+            if (response.ok) {
+                const data = await response.json();
+                setProviders(prev => prev.map(p => {
+                    const savedKey = data.find((d: any) => d.provider === p.id);
+                    return {
+                        ...p,
+                        apiKey: savedKey?.api_key || '',
+                        status: savedKey?.api_key ? 'disconnected' : 'disconnected'
+                    };
+                }));
+            }
+        } catch (error) {
+            console.error('Error loading API keys:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const toggleKeyVisibility = (id: string) => {
         setShowKeys(prev => ({ ...prev, [id]: !prev[id] }));
@@ -27,13 +56,84 @@ const APIConfig: React.FC = () => {
 
     const handleApiKeyChange = (id: string, value: string) => {
         setProviders(providers.map(p =>
-            p.id === id ? { ...p, apiKey: value } : p
+            p.id === id ? { ...p, apiKey: value, status: 'disconnected' } : p
         ));
     };
 
-    const handleSave = () => {
-        alert('API Credentials saved successfully!');
+    const testConnection = async (id: string) => {
+        const provider = providers.find(p => p.id === id);
+        if (!provider || !provider.apiKey) {
+            alert('Please enter an API Key first.');
+            return;
+        }
+
+        setProviders(prev => prev.map(p => p.id === id ? { ...p, status: 'testing' } : p));
+
+        try {
+            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/test-api-key`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    provider: id,
+                    api_key: provider.apiKey
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setProviders(prev => prev.map(p =>
+                    p.id === id ? { ...p, status: 'connected', latency: result.latency } : p
+                ));
+            } else {
+                setProviders(prev => prev.map(p =>
+                    p.id === id ? { ...p, status: 'error', latency: '-' } : p
+                ));
+                alert(`Connection failed: ${result.error}`);
+            }
+        } catch (error) {
+            setProviders(prev => prev.map(p => p.id === id ? { ...p, status: 'error', latency: '-' } : p));
+            console.error('Test connection error:', error);
+        }
     };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            // Save each provider's key to backend
+            const savePromises = providers
+                .filter(p => p.apiKey) // Only save if key is provided
+                .map(p =>
+                    fetch(`${endpoints.test.replace('/test', '')}/admin/api-keys`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            provider: p.id,
+                            api_key: p.apiKey
+                        })
+                    })
+                );
+
+            await Promise.all(savePromises);
+            alert('API Credentials saved successfully to secure backend storage!');
+        } catch (error) {
+            console.error('Error saving API keys:', error);
+            alert('Failed to save API keys. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="max-w-4xl mx-auto space-y-8 pb-20 flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <Loader className="animate-spin text-neon-cyan mx-auto mb-4" size={48} />
+                    <p className="text-gray-400">Loading API configuration...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 pb-20">
@@ -47,14 +147,18 @@ const APIConfig: React.FC = () => {
                     <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
                         API Configuration
                     </h1>
-                    <p className="text-gray-400">Manage API keys and connection status for AI providers.</p>
+                    <p className="text-gray-400 flex items-center gap-2">
+                        <Database size={16} className="text-green-400" />
+                        Manage API keys securely stored in encrypted database
+                    </p>
                 </div>
                 <button
                     onClick={handleSave}
-                    className="btn-3d btn-primary px-6 py-2 flex items-center gap-2"
+                    disabled={isSaving}
+                    className="btn-3d btn-primary px-6 py-2 flex items-center gap-2 disabled:opacity-50"
                 >
-                    <Save size={18} />
-                    Save Credentials
+                    {isSaving ? <Loader className="animate-spin" size={18} /> : <Save size={18} />}
+                    {isSaving ? 'Saving...' : 'Save Credentials'}
                 </button>
             </motion.div>
 
@@ -73,11 +177,19 @@ const APIConfig: React.FC = () => {
                             <div className="min-w-[200px]">
                                 <h3 className="font-bold text-lg">{provider.name}</h3>
                                 <div className="flex items-center gap-2 mt-1">
-                                    <span className={`w-2 h-2 rounded-full ${provider.status === 'connected' ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' :
-                                        provider.status === 'error' ? 'bg-red-400' : 'bg-gray-500'
-                                        }`} />
+                                    {provider.status === 'testing' ? (
+                                        <Loader className="animate-spin text-yellow-400" size={14} />
+                                    ) : provider.status === 'connected' ? (
+                                        <CheckCircle className="text-green-400" size={14} />
+                                    ) : provider.status === 'error' ? (
+                                        <XCircle className="text-red-400" size={14} />
+                                    ) : (
+                                        <div className="w-3.5 h-3.5 rounded-full bg-gray-600" />
+                                    )}
+
                                     <span className={`text-xs capitalize ${provider.status === 'connected' ? 'text-green-400' :
-                                        provider.status === 'error' ? 'text-red-400' : 'text-gray-500'
+                                            provider.status === 'error' ? 'text-red-400' :
+                                                provider.status === 'testing' ? 'text-yellow-400' : 'text-gray-500'
                                         }`}>
                                         {provider.status}
                                     </span>
@@ -111,10 +223,12 @@ const APIConfig: React.FC = () => {
                                     <div className="font-mono text-neon-cyan">{provider.latency}</div>
                                 </div>
                                 <button
-                                    className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-neon-cyan transition-colors"
+                                    onClick={() => testConnection(provider.id)}
+                                    disabled={provider.status === 'testing' || !provider.apiKey}
+                                    className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-neon-cyan transition-colors disabled:opacity-50"
                                     title="Test Connection"
                                 >
-                                    <RefreshCw size={20} />
+                                    <RefreshCw size={20} className={provider.status === 'testing' ? 'animate-spin' : ''} />
                                 </button>
                             </div>
                         </div>
@@ -127,13 +241,14 @@ const APIConfig: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-start gap-3"
+                className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 flex items-start gap-3"
             >
-                <AlertTriangle className="text-yellow-400 shrink-0" size={24} />
+                <Database className="text-green-400 shrink-0" size={24} />
                 <div>
-                    <h4 className="font-bold text-yellow-400 mb-1">Security Note</h4>
-                    <p className="text-sm text-yellow-200/80">
-                        API keys are encrypted at rest. To change which model is used for specific tasks (like Transcription or Job Writing), please visit the <a href="/admin/ai-control" className="underline hover:text-white">AI System Control</a> page.
+                    <h4 className="font-bold text-green-400 mb-1">🔒 Production-Level Security</h4>
+                    <p className="text-sm text-green-200/80">
+                        API keys are encrypted using AES-256-CBC and stored securely in the database.
+                        Only authorized admin users can access this data. All keys are encrypted at rest and in transit.
                     </p>
                 </div>
             </motion.div>

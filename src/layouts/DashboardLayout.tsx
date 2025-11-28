@@ -28,6 +28,7 @@ const DashboardLayout: React.FC = () => {
         { icon: Video, label: 'Video Resume', path: '/candidate/video-resume' },
         { icon: FileText, label: 'Assessments', path: '/candidate/assessments' },
         { icon: Briefcase, label: 'Jobs', path: '/candidate/jobs' },
+        { icon: Video, label: 'Interviews', path: '/candidate/interviews' },
         { icon: Trophy, label: 'My Progress', path: '/candidate/gamification' },
     ];
 

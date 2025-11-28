@@ -124,7 +124,14 @@ const LoginCard = ({ onClose }: LoginCardProps) => {
                 <div className="overlay-content">
                     <h2>Hello, Friend!</h2>
                     <p>Register to access all premium features of HireGo AI</p>
-                    <button className="sign-up-btn">
+                    <button
+                        className="sign-up-btn"
+                        onClick={() => {
+                            const registerPath = userType === 'candidate' ? '/register/candidate' : '/register/employer';
+                            navigate(registerPath);
+                            if (onClose) onClose();
+                        }}
+                    >
                         SIGN UP
                     </button>
                 </div>

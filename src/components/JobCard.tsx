@@ -1,5 +1,6 @@
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, DollarSign, Clock } from 'lucide-react';
+import { MapPin, DollarSign, Clock, Info } from 'lucide-react';
 
 interface JobCardProps {
     title: string;
@@ -9,9 +10,13 @@ interface JobCardProps {
     type: string;
     logo: string;
     tags: string[];
+    description?: string;
+    onJoin?: () => void;
 }
 
-export default function JobCard({ title, company, location, salary, type, logo, tags }: JobCardProps) {
+export default function JobCard({ title, company, location, salary, type, logo, tags, description, onJoin }: JobCardProps) {
+    const [showDetails, setShowDetails] = useState(false);
+
     return (
         <motion.div
             whileHover={{ y: -8, scale: 1.02 }}
@@ -59,17 +64,47 @@ export default function JobCard({ title, company, location, salary, type, logo, 
                             </span>
                         ))}
                     </div>
-                </div>
 
-                {/* Apply Button */}
-                <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="btn-3d btn-primary px-6 py-2 text-sm"
-                >
-                    Apply
-                </motion.button>
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 mt-4">
+                        <button
+                            onClick={() => setShowDetails(true)}
+                            className="btn-3d btn-ghost flex items-center gap-1"
+                        >
+                            <Info size={14} /> Details
+                        </button>
+                        {onJoin && (
+                            <button
+                                onClick={onJoin}
+                                className="btn-3d btn-primary flex items-center gap-1"
+                            >
+                                Join
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
+
+            {/* Details Overlay */}
+            {showDetails && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+                >
+                    <div className="bg-gray-900 rounded-xl p-6 max-w-lg w-full">
+                        <h3 className="text-xl font-bold text-white mb-2">{title} - Details</h3>
+                        <p className="text-gray-300 mb-4">{description || 'No detailed description provided.'}</p>
+                        <button
+                            onClick={() => setShowDetails(false)}
+                            className="btn-3d btn-ghost mt-2"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </motion.div>
+            )}
         </motion.div>
     );
 }

@@ -1,0 +1,36 @@
+services:
+  # Backend Service
+  - type: web
+    name: job-portal-backend
+    env: node
+    root: server
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+
+  # Frontend Service
+  - type: static
+    name: job-portal-frontend
+    env: static
+    plan: free
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    routes:
+      - type: rewrite
+        source: /**
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: job-portal-backend
+          property: url
