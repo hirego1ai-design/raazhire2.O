@@ -3,10 +3,9 @@ services:
   - type: web
     name: job-portal-backend
     env: node
-    root: server
+    buildCommand: cd server && npm install
+    startCommand: cd server && node index.js
     plan: free
-    buildCommand: npm install
-    startCommand: node index.js
     envVars:
       - key: PORT
         value: 10000
@@ -18,19 +17,19 @@ services:
         sync: false
 
   # Frontend Service
-  - type: static
+  - type: web
     name: job-portal-frontend
     env: static
-    plan: free
     buildCommand: npm install && npm run build
-    publishDir: dist
+    staticPublishPath: ./dist
+    plan: free
     routes:
       - type: rewrite
-        source: /**
+        source: /*
         destination: /index.html
     envVars:
       - key: VITE_API_URL
         fromService:
           type: web
           name: job-portal-backend
-          property: url
+          envVarKey: RENDER_EXTERNAL_URL
