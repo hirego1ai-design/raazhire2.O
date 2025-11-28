@@ -9,12 +9,14 @@ services:
     envVars:
       - key: PORT
         value: 10000
+      # Optional: Only needed if you want to use Supabase instead of local file storage
+      # If not set, the app will use local_db.json for storage
       - key: SUPABASE_URL
-        sync: false
+        value: ""
       - key: SUPABASE_ANON_KEY
-        sync: false
+        value: ""
       - key: ENCRYPTION_KEY
-        sync: false
+        generateValue: true
 
   # Frontend Service
   - type: web
