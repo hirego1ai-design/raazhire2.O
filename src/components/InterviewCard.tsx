@@ -34,7 +34,7 @@ const InterviewCard: React.FC<InterviewCardProps> = ({ interview }) => {
             <motion.div
                 whileHover={{ y: -8, scale: 1.02 }}
                 transition={{ duration: 0.3 }}
-                className="glass glass-hover rounded-2xl p-6 shadow-3d-purple hover:shadow-3d-cyan cursor-pointer group"
+                className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-colors rounded-2xl p-6 shadow-3d-purple hover:shadow-3d-cyan cursor-pointer group"
             >
                 <div className="flex items-start gap-4">
                     {/* Avatar */}

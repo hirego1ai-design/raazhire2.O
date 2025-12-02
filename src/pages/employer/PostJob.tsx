@@ -4,6 +4,7 @@ import { Briefcase, MapPin, Sparkles, Zap, CheckCircle, AlertTriangle, DollarSig
 
 import { useNavigate } from 'react-router-dom';
 import { endpoints } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 
 const JOB_TYPES = [
     { id: 'basic', name: 'Basic', credits: 10, description: 'Standard listing, visible for 30 days.' },
@@ -63,7 +64,7 @@ const PostJob: React.FC = () => {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (walletBalance < selectedType.credits) {
             alert('Insufficient credits! Please buy more credits.');
@@ -71,10 +72,34 @@ const PostJob: React.FC = () => {
         }
 
         if (window.confirm(`This will deduct ${selectedType.credits} credits from your wallet. Proceed?`)) {
-            setWalletBalance(prev => prev - selectedType.credits);
-            console.log('Posting job:', { ...jobData, jobType: selectedType });
-            alert('Job posted successfully!');
-            navigate('/employer/dashboard');
+            try {
+                // Insert into Supabase
+                if (supabase) {
+                    const { error } = await supabase.from('jobs').insert({
+                        title: jobData.title,
+                        type: jobData.type,
+                        location: jobData.location,
+                        salary_min: jobData.salaryMin,
+                        salary_max: jobData.salaryMax,
+                        description: jobData.description,
+                        requirements: jobData.requirements,
+                        skills: jobData.skills.split(',').map(s => s.trim()),
+                        status: 'active',
+                        job_type: selectedType.id, // Store the tier/type
+                        // employer_id: '...' // Ideally get from auth context
+                    });
+
+                    if (error) throw error;
+                }
+
+                setWalletBalance(prev => prev - selectedType.credits);
+                console.log('Posting job:', { ...jobData, jobType: selectedType });
+                alert('Job posted successfully!');
+                navigate('/employer/dashboard');
+            } catch (error) {
+                console.error('Error posting job:', error);
+                alert('Failed to post job. Please try again.');
+            }
         }
     };
 

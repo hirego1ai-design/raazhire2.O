@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Video, Users, Calendar, Clock, CheckCircle, XCircle, AlertTriangle,
@@ -51,66 +51,65 @@ interface ProctoringViolation {
     description: string;
 }
 
-// --- Mock Data ---
-const MOCK_INTERVIEWS: InterviewSession[] = [
-    {
-        id: 'INT-001',
-        candidate: {
-            id: 'C001',
-            name: 'Rahul Sharma',
-            email: 'rahul@example.com',
-            phone: '+91 98765 43210',
-            position: 'Senior React Developer',
-            experience: '5 years',
-        },
-        jobId: 'J001',
-        jobTitle: 'Senior React Developer',
-        round: 'technical',
-        status: 'in-progress',
-        scheduledDate: '2025-11-25',
-        scheduledTime: '14:00',
-        duration: 60,
-        interviewers: ['HR Manager', 'Tech Lead', 'CTO'],
-        currentInterviewer: 'Tech Lead',
-        proctoringEnabled: true,
-        proctoringStatus: 'warning',
-        violations: [
-            { id: 'V1', timestamp: '14:15', type: 'tab-switch', severity: 'medium', description: 'Switched to another tab for 5 seconds' },
-        ],
-        notes: 'Strong React knowledge, good problem-solving skills',
-        score: 85,
-        decision: 'pending',
-    },
-    {
-        id: 'INT-002',
-        candidate: {
-            id: 'C002',
-            name: 'Priya Singh',
-            email: 'priya@example.com',
-            phone: '+91 98765 43211',
-            position: 'Full Stack Developer',
-            experience: '3 years',
-        },
-        jobId: 'J002',
-        jobTitle: 'Full Stack Developer',
-        round: 'screening',
-        status: 'scheduled',
-        scheduledDate: '2025-11-25',
-        scheduledTime: '16:00',
-        duration: 30,
-        interviewers: ['HR Manager'],
-        proctoringEnabled: true,
-        violations: [],
-        notes: '',
-        decision: 'pending',
-    },
-];
+import { supabase } from '../../lib/supabase';
+
+// ... existing imports
+
+// ... Types ...
 
 const InterviewManagement: React.FC = () => {
-    const [interviews, setInterviews] = useState<InterviewSession[]>(MOCK_INTERVIEWS);
+    const [interviews, setInterviews] = useState<InterviewSession[]>([]);
     const [selectedInterview, setSelectedInterview] = useState<InterviewSession | null>(null);
     const [activeTab, setActiveTab] = useState<'all' | 'scheduled' | 'in-progress' | 'completed'>('all');
     const [showProctoringPanel, setShowProctoringPanel] = useState(false);
+
+    useEffect(() => {
+        const fetchInterviews = async () => {
+            if (!supabase) return;
+
+            const { data, error } = await supabase
+                .from('interviews')
+                .select(`
+                    *,
+                    candidate:candidates(id, name, email, phone, current_role, experience_years),
+                    job:jobs(id, title)
+                `)
+                .order('date', { ascending: true });
+
+            if (data) {
+                const formattedInterviews: InterviewSession[] = data.map((int: any) => ({
+                    id: int.id,
+                    candidate: {
+                        id: int.candidate?.id || 'Unknown',
+                        name: int.candidate?.name || 'Unknown Candidate',
+                        email: int.candidate?.email || '',
+                        phone: int.candidate?.phone || '',
+                        position: int.candidate?.current_role || 'Applicant',
+                        experience: `${int.candidate?.experience_years || 0} years`,
+                    },
+                    jobId: int.job?.id || '',
+                    jobTitle: int.job?.title || 'Unknown Job',
+                    round: int.round_name || 'screening', // Assuming round_name column or default
+                    status: int.status || 'scheduled',
+                    scheduledDate: int.date,
+                    scheduledTime: int.time,
+                    duration: int.duration || 30,
+                    interviewers: [], // Placeholder as this might need another join
+                    currentInterviewer: 'Not assigned',
+                    proctoringEnabled: true, // Defaulting to true for now
+                    proctoringStatus: 'normal', // Default
+                    violations: [], // Fetch from proctoring logs if available
+                    notes: int.notes || '',
+                    score: int.score,
+                    decision: int.decision || 'pending'
+                }));
+                setInterviews(formattedInterviews);
+            }
+        };
+
+        fetchInterviews();
+    }, []);
+
 
     // Filter interviews
     const filteredInterviews = interviews.filter(interview => {
@@ -268,8 +267,8 @@ const InterviewManagement: React.FC = () => {
                                             <div key={violation.id} className="p-3 rounded-lg bg-black/20 border border-red-500/20">
                                                 <div className="flex justify-between items-start mb-2">
                                                     <span className={`px-2 py-0.5 rounded text-xs ${violation.severity === 'high' ? 'bg-red-500/20 text-red-400' :
-                                                            violation.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                                'bg-blue-500/20 text-blue-400'
+                                                        violation.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                            'bg-blue-500/20 text-blue-400'
                                                         }`}>
                                                         {violation.severity}
                                                     </span>

@@ -1,14 +1,11 @@
 import { motion } from 'framer-motion';
 import { Rocket, Menu, X, Sun, Moon } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-interface NavbarProps {
-    onSignInClick?: () => void;
-}
-
-export default function Navbar({ onSignInClick }: NavbarProps) {
+export default function Navbar() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
@@ -78,14 +75,26 @@ export default function Navbar({ onSignInClick }: NavbarProps) {
                             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
 
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => navigate('/auth')}
-                            className="btn-3d btn-primary px-6 py-2 rounded-full"
-                        >
-                            Sign In
-                        </motion.button>
+                        {location.pathname === '/' && (
+                            <div className="flex items-center gap-3">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => navigate('/signin')}
+                                    className="px-5 py-2 text-[var(--text-primary)] border border-[var(--glass-border)] rounded-full hover:bg-[var(--glass-border)] transition-all"
+                                >
+                                    Sign In
+                                </motion.button>
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => navigate('/signup')}
+                                    className="btn-3d btn-primary px-6 py-2 rounded-full"
+                                >
+                                    Sign Up
+                                </motion.button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Mobile Menu Button */}
@@ -121,12 +130,22 @@ export default function Navbar({ onSignInClick }: NavbarProps) {
                         <a href="#about" className="block text-[var(--text-secondary)] hover:text-neon-cyan transition-colors">
                             About
                         </a>
-                        <button
-                            onClick={() => navigate('/auth')}
-                            className="w-full btn-3d btn-primary px-6 py-2 rounded-full"
-                        >
-                            Sign In
-                        </button>
+                        {location.pathname === '/' && (
+                            <>
+                                <button
+                                    onClick={() => navigate('/signin')}
+                                    className="w-full px-5 py-2 text-[var(--text-primary)] border border-[var(--glass-border)] rounded-full hover:bg-[var(--glass-border)] transition-all"
+                                >
+                                    Sign In
+                                </button>
+                                <button
+                                    onClick={() => navigate('/signup')}
+                                    className="w-full btn-3d btn-primary px-6 py-2 rounded-full"
+                                >
+                                    Sign Up
+                                </button>
+                            </>
+                        )}
                     </motion.div>
                 )}
             </div>

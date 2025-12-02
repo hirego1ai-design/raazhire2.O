@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import '../../styles/premium-dark-theme.css';
 import InterviewCard from '../../components/InterviewCard';
-import { supabase } from '../../lib/supabase';
 
 interface Interview {
     id: number;
@@ -18,87 +17,76 @@ interface Interview {
     roundTag?: string;
 }
 
-const mockInterviews: Interview[] = [
-    {
-        id: 1,
-        candidateName: 'Sarah Johnson',
-        role: 'Senior Frontend Developer',
-        date: '2024-03-20T10:00:00Z',
-        time: '10:00 AM',
-        type: 'Video',
-        status: 'Scheduled',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
-        participants: ['HR Alice', 'HR Bob'],
-        roundTag: 'Round 1',
-    },
-    {
-        id: 2,
-        candidateName: 'Michael Chen',
-        role: 'Full Stack Engineer',
-        date: '2024-03-21T14:00:00Z',
-        time: '2:00 PM',
-        type: 'Technical',
-        status: 'Scheduled',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
-        participants: ['HR Carol'],
-        roundTag: 'Round 2',
-    },
-];
-
 const CandidateDashboard: React.FC = () => {
     const [interviews, setInterviews] = React.useState<Interview[]>([]);
+    const [jobs, setJobs] = React.useState<any[]>([]);
+    const [stats, setStats] = React.useState([
+        { label: 'Profile Completion', value: '0%', icon: TrendingUp, color: 'text-neon-cyan' },
+        { label: 'Pending Assessments', value: '0', icon: Clock, color: 'text-neon-purple' },
+        { label: 'Jobs Applied', value: '0', icon: CheckCircle, color: 'text-green-400' },
+        { label: 'Interviews', value: '0', icon: AlertCircle, color: 'text-neon-pink' },
+    ]);
 
     React.useEffect(() => {
-        // Initial fetch
-        const fetchInterviews = async () => {
-            if (supabase) {
-                const { data, error } = await supabase
-                    .from('interviews')
-                    .select('*')
-                    .order('date', { ascending: true });
-
-                if (!error && data) {
-                    setInterviews(data as Interview[]);
-                } else {
-                    setInterviews(mockInterviews);
-                }
-            } else {
-                // Fallback to mock data if Supabase is not configured
-                setInterviews(mockInterviews);
+        // Use mock data for testing
+        const mockInterviews: Interview[] = [
+            {
+                id: 1,
+                candidateName: 'You',
+                role: 'Senior Full Stack Developer',
+                date: new Date(Date.now() + 86400000).toISOString(),
+                time: '10:00 AM',
+                type: 'Technical',
+                status: 'Scheduled',
+                avatar: 'https://ui-avatars.com/api/?name=You&background=4f46e5&color=fff',
+                roundTag: 'Round 1'
+            },
+            {
+                id: 2,
+                candidateName: 'You',
+                role: 'UI/UX Designer',
+                date: new Date(Date.now() + 172800000).toISOString(),
+                time: '2:00 PM',
+                type: 'HR',
+                status: 'Scheduled',
+                avatar: 'https://ui-avatars.com/api/?name=You&background=10b981&color=fff',
+                roundTag: 'Round 2'
             }
-        };
+        ];
 
-        fetchInterviews();
-
-        // Real-time subscription
-        const channel = supabase?.channel('public:interviews')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'interviews' }, payload => {
-                if (payload.eventType === 'INSERT') {
-                    setInterviews(prev => [...prev, payload.new as Interview]);
-                } else if (payload.eventType === 'UPDATE') {
-                    setInterviews(prev => prev.map(i => i.id === payload.new.id ? payload.new as Interview : i));
-                } else if (payload.eventType === 'DELETE') {
-                    setInterviews(prev => prev.filter(i => i.id !== payload.old.id));
-                }
-            })
-            .subscribe();
-
-        return () => {
-            if (channel) {
-                supabase?.removeChannel(channel);
+        const mockJobs = [
+            {
+                id: 1,
+                title: 'Senior Frontend Developer',
+                company: 'TechCorp Solutions',
+                location: 'Remote'
+            },
+            {
+                id: 2,
+                title: 'Full Stack Engineer',
+                company: 'InnovateAI Labs',
+                location: 'Bangalore, India'
+            },
+            {
+                id: 3,
+                title: 'React Developer',
+                company: 'StartUp Inc',
+                location: 'Mumbai, India'
             }
-        };
+        ];
+
+        setInterviews(mockInterviews);
+        setJobs(mockJobs);
+        setStats([
+            { label: 'Profile Completion', value: '85%', icon: TrendingUp, color: 'text-neon-cyan' },
+            { label: 'Pending Assessments', value: '3', icon: Clock, color: 'text-neon-purple' },
+            { label: 'Jobs Applied', value: '12', icon: CheckCircle, color: 'text-green-400' },
+            { label: 'Interviews', value: mockInterviews.length.toString(), icon: AlertCircle, color: 'text-neon-pink' },
+        ]);
     }, []);
 
-    const stats = [
-        { label: 'Profile Completion', value: '85%', icon: TrendingUp, color: 'text-neon-cyan' },
-        { label: 'Pending Assessments', value: '2', icon: Clock, color: 'text-neon-purple' },
-        { label: 'Jobs Applied', value: '12', icon: CheckCircle, color: 'text-green-400' },
-        { label: 'Interviews', value: interviews.length.toString(), icon: AlertCircle, color: 'text-neon-pink' },
-    ];
-
     return (
-        <div className="space-y-8 bg-black/90 p-6 rounded-2xl glass">
+        <div className="space-y-8 bg-black/90 p-6 rounded-2xl border border-white/10 backdrop-blur-xl">
             {/* Welcome Section */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -106,10 +94,10 @@ const CandidateDashboard: React.FC = () => {
                 className="p-8 rounded-2xl bg-gradient-to-r from-space-blue to-space-dark border border-white/10"
             >
                 <h1 className="text-3xl font-bold mb-2">
-                    Welcome back, <span className="text-gradient">John Doe</span>! 👋
+                    Welcome back! 👋
                 </h1>
                 <p className="text-gray-400">
-                    Your AI-powered career journey is on track. You have 2 pending assessments.
+                    Your AI-powered career journey is on track.
                 </p>
             </motion.div>
 
@@ -121,7 +109,7 @@ const CandidateDashboard: React.FC = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        className="p-6 rounded-xl glass hover:border-neon-cyan/50 transition-colors"
+                        className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-neon-cyan/50 transition-colors"
                     >
                         <div className="flex items-center justify-between mb-4">
                             <div className={`p-3 rounded-lg bg-white/5 ${stat.color}`}>
@@ -155,21 +143,23 @@ const CandidateDashboard: React.FC = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="p-6 rounded-xl glass border border-white/10"
+                    className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10"
                 >
                     <h3 className="text-xl font-bold mb-4">Recommended Jobs</h3>
                     <div className="space-y-4">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                        {jobs.length > 0 ? jobs.map((job) => (
+                            <div key={job.id} className="p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h4 className="font-semibold text-neon-cyan">Senior React Developer</h4>
-                                        <p className="text-sm text-gray-400">TechCorp Inc. • Remote</p>
+                                        <h4 className="font-semibold text-neon-cyan">{job.title}</h4>
+                                        <p className="text-sm text-gray-400">{job.company} • {job.location}</p>
                                     </div>
-                                    <span className="text-xs px-2 py-1 rounded-full bg-neon-purple/20 text-neon-purple">98% Match</span>
+                                    <span className="text-xs px-2 py-1 rounded-full bg-neon-purple/20 text-neon-purple">New</span>
                                 </div>
                             </div>
-                        ))}
+                        )) : (
+                            <p className="text-gray-400">No jobs found.</p>
+                        )}
                     </div>
                 </motion.div>
 
@@ -178,7 +168,7 @@ const CandidateDashboard: React.FC = () => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="p-6 rounded-xl glass border border-white/10"
+                    className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10"
                 >
                     <h3 className="text-xl font-bold mb-4">Upcoming Actions</h3>
                     <div className="space-y-4">

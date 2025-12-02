@@ -6,6 +6,9 @@ import crypto from 'crypto';
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import Stripe from 'stripe';
+import Razorpay from 'razorpay';
+import { setupAIRoutes } from './routes/ai_routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -68,10 +71,40 @@ async function writeLocalDb(data) {
     await fs.writeFile(LOCAL_DB_PATH, JSON.stringify(data, null, 2));
 }
 
+// ==================== AUTH MIDDLEWARE ====================
+const authenticateUser = async (req, res, next) => {
+    // Skip auth if Supabase is not configured (Dev mode fallback)
+    if (!supabase) {
+        console.warn('⚠️ Supabase not configured. Skipping auth check for:', req.path);
+        return next();
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ error: 'Missing Authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ error: 'Missing Bearer token' });
+    }
+
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) {
+            return res.status(401).json({ error: 'Invalid or expired token' });
+        }
+        req.user = user;
+        next();
+    } catch (error) {
+        return res.status(500).json({ error: 'Internal authentication error' });
+    }
+};
+
 // ==================== API KEY MANAGEMENT ====================
 
 // Get all API keys (admin only)
-app.get('/api/admin/api-keys', async (req, res) => {
+app.get('/api/admin/api-keys', authenticateUser, async (req, res) => {
     try {
         let data = [];
 
@@ -107,7 +140,7 @@ app.get('/api/admin/api-keys', async (req, res) => {
 });
 
 // Save/Update API keys (admin only)
-app.post('/api/admin/api-keys', async (req, res) => {
+app.post('/api/admin/api-keys', authenticateUser, async (req, res) => {
     try {
         const { provider, api_key, client_id, client_secret, access_token, metadata } = req.body;
 
@@ -115,13 +148,20 @@ app.post('/api/admin/api-keys', async (req, res) => {
             return res.status(400).json({ error: 'Provider is required' });
         }
 
+        if (!api_key) {
+            return res.status(400).json({ error: 'API key is required' });
+        }
+
+        // Trim whitespace from all inputs
+        const cleanApiKey = api_key.trim();
+
         // Encrypt sensitive data
         const encryptedData = {
             provider,
-            api_key: api_key ? encrypt(api_key) : null,
-            client_id: client_id ? encrypt(client_id) : null,
-            client_secret: client_secret ? encrypt(client_secret) : null,
-            access_token: access_token ? encrypt(access_token) : null,
+            api_key: cleanApiKey ? encrypt(cleanApiKey) : null,
+            client_id: client_id ? encrypt(client_id.trim()) : null,
+            client_secret: client_secret ? encrypt(client_secret.trim()) : null,
+            access_token: access_token ? encrypt(access_token.trim()) : null,
             metadata: metadata || {},
             updated_at: new Date().toISOString()
         };
@@ -129,26 +169,38 @@ app.post('/api/admin/api-keys', async (req, res) => {
         let result;
 
         if (supabase) {
-            // Check if provider already exists
-            const { data: existing } = await supabase
-                .from('api_keys')
-                .select('id')
-                .eq('provider', provider)
-                .single();
-
-            if (existing) {
-                const { data, error } = await supabase
+            try {
+                // Check if provider already exists
+                const { data: existing } = await supabase
                     .from('api_keys')
-                    .update(encryptedData)
+                    .select('id')
                     .eq('provider', provider)
-                    .select();
-                if (!error) result = data;
-            } else {
-                const { data, error } = await supabase
-                    .from('api_keys')
-                    .insert([{ ...encryptedData, created_at: new Date().toISOString() }])
-                    .select();
-                if (!error) result = data;
+                    .single();
+
+                if (existing) {
+                    const { data, error } = await supabase
+                        .from('api_keys')
+                        .update(encryptedData)
+                        .eq('provider', provider)
+                        .select();
+                    if (error) {
+                        console.error('Supabase update error:', error);
+                    } else {
+                        result = data;
+                    }
+                } else {
+                    const { data, error } = await supabase
+                        .from('api_keys')
+                        .insert([{ ...encryptedData, created_at: new Date().toISOString() }])
+                        .select();
+                    if (error) {
+                        console.error('Supabase insert error:', error);
+                    } else {
+                        result = data;
+                    }
+                }
+            } catch (supabaseError) {
+                console.error('Supabase operation error:', supabaseError);
             }
         }
 
@@ -172,15 +224,16 @@ app.post('/api/admin/api-keys', async (req, res) => {
 
         if (!result) result = [newRecord];
 
+        console.log(`✅ API key saved for provider: ${provider}`);
         res.json({ success: true, data: result });
     } catch (error) {
         console.error('Error saving API keys:', error);
-        res.status(500).json({ error: 'Failed to save API keys' });
+        res.status(500).json({ error: `Failed to save API keys: ${error.message}` });
     }
 });
 
 // Test API connection
-app.post('/api/admin/test-api-key', async (req, res) => {
+app.post('/api/admin/test-api-key', authenticateUser, async (req, res) => {
     try {
         const { provider, api_key } = req.body;
 
@@ -188,15 +241,35 @@ app.post('/api/admin/test-api-key', async (req, res) => {
             return res.status(400).json({ error: 'Provider and API key are required' });
         }
 
+        // Trim whitespace from API key
+        const trimmedKey = api_key.trim();
         const startTime = Date.now();
         let response;
 
         // Test based on provider
         if (provider === 'gemini') {
-            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro?key=${api_key}`);
+            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro?key=${trimmedKey}`);
         } else if (provider === 'gpt4') {
             response = await fetch('https://api.openai.com/v1/models', {
-                headers: { 'Authorization': `Bearer ${api_key}` }
+                headers: { 'Authorization': `Bearer ${trimmedKey}` }
+            });
+        } else if (provider === 'claude') {
+            response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 
+                    'x-api-key': trimmedKey,
+                    'anthropic-version': '2023-06-01',
+                    'content-type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'claude-3-sonnet-20240229',
+                    max_tokens: 10,
+                    messages: [{ role: 'user', content: 'test' }]
+                })
+            });
+        } else if (provider === 'deepseek') {
+            response = await fetch('https://api.deepseek.com/v1/models', {
+                headers: { 'Authorization': `Bearer ${trimmedKey}` }
             });
         } else {
             return res.status(400).json({ error: 'Unsupported provider' });
@@ -213,10 +286,11 @@ app.post('/api/admin/test-api-key', async (req, res) => {
             });
         } else {
             const errorData = await response.json();
+            const errorMsg = errorData.error?.message || errorData.error || 'Connection failed';
             res.status(400).json({
                 success: false,
                 status: 'error',
-                error: errorData.error?.message || 'Connection failed'
+                error: errorMsg
             });
         }
     } catch (error) {
@@ -372,6 +446,196 @@ app.post('/api/admin/youtube-config', async (req, res) => {
     }
 });
 
+// ==================== PAYMENT CONFIG MANAGEMENT ====================
+
+// Get Payment configuration
+app.get('/api/admin/payment-config', authenticateUser, async (req, res) => {
+    try {
+        let data = null;
+
+        if (supabase) {
+            const { data: dbData, error } = await supabase
+                .from('payment_config')
+                .select('*')
+                .single();
+
+            if (!error) data = dbData;
+        }
+
+        // Fallback to local DB
+        if (!data) {
+            const localDb = await readLocalDb();
+            data = localDb.payment_config;
+        }
+
+        if (!data) {
+            return res.json(null);
+        }
+
+        // Decrypt sensitive fields
+        const decryptedConfig = {
+            ...data,
+            stripe_secret_key: data.stripe_secret_key ? decrypt(data.stripe_secret_key) : null,
+            stripe_webhook_secret: data.stripe_webhook_secret ? decrypt(data.stripe_webhook_secret) : null,
+            razorpay_key_secret: data.razorpay_key_secret ? decrypt(data.razorpay_key_secret) : null,
+            razorpay_webhook_secret: data.razorpay_webhook_secret ? decrypt(data.razorpay_webhook_secret) : null,
+        };
+
+        res.json(decryptedConfig);
+    } catch (error) {
+        console.error('Error fetching Payment config:', error);
+        res.status(500).json({ error: 'Failed to fetch Payment configuration' });
+    }
+});
+
+// Save Payment configuration
+app.post('/api/admin/payment-config', authenticateUser, async (req, res) => {
+    try {
+        const {
+            provider,
+            currency,
+            stripe_public_key,
+            stripe_secret_key,
+            stripe_webhook_secret,
+            razorpay_key_id,
+            razorpay_key_secret,
+            razorpay_webhook_secret,
+            enabled
+        } = req.body;
+
+        // Encrypt sensitive data
+        const encryptedConfig = {
+            provider,
+            currency,
+            enabled: enabled !== undefined ? enabled : true,
+            stripe_public_key,
+            stripe_secret_key: stripe_secret_key ? encrypt(stripe_secret_key) : null,
+            stripe_webhook_secret: stripe_webhook_secret ? encrypt(stripe_webhook_secret) : null,
+            razorpay_key_id,
+            razorpay_key_secret: razorpay_key_secret ? encrypt(razorpay_key_secret) : null,
+            razorpay_webhook_secret: razorpay_webhook_secret ? encrypt(razorpay_webhook_secret) : null,
+            updated_at: new Date().toISOString()
+        };
+
+        let result;
+
+        if (supabase) {
+            try {
+                // Check if config exists
+                const { data: existing } = await supabase
+                    .from('payment_config')
+                    .select('id')
+                    .single();
+
+                if (existing) {
+                    const { data, error } = await supabase
+                        .from('payment_config')
+                        .update(encryptedConfig)
+                        .eq('id', existing.id)
+                        .select();
+                    if (!error) result = data;
+                } else {
+                    const { data, error } = await supabase
+                        .from('payment_config')
+                        .insert([{ ...encryptedConfig, created_at: new Date().toISOString() }])
+                        .select();
+                    if (!error) result = data;
+                }
+            } catch (dbError) {
+                console.error('Supabase error (continuing to local DB):', dbError);
+            }
+        }
+
+        // Always save to local DB
+        const localDb = await readLocalDb();
+        const newRecord = {
+            id: 1, // Singleton
+            ...encryptedConfig,
+            created_at: localDb.payment_config ? localDb.payment_config.created_at : new Date().toISOString()
+        };
+
+        localDb.payment_config = newRecord;
+        await writeLocalDb(localDb);
+
+        if (!result) result = newRecord;
+
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('Error saving Payment config:', error);
+        res.status(500).json({ error: 'Failed to save Payment configuration', details: error.message });
+    }
+});
+
+// Create Checkout Session
+app.post('/api/create-checkout-session', authenticateUser, async (req, res) => {
+    try {
+        const { planId, amount, currency = 'usd' } = req.body;
+
+        // Get payment config
+        let config = null;
+        if (supabase) {
+            const { data } = await supabase.from('payment_config').select('*').single();
+            config = data;
+        }
+
+        // Fallback to local DB
+        if (!config) {
+            const localDb = await readLocalDb();
+            config = localDb.payment_config;
+        }
+
+        if (!config || !config.enabled) {
+            return res.status(400).json({ error: 'Payment gateway not configured or disabled' });
+        }
+
+        const provider = config.provider;
+
+        if (provider === 'stripe') {
+            const stripeKey = decrypt(config.stripe_secret_key);
+            const stripe = new Stripe(stripeKey);
+
+            const session = await stripe.checkout.sessions.create({
+                payment_method_types: ['card'],
+                line_items: [{
+                    price_data: {
+                        currency: currency,
+                        product_data: {
+                            name: 'Premium Plan', // Dynamic based on planId
+                        },
+                        unit_amount: amount * 100, // Cents
+                    },
+                    quantity: 1,
+                }],
+                mode: 'payment',
+                success_url: `${req.headers.origin}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${req.headers.origin}/payment/cancel`,
+            });
+
+            res.json({ sessionId: session.id, url: session.url });
+
+        } else if (provider === 'razorpay') {
+            const razorpay = new Razorpay({
+                key_id: config.razorpay_key_id,
+                key_secret: decrypt(config.razorpay_key_secret)
+            });
+
+            const order = await razorpay.orders.create({
+                amount: amount * 100, // Paise
+                currency: currency.toUpperCase(),
+                receipt: `receipt_${Date.now()}`
+            });
+
+            res.json({ orderId: order.id, keyId: config.razorpay_key_id });
+        } else {
+            res.status(400).json({ error: 'Invalid provider' });
+        }
+
+    } catch (error) {
+        console.error('Payment error:', error);
+        res.status(500).json({ error: 'Payment initialization failed' });
+    }
+});
+
 // ==================== EXISTING ROUTES ====================
 
 app.get('/health', (req, res) => {
@@ -412,50 +676,65 @@ app.post('/api/logs', (req, res) => {
     res.status(201).json(newLog);
 });
 
-// AI Video Analysis - Now uses real API keys from database
+import { runMasterEvaluation } from './agents/master_agent.js';
+
+// AI Video Analysis - Powered by Multi-Layer Agent Architecture
 app.post('/api/analyze-video', async (req, res) => {
     try {
-        if (!supabase) {
-            // Fallback to mock if no database
-            return setTimeout(() => {
-                res.json({
-                    score: Math.floor(Math.random() * 20) + 80,
-                    communication: Math.floor(Math.random() * 20) + 80,
-                    confidence: Math.floor(Math.random() * 20) + 80,
-                    knowledge: Math.floor(Math.random() * 20) + 80,
-                    tone: ['Professional', 'Enthusiastic', 'Calm', 'Confident'][Math.floor(Math.random() * 4)],
-                    keywords: ['React', 'Node.js', 'Scalability', 'Teamwork', 'Problem Solving', 'Leadership'].sort(() => 0.5 - Math.random()).slice(0, 4),
-                    feedback: 'Great video! You showed good confidence and clear communication. Try to maintain more eye contact in the next one.'
+        console.log('Received video analysis request');
+
+        // Extract data from request (support both old and new formats)
+        const candidateData = req.body.candidateData || {
+            name: 'Candidate',
+            skills: ['React', 'Node.js', 'Communication'] // Default skills for testing
+        };
+
+        const videoData = req.body.videoData || {
+            transcription: "I have experience with React and Node.js. I am confident in my ability to lead teams.",
+            metadata: { duration: 120 }
+        };
+
+        // Fetch API keys from database
+        let apiKeys = {};
+
+        if (supabase) {
+            const { data: keys } = await supabase.from('api_keys').select('*');
+            if (keys) {
+                keys.forEach(k => {
+                    if (k.api_key) apiKeys[k.provider] = decrypt(k.api_key);
                 });
-            }, 2000);
+            }
+        } else {
+            // Fallback to local DB
+            const localDb = await readLocalDb();
+            if (localDb.api_keys) {
+                localDb.api_keys.forEach(k => {
+                    if (k.api_key) apiKeys[k.provider] = decrypt(k.api_key);
+                });
+            }
         }
 
-        // Get Gemini API key from database
-        const { data: keyData } = await supabase
-            .from('api_keys')
-            .select('api_key')
-            .eq('provider', 'gemini')
-            .single();
+        // Run the Master Agent Evaluation
+        const report = await runMasterEvaluation(candidateData, videoData, apiKeys);
 
-        if (!keyData || !keyData.api_key) {
-            return res.status(503).json({ error: 'Gemini API key not configured' });
-        }
+        // Map the detailed agent report to the format expected by the current frontend
+        // This ensures backward compatibility while we upgrade the UI
+        const response = {
+            // Legacy fields
+            score: report.finalScore,
+            communication: report.layer3 ? report.layer3.score : 0,
+            confidence: report.layer3 ? report.layer3.score : 0, // Using behavioral score as proxy
+            knowledge: report.layer2 ? report.layer2.score : 0,
+            tone: report.layer3 ? report.layer3.emotionalTone : 'Neutral',
+            keywords: report.layer2 ? report.layer2.detectedTerms : [],
+            feedback: report.summary,
 
-        const geminiKey = decrypt(keyData.api_key);
+            // New Rich Data (for future UI)
+            detailedReport: report
+        };
 
-        // TODO: Implement real Gemini API call here
-        // For now, return mock data
-        setTimeout(() => {
-            res.json({
-                score: Math.floor(Math.random() * 20) + 80,
-                communication: Math.floor(Math.random() * 20) + 80,
-                confidence: Math.floor(Math.random() * 20) + 80,
-                knowledge: Math.floor(Math.random() * 20) + 80,
-                tone: ['Professional', 'Enthusiastic', 'Calm', 'Confident'][Math.floor(Math.random() * 4)],
-                keywords: ['React', 'Node.js', 'Scalability', 'Teamwork', 'Problem Solving', 'Leadership'].sort(() => 0.5 - Math.random()).slice(0, 4),
-                feedback: 'Great video! You showed good confidence and clear communication. Try to maintain more eye contact in the next one.'
-            });
-        }, 2000);
+        res.json(response);
+
     } catch (error) {
         console.error('Error analyzing video:', error);
         res.status(500).json({ error: 'Failed to analyze video' });
@@ -467,18 +746,21 @@ app.post('/api/generate-job-description', (req, res) => {
     setTimeout(() => {
         res.json({
             description: `We are looking for a talented ${title} to join our dynamic team. You will be responsible for building scalable applications and working closely with cross-functional teams to deliver high-quality software solutions.`,
-            requirements: `- 3+ years of experience in related field\\n- Strong problem-solving skills\\n- Excellent communication abilities\\n- Proficiency in modern technologies`
+            requirements: `- 3+ years of experience in related field\n- Strong problem-solving skills\n- Excellent communication abilities\n- Proficiency in modern technologies`
         });
-    }, 1500);
+    }, 500);
 });
+
+// Setup AI Routes
+setupAIRoutes(app, supabase, decrypt);
 
 // Start server
 app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    console.log(`✅ Server running on http://localhost:${port}`);
     if (!supabase) {
-        console.warn('Warning: Supabase credentials not found in .env');
+        console.warn('⚠️  Warning: Supabase credentials not found in .env');
     }
     if (ENCRYPTION_KEY === 'default-encryption-key-change-in-production') {
-        console.warn('Warning: Using default encryption key. Set ENCRYPTION_KEY in .env for production!');
+        console.warn('⚠️  Warning: Using default encryption key. Set ENCRYPTION_KEY in .env for production!');
     }
 });

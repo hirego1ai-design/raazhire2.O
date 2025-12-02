@@ -43,70 +43,39 @@ const CandidateInterviews: React.FC = () => {
             if (supabase) {
                 const { data, error } = await supabase
                     .from('interviews')
-                    .select('*')
+                    .select(`
+                        *,
+                        job:jobs(title, description, requirements),
+                        employer:users!employer_id(company_name)
+                    `)
                     .order('date', { ascending: true });
 
-                if (!error && data && data.length > 0) {
-                    // Transform Supabase data to match Interview interface if needed
-                    // For now assuming direct mapping or using what we have
-                    setInterviews(data as Interview[]);
+                if (!error && data) {
+                    const formattedInterviews: Interview[] = data.map((int: any) => ({
+                        id: int.id,
+                        candidateName: 'Me', // Context user
+                        companyName: int.employer?.company_name || 'Unknown Company',
+                        role: int.job?.title || 'Unknown Role',
+                        date: int.date,
+                        time: int.time,
+                        type: int.type,
+                        status: int.status,
+                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(int.employer?.company_name || 'Company')}&background=random`,
+                        participants: [], // Placeholder
+                        roundTag: int.round_tag || 'Round 1', // Assuming round_tag exists or defaulting
+                        jobDescription: int.job?.description,
+                        companyProfile: "Company profile...", // Placeholder
+                        instructions: "Please be ready 5 mins early." // Placeholder
+                    }));
+                    setInterviews(formattedInterviews);
                 } else {
-                    // Fallback to mock data
-                    loadMockData();
+                    setInterviews([]);
                 }
-            } else {
-                loadMockData();
             }
         };
 
         fetchInterviews();
     }, []);
-
-    const loadMockData = () => {
-        const mockData: Interview[] = [
-            {
-                id: 1,
-                candidateName: "John Doe",
-                companyName: "TechCorp Inc.",
-                role: "Senior Frontend Developer",
-                date: "2024-03-20",
-                time: "10:00 AM",
-                type: "Video",
-                status: "Scheduled",
-                avatar: "https://ui-avatars.com/api/?name=TechCorp&background=random",
-                participants: ["HR Alice", "Tech Lead Bob"],
-                roundTag: "Round 1",
-                jobDescription: "Senior Frontend Developer role...",
-                companyProfile: "TechCorp is a global leader...",
-                instructions: "Please be ready 5 mins early."
-            },
-            {
-                id: 2,
-                candidateName: "John Doe",
-                companyName: "InnovateSoft",
-                role: "Full Stack Engineer",
-                date: "2024-03-25",
-                time: "2:00 PM",
-                type: "Technical",
-                status: "Pending",
-                avatar: "https://ui-avatars.com/api/?name=InnovateSoft&background=random",
-                roundTag: "Round 2"
-            },
-            {
-                id: 3,
-                candidateName: "John Doe",
-                companyName: "StartupX",
-                role: "React Native Dev",
-                date: "2024-03-15",
-                time: "09:00 AM",
-                type: "HR",
-                status: "Rejected",
-                avatar: "https://ui-avatars.com/api/?name=StartupX&background=random",
-                roundTag: "Final"
-            }
-        ];
-        setInterviews(mockData);
-    };
 
     const openDetails = (interview: Interview) => {
         setSelectedInterview(interview);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Filter, X, Calendar, Clock, User, MapPin, Phone, Mail, Briefcase, ArrowRight, CalendarCheck, CalendarX, VideoIcon as Video } from 'lucide-react';
+import { Plus, Search, Filter, X, Calendar, Clock, User, MapPin, Phone, Mail, Briefcase, ArrowRight, CalendarCheck, CalendarX, VideoIcon as Video, Star, CheckCircle } from 'lucide-react';
 import ScheduleInterviewModal from '../../components/ScheduleInterviewModal';
 import { supabase } from '../../lib/supabase';
 
@@ -21,6 +21,9 @@ interface Interview {
     meetingLink?: string;
     notes?: string;
     cancellationReason?: string;
+    mode?: 'Virtual' | 'Face to Face';
+    address?: string;
+    rating?: number;
 }
 
 const EmployerInterviews: React.FC = () => {
@@ -32,49 +35,59 @@ const EmployerInterviews: React.FC = () => {
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [cancellationReason, setCancellationReason] = useState('');
+    const [showRatingModal, setShowRatingModal] = useState(false);
+    const [rating, setRating] = useState(0);
+    const [ratingFeedback, setRatingFeedback] = useState('');
 
     // Mock Data Load
+    // Load Data from Supabase
     useEffect(() => {
-        const mockData: Interview[] = [
-            {
-                id: 1,
-                candidateName: "Sarah Johnson",
-                role: "Senior Frontend Developer",
-                date: "2025-11-30",
-                time: "10:00 AM",
-                duration: "45 mins",
-                type: "Video",
-                status: "Scheduled",
-                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-                email: "sarah.j@example.com",
-                phone: "+91 98765 43210",
-                location: "Remote",
-                interviewer: "John Doe",
-                meetingLink: "https://meet.google.com/abc-defg-hij",
-                notes: "Strong React background"
-            },
-            {
-                id: 2,
-                candidateName: "Michael Chen",
-                role: "Full Stack Engineer",
-                date: "2025-12-01",
-                time: "2:00 PM",
-                duration: "60 mins",
-                type: "Technical",
-                status: "Scheduled",
-                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-                email: "michael.c@example.com",
-                phone: "+91 98123 45678",
-                location: "Remote",
-                interviewer: "Alice Smith"
+        const fetchInterviews = async () => {
+            if (!supabase) return;
+
+            const { data } = await supabase
+                .from('interviews')
+                .select(`
+                    *,
+                    candidate:candidates(name, email, phone, location),
+                    job:jobs(title)
+                `)
+                .order('date', { ascending: true });
+
+            if (data) {
+                const formattedInterviews: Interview[] = data.map((int: any) => ({
+                    id: int.id,
+                    candidateName: int.candidate?.name || 'Unknown',
+                    role: int.job?.title || 'Unknown',
+                    date: int.date,
+                    time: int.time,
+                    duration: int.duration || "45 mins",
+                    type: int.type,
+                    status: int.status,
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(int.candidate?.name || 'User')}&background=random`,
+                    email: int.candidate?.email,
+                    phone: int.candidate?.phone,
+                    location: int.candidate?.location || "Remote",
+                    interviewer: int.interviewer,
+                    meetingLink: int.meeting_link,
+                    notes: int.notes,
+                    cancellationReason: int.cancellation_reason
+                }));
+                setInterviews(formattedInterviews);
             }
-        ];
-        setInterviews(mockData);
+        };
+
+        fetchInterviews();
     }, []);
 
-    const handleSchedule = (data: any) => {
+    const handleSchedule = async (data: any) => {
+        // In a real app, you'd insert into Supabase here
+        // For now, we'll just update local state to reflect "success" after a mock API call
+        // But ideally: await supabase.from('interviews').insert({...})
+
+        // Simulating the optimistic update for now as the Modal might not return full DB object structure
         const newInterview: Interview = {
-            id: Date.now(),
+            id: Date.now(), // Temporary ID
             candidateName: data.candidateName,
             role: data.role,
             date: data.date,
@@ -98,8 +111,16 @@ const EmployerInterviews: React.FC = () => {
         setShowCancelModal(true);
     };
 
-    const confirmCancelInterview = () => {
+    const confirmCancelInterview = async () => {
         if (selectedInterview && cancellationReason.trim()) {
+            // Update Supabase
+            if (supabase) {
+                await supabase
+                    .from('interviews')
+                    .update({ status: 'Cancelled', cancellation_reason: cancellationReason })
+                    .eq('id', selectedInterview.id);
+            }
+
             setInterviews(interviews.map(i =>
                 i.id === selectedInterview.id ? { ...i, status: 'Cancelled', cancellationReason } : i
             ));
@@ -199,96 +220,126 @@ const EmployerInterviews: React.FC = () => {
                 </div>
             </motion.div>
 
-            {/* Interview Cards Grid - Medium Size */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {/* Interview Cards Grid - Compact Square Boxes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {filteredInterviews.map((interview, index) => (
                     <motion.div
                         key={interview.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="bg-[#0f1629] border-2 border-white/10 p-4 hover:border-neon-cyan/30 transition-all duration-300"
-                        style={{ borderRadius: '0px' }}
+                        className="bg-gradient-to-br from-[#0f1629] to-[#1a1f3a] border border-white/10 rounded-3xl p-5 hover:border-neon-cyan/40 transition-all duration-300 shadow-[0_8px_16px_rgba(0,0,0,0.4)] hover:shadow-[0_12px_24px_rgba(0,243,255,0.15)] relative overflow-hidden"
                     >
-                        {/* Card Header */}
-                        <div className="flex items-start gap-3 mb-4">
-                            <div className="relative">
-                                <img
-                                    src={interview.avatar}
-                                    alt={interview.candidateName}
-                                    className="w-12 h-12 object-cover border-2 border-white/20"
-                                    style={{ borderRadius: '0px' }}
-                                />
-                                <div className={`absolute -bottom-1 -right-1 w-4 h-4 border-2 border-[#0f1629] ${interview.status === 'Scheduled' ? 'bg-green-500' :
-                                    interview.status === 'Completed' ? 'bg-blue-500' :
-                                        interview.status === 'Cancelled' ? 'bg-red-500' : 'bg-yellow-500'
-                                    }`} style={{ borderRadius: '0px' }}></div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-base font-bold text-white mb-0.5 truncate">{interview.candidateName}</h3>
-                                <p className="text-xs text-gray-400 truncate">{interview.role}</p>
-                                <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                                    <span className={`text-xs px-1.5 py-0.5 border ${getStatusColor(interview.status)}`} style={{ borderRadius: '0px' }}>
-                                        {interview.status}
-                                    </span>
-                                    <span className={`text-xs px-1.5 py-0.5 border ${getTypeColor(interview.type)}`} style={{ borderRadius: '0px' }}>
-                                        {interview.type}
-                                    </span>
+                        {/* Subtle 3D Background Effect */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-neon-cyan/5 to-transparent rounded-full blur-2xl"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-neon-purple/5 to-transparent rounded-full blur-xl"></div>
+                        
+                        <div className="relative z-10">
+                            {/* Card Header */}
+                            <div className="flex items-start gap-3 mb-4">
+                                <div className="relative">
+                                    <img
+                                        src={interview.avatar}
+                                        alt={interview.candidateName}
+                                        className="w-12 h-12 rounded-2xl object-cover border-2 border-white/20 shadow-lg"
+                                    />
+                                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0f1629] ${
+                                        interview.status === 'Scheduled' ? 'bg-green-400' :
+                                        interview.status === 'Completed' ? 'bg-blue-400' :
+                                        interview.status === 'Cancelled' ? 'bg-red-400' : 'bg-yellow-400'
+                                    }`}></div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="text-sm font-bold text-white mb-0.5 truncate">{interview.candidateName}</h3>
+                                    <p className="text-xs text-gray-400 truncate">{interview.role}</p>
+                                    <div className="flex gap-1.5 mt-2 flex-wrap">
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${getStatusColor(interview.status)} font-medium`}>
+                                            {interview.status}
+                                        </span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${getTypeColor(interview.type)} font-medium`}>
+                                            {interview.type}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Interview Details */}
-                        <div className="space-y-2 mb-4">
-                            <div className="flex items-center gap-2 p-2 bg-white/5 border border-white/5" style={{ borderRadius: '0px' }}>
-                                <Calendar className="text-neon-cyan flex-shrink-0" size={14} />
-                                <p className="text-xs text-white font-medium truncate">{new Date(interview.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                            {/* Interview Details - Compact */}
+                            <div className="space-y-2 mb-4">
+                                <div className="flex items-center gap-2 p-2 bg-white/5 rounded-xl border border-white/5">
+                                    <Calendar className="text-neon-cyan flex-shrink-0" size={12} />
+                                    <p className="text-[11px] text-white font-medium truncate">{new Date(interview.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                                </div>
+
+                                <div className="flex items-center gap-2 p-2 bg-white/5 rounded-xl border border-white/5">
+                                    <Clock className="text-neon-purple flex-shrink-0" size={12} />
+                                    <p className="text-[11px] text-white font-medium">{interview.time} • {interview.duration}</p>
+                                </div>
+
+                                <div className="flex items-center gap-2 p-2 bg-white/5 rounded-xl border border-white/5">
+                                    <Video className="text-yellow-400 flex-shrink-0" size={12} />
+                                    <p className="text-[11px] text-white font-medium">{interview.mode || 'Virtual'}</p>
+                                </div>
                             </div>
 
-                            <div className="flex items-center gap-2 p-2 bg-white/5 border border-white/5" style={{ borderRadius: '0px' }}>
-                                <Clock className="text-neon-purple flex-shrink-0" size={14} />
-                                <p className="text-xs text-white font-medium">{interview.time}</p>
-                            </div>
-
-                            <div className="flex items-center gap-2 p-2 bg-white/5 border border-white/5" style={{ borderRadius: '0px' }}>
-                                <Video className="text-yellow-400 flex-shrink-0" size={14} />
-                                <p className="text-xs text-white font-medium">{interview.duration}</p>
-                            </div>
-                        </div>
-
-                        {/* 3D Carved Action Buttons */}
-                        <div className="space-y-2">
-                            <button
-                                onClick={() => handleJoinInterview(interview)}
-                                disabled={interview.status === 'Cancelled' || interview.status === 'Completed'}
-                                className="w-full py-2.5 px-3 bg-gradient-to-b from-green-500 to-green-600 text-white text-sm font-semibold border-b-4 border-green-700 hover:from-green-600 hover:to-green-700 active:border-b-2 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-                                style={{ borderRadius: '0px' }}
-                            >
-                                <Video size={16} />
-                                Join
-                            </button>
-
-                            <div className="grid grid-cols-2 gap-2">
+                            {/* Action Buttons - Small & Compact */}
+                            <div className="space-y-2">
                                 <button
-                                    onClick={() => handleRescheduleInterview(interview)}
+                                    onClick={() => handleJoinInterview(interview)}
                                     disabled={interview.status === 'Cancelled' || interview.status === 'Completed'}
-                                    className="py-2 px-2 bg-gradient-to-b from-blue-500 to-blue-600 text-white text-xs font-semibold border-b-3 border-blue-700 hover:from-blue-600 hover:to-blue-700 active:border-b-2 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
-                                    style={{ borderRadius: '0px' }}
+                                    className="w-full py-2 px-3 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 text-white text-[11px] font-bold shadow-[0_4px_12px_rgba(34,197,94,0.3)] hover:shadow-[0_6px_20px_rgba(34,197,94,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-1.5"
                                 >
-                                    <CalendarCheck size={14} />
-                                    Reschedule
+                                    <Video size={13} />
+                                    Join Interview
                                 </button>
 
-                                <button
-                                    onClick={() => handleCancelInterview(interview)}
-                                    disabled={interview.status === 'Cancelled' || interview.status === 'Completed'}
-                                    className="py-2 px-2 bg-gradient-to-b from-red-500 to-red-600 text-white text-xs font-semibold border-b-3 border-red-700 hover:from-red-600 hover:to-red-700 active:border-b-2 active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
-                                    style={{ borderRadius: '0px' }}
-                                >
-                                    <CalendarX size={14} />
-                                    Cancel
-                                </button>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => handleRescheduleInterview(interview)}
+                                        disabled={interview.status === 'Cancelled' || interview.status === 'Completed'}
+                                        className="py-1.5 px-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 text-white text-[10px] font-semibold shadow-[0_3px_10px_rgba(59,130,246,0.3)] hover:shadow-[0_4px_14px_rgba(59,130,246,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-1"
+                                    >
+                                        <CalendarCheck size={11} />
+                                        Reschedule
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleCancelInterview(interview)}
+                                        disabled={interview.status === 'Cancelled' || interview.status === 'Completed'}
+                                        className="py-1.5 px-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white text-[10px] font-semibold shadow-[0_3px_10px_rgba(239,68,68,0.3)] hover:shadow-[0_4px_14px_rgba(239,68,68,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-1"
+                                    >
+                                        <CalendarX size={11} />
+                                        Cancel
+                                    </button>
+                                </div>
+
+                                {/* Rating Button - Shows after Completed */}
+                                {interview.status === 'Completed' && (
+                                    <button
+                                        onClick={() => {
+                                            setSelectedInterview(interview);
+                                            setRating(interview.rating || 0);
+                                            setShowRatingModal(true);
+                                        }}
+                                        className="w-full py-2 px-3 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-600 text-white text-[11px] font-bold shadow-[0_4px_12px_rgba(234,179,8,0.3)] hover:shadow-[0_6px_20px_rgba(234,179,8,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                                    >
+                                        <Star size={13} fill={interview.rating ? 'currentColor' : 'none'} />
+                                        {interview.rating ? 'Update Rating' : 'Rate Candidate'}
+                                    </button>
+                                )}
                             </div>
+
+                            {/* Show Rating if exists */}
+                            {interview.rating && (
+                                <div className="mt-3 flex items-center justify-center gap-1 p-2 bg-yellow-500/10 rounded-xl border border-yellow-500/20">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <Star
+                                            key={star}
+                                            size={12}
+                                            className={star <= (interview.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 ))}
@@ -460,6 +511,109 @@ const EmployerInterviews: React.FC = () => {
                                 style={{ borderRadius: '0px' }}
                             >
                                 Confirm Cancellation
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Rating Modal */}
+            {showRatingModal && selectedInterview && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-[#0f1629] border-2 border-white/10 rounded-3xl p-8 w-full max-w-md shadow-2xl"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-white">Rate Candidate</h2>
+                            <button
+                                onClick={() => {
+                                    setShowRatingModal(false);
+                                    setRating(0);
+                                    setRatingFeedback('');
+                                }}
+                                className="text-gray-400 hover:text-white transition-colors"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="mb-6">
+                            <p className="text-gray-300 mb-4">
+                                How would you rate <span className="font-bold text-white">{selectedInterview.candidateName}</span>'s interview performance?
+                            </p>
+                            
+                            {/* Star Rating */}
+                            <div className="flex justify-center gap-3 mb-6 p-4 bg-white/5 rounded-2xl">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        onClick={() => setRating(star)}
+                                        className="hover:scale-125 transition-transform"
+                                    >
+                                        <Star
+                                            size={32}
+                                            className={star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600 hover:text-yellow-300'}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+
+                            {rating > 0 && (
+                                <p className="text-center text-sm text-neon-cyan mb-4">
+                                    {rating === 5 ? 'Excellent!' : rating === 4 ? 'Very Good!' : rating === 3 ? 'Good' : rating === 2 ? 'Fair' : 'Needs Improvement'}
+                                </p>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Feedback (Optional)</label>
+                                <textarea
+                                    value={ratingFeedback}
+                                    onChange={(e) => setRatingFeedback(e.target.value)}
+                                    placeholder="Share your feedback about the candidate's performance..."
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-[#0a0e27] border border-white/10 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-neon-cyan/50 resize-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => {
+                                    setShowRatingModal(false);
+                                    setRating(0);
+                                    setRatingFeedback('');
+                                }}
+                                className="flex-1 py-3 rounded-2xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (rating > 0 && selectedInterview) {
+                                        // Update rating in database
+                                        if (supabase) {
+                                            await supabase
+                                                .from('interviews')
+                                                .update({ rating: rating, feedback: ratingFeedback })
+                                                .eq('id', selectedInterview.id);
+                                        }
+                                        
+                                        // Update local state
+                                        setInterviews(interviews.map(i =>
+                                            i.id === selectedInterview.id ? { ...i, rating: rating } : i
+                                        ));
+                                        
+                                        setShowRatingModal(false);
+                                        setRating(0);
+                                        setRatingFeedback('');
+                                    }
+                                }}
+                                disabled={rating === 0}
+                                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-600 text-white font-bold shadow-[0_6px_20px_rgba(234,179,8,0.4)] hover:shadow-[0_8px_28px_rgba(234,179,8,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            >
+                                Submit Rating
                             </button>
                         </div>
                     </motion.div>

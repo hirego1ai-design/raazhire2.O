@@ -1,0 +1,170 @@
+/* Rich Text Editor Custom Styles */
+
+.job-description-editor .ql-container {
+  height: 500px;
+  font-size: 15px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.8;
+}
+
+.job-description-editor .ql-editor {
+  padding: 20px 24px;
+  color: #e2e8f0;
+  background: transparent;
+}
+
+.job-description-editor .ql-editor.ql-blank::before {
+  color: #64748b;
+  font-style: italic;
+  font-size: 14px;
+}
+
+/* Toolbar Styling */
+.job-description-editor .ql-toolbar {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-bottom: 1px solid rgba(188, 19, 254, 0.2);
+  border-radius: 12px 12px 0 0;
+  padding: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.job-description-editor .ql-toolbar button {
+  color: #94a3b8;
+  transition: all 0.2s;
+}
+
+.job-description-editor .ql-toolbar button:hover {
+  color: #00f3ff;
+  transform: scale(1.1);
+}
+
+.job-description-editor .ql-toolbar button.ql-active {
+  color: #00f3ff;
+  background: rgba(0, 243, 255, 0.1);
+  border-radius: 4px;
+}
+
+.job-description-editor .ql-toolbar .ql-stroke {
+  stroke: currentColor;
+}
+
+.job-description-editor .ql-toolbar .ql-fill {
+  fill: currentColor;
+}
+
+/* Container Border */
+.job-description-editor .ql-container {
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  background: rgba(10, 14, 31, 0.6);
+}
+
+/* Text Formatting Styles */
+.job-description-editor .ql-editor h1,
+.job-description-editor .ql-editor h2,
+.job-description-editor .ql-editor h3 {
+  color: #ffffff;
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.8em;
+}
+
+.job-description-editor .ql-editor h2 {
+  font-size: 1.5em;
+  border-bottom: 2px solid rgba(0, 243, 255, 0.3);
+  padding-bottom: 0.3em;
+}
+
+.job-description-editor .ql-editor h3 {
+  font-size: 1.25em;
+  color: #00f3ff;
+}
+
+.job-description-editor .ql-editor strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.job-description-editor .ql-editor ul,
+.job-description-editor .ql-editor ol {
+  padding-left: 1.5em;
+  margin: 1em 0;
+}
+
+.job-description-editor .ql-editor li {
+  margin: 0.5em 0;
+  color: #cbd5e1;
+}
+
+.job-description-editor .ql-editor li::marker {
+  color: #00f3ff;
+}
+
+/* Links */
+.job-description-editor .ql-editor a {
+  color: #00f3ff;
+  text-decoration: underline;
+  text-decoration-color: rgba(0, 243, 255, 0.3);
+  transition: all 0.2s;
+}
+
+.job-description-editor .ql-editor a:hover {
+  color: #bc13fe;
+  text-decoration-color: rgba(188, 19, 254, 0.5);
+}
+
+/* Custom scrollbar for editor */
+.job-description-editor .ql-editor::-webkit-scrollbar {
+  width: 8px;
+}
+
+.job-description-editor .ql-editor::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.job-description-editor .ql-editor::-webkit-scrollbar-thumb {
+  background: rgba(0, 243, 255, 0.3);
+  border-radius: 4px;
+}
+
+.job-description-editor .ql-editor::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 243, 255, 0.5);
+}
+
+/* Picker Dropdowns */
+.job-description-editor .ql-picker-label {
+  color: #94a3b8;
+}
+
+.job-description-editor .ql-picker-label:hover {
+  color: #00f3ff;
+}
+
+.job-description-editor .ql-picker-options {
+  background: #1a1f3a;
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.job-description-editor .ql-picker-item {
+  color: #e2e8f0;
+}
+
+.job-description-editor .ql-picker-item:hover {
+  background: rgba(0, 243, 255, 0.1);
+  color: #00f3ff;
+}
+
+/* Focus state */
+.job-description-editor .ql-container.ql-snow {
+  border-color: rgba(0, 243, 255, 0.3);
+}
+
+.job-description-editor:focus-within .ql-container.ql-snow {
+  border-color: rgba(0, 243, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(0, 243, 255, 0.1);
+}

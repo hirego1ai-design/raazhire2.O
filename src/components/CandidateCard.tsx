@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { Play, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-interface Candidate {
+export interface Candidate {
     id: string;
     name: string;
     photoUrl: string;

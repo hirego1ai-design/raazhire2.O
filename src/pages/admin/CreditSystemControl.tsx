@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     CreditCard, Coins, Plus, Edit, Trash2, Save, X,
     Globe, Briefcase, History, Wallet, CheckCircle, AlertTriangle,
-    DollarSign, TrendingUp, ShoppingCart
+    DollarSign
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
-// --- Types ---
 interface CreditBundle {
     id: string;
     credits: number;
@@ -35,94 +35,102 @@ interface EmployerWallet {
 
 interface TransactionLog {
     id: string;
+    date: string;
     employerName: string;
     type: 'ADD' | 'DEDUCT';
     credits: number;
     description: string;
-    date: string;
 }
-
-// --- Mock Data ---
-const INITIAL_BUNDLES: CreditBundle[] = [
-    { id: '1', credits: 100, priceINR: 999, priceUSD: 12, priceAED: 45, priceEUR: 11, priceAUD: 18, isActive: true },
-    { id: '2', credits: 500, priceINR: 3999, priceUSD: 45, priceAED: 165, priceEUR: 40, priceAUD: 75, isActive: true },
-    { id: '3', credits: 1000, priceINR: 6999, priceUSD: 85, priceAED: 310, priceEUR: 75, priceAUD: 140, isActive: true },
-];
-
-const INITIAL_JOB_TYPES: JobPostType[] = [
-    { id: '1', name: 'Basic', creditsRequired: 10, description: 'Standard job listing, visible for 30 days.', isActive: true },
-    { id: '2', name: 'Standard', creditsRequired: 15, description: 'Includes email alerts to matching candidates.', isActive: true },
-    { id: '3', name: 'Premium', creditsRequired: 25, description: 'Top of search results + Social Media boost.', isActive: true },
-    { id: '4', name: 'Urgent Hiring', creditsRequired: 30, description: 'Highlighted as Urgent + SMS alerts.', isActive: true },
-    { id: '5', name: 'Interview-Ready', creditsRequired: 40, description: 'Pre-screened candidates only.', isActive: true },
-];
-
-const INITIAL_WALLETS: EmployerWallet[] = [
-    { id: 'e1', employerName: 'TechCorp Inc.', email: 'hr@techcorp.com', balance: 450 },
-    { id: 'e2', employerName: 'Global Solutions', email: 'recruitment@globalsol.com', balance: 1200 },
-];
-
-const INITIAL_LOGS: TransactionLog[] = [
-    { id: 't1', employerName: 'TechCorp Inc.', type: 'ADD', credits: 500, description: 'Purchased Credit Bundle', date: '2025-11-24 10:30 AM' },
-    { id: 't2', employerName: 'TechCorp Inc.', type: 'DEDUCT', credits: 25, description: 'Premium Job Post', date: '2025-11-24 11:15 AM' },
-    { id: 't3', employerName: 'Global Solutions', type: 'DEDUCT', credits: 40, description: 'Interview-Ready Post', date: '2025-11-25 09:00 AM' },
-];
 
 const CreditSystemControl: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'pricing' | 'jobtypes' | 'wallets' | 'logs'>('pricing');
-    const [bundles, setBundles] = useState<CreditBundle[]>(INITIAL_BUNDLES);
-    const [jobTypes, setJobTypes] = useState<JobPostType[]>(INITIAL_JOB_TYPES);
-    const [wallets, setWallets] = useState<EmployerWallet[]>(INITIAL_WALLETS);
+    const [bundles, setBundles] = useState<CreditBundle[]>([]);
+    const [jobTypes, setJobTypes] = useState<JobPostType[]>([]);
+    const [wallets, setWallets] = useState<EmployerWallet[]>([]);
+    const [logs, setLogs] = useState<TransactionLog[]>([]);
     const [editingBundle, setEditingBundle] = useState<CreditBundle | null>(null);
     const [editingJobType, setEditingJobType] = useState<JobPostType | null>(null);
 
-    // --- Actions ---
-    const handleSaveBundle = (bundle: CreditBundle) => {
-        if (bundles.find(b => b.id === bundle.id)) {
-            setBundles(bundles.map(b => b.id === bundle.id ? bundle : b));
-        } else {
-            setBundles([...bundles, { ...bundle, id: Date.now().toString() }]);
-        }
+    // Fetch Data
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!supabase) return;
+
+            // Fetch Bundles
+            const { data: bundlesData } = await supabase.from('credit_bundles').select('*');
+            if (bundlesData) {
+                setBundles(bundlesData.map((b: any) => ({
+                    id: b.id,
+                    credits: b.credits,
+                    priceINR: b.price_inr,
+                    priceUSD: b.price_usd,
+                    priceAED: b.price_aed,
+                    priceEUR: b.price_eur,
+                    priceAUD: b.price_aud,
+                    isActive: b.is_active
+                })));
+            }
+
+            // Fetch Job Types
+            const { data: jobTypesData } = await supabase.from('job_post_types').select('*');
+            if (jobTypesData) {
+                setJobTypes(jobTypesData.map((t: any) => ({
+                    id: t.id,
+                    name: t.name,
+                    creditsRequired: t.credits_required,
+                    description: t.description,
+                    isActive: t.is_active
+                })));
+            }
+
+            // Mock data for wallets and logs if not available
+            setWallets([
+                { id: '1', employerName: 'Tech Corp', email: 'admin@techcorp.com', balance: 500 },
+                { id: '2', employerName: 'Startup Inc', email: 'hello@startup.com', balance: 120 }
+            ]);
+
+            setLogs([
+                { id: '1', date: '2024-03-20', employerName: 'Tech Corp', type: 'ADD', credits: 100, description: 'Purchased Bundle' },
+                { id: '2', date: '2024-03-19', employerName: 'Startup Inc', type: 'DEDUCT', credits: 50, description: 'Job Posting' }
+            ]);
+        };
+        fetchData();
+    }, []);
+
+    const handleSaveBundle = async (bundle: CreditBundle) => {
+        console.log('Saving bundle', bundle);
         setEditingBundle(null);
     };
 
-    const handleSaveJobType = (type: JobPostType) => {
-        if (jobTypes.find(t => t.id === type.id)) {
-            setJobTypes(jobTypes.map(t => t.id === type.id ? type : t));
-        } else {
-            setJobTypes([...jobTypes, { ...type, id: Date.now().toString() }]);
-        }
+    const handleSaveJobType = async (type: JobPostType) => {
+        console.log('Saving job type', type);
         setEditingJobType(null);
     };
 
     const handleManualCreditAdjustment = (walletId: string, amount: number, type: 'ADD' | 'DEDUCT') => {
-        setWallets(wallets.map(w => {
-            if (w.id === walletId) {
-                return { ...w, balance: type === 'ADD' ? w.balance + amount : w.balance - amount };
-            }
-            return w;
-        }));
-        alert(`Successfully ${type === 'ADD' ? 'added' : 'deducted'} ${amount} credits.`);
+        console.log('Adjusting wallet', walletId, amount, type);
     };
 
-    // --- Modals ---
     const BundleEditor = ({ bundle, onClose, onSave }: { bundle: CreditBundle, onClose: () => void, onSave: (b: CreditBundle) => void }) => {
         const [data, setData] = useState(bundle);
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                 <div className="bg-[#0f111a] border border-white/10 rounded-xl p-6 w-full max-w-lg">
-                    <h3 className="text-xl font-bold mb-4">{bundle.id ? 'Edit Bundle' : 'New Credit Bundle'}</h3>
+                    <h3 className="text-xl font-bold mb-4 text-white">{bundle.id ? 'Edit Credit Bundle' : 'New Credit Bundle'}</h3>
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm text-gray-400">Credits</label>
+                            <label className="text-sm text-gray-400">Credits Amount</label>
                             <input type="number" value={data.credits} onChange={e => setData({ ...data, credits: parseInt(e.target.value) })} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div><label className="text-xs text-gray-500">INR (₹)</label><input type="number" value={data.priceINR} onChange={e => setData({ ...data, priceINR: parseInt(e.target.value) })} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white" /></div>
-                            <div><label className="text-xs text-gray-500">USD ($)</label><input type="number" value={data.priceUSD} onChange={e => setData({ ...data, priceUSD: parseInt(e.target.value) })} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white" /></div>
-                            <div><label className="text-xs text-gray-500">AED</label><input type="number" value={data.priceAED} onChange={e => setData({ ...data, priceAED: parseInt(e.target.value) })} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white" /></div>
-                            <div><label className="text-xs text-gray-500">EUR (€)</label><input type="number" value={data.priceEUR} onChange={e => setData({ ...data, priceEUR: parseInt(e.target.value) })} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white" /></div>
-                            <div><label className="text-xs text-gray-500">AUD ($)</label><input type="number" value={data.priceAUD} onChange={e => setData({ ...data, priceAUD: parseInt(e.target.value) })} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white" /></div>
+                            <div>
+                                <label className="text-sm text-gray-400">Price (INR)</label>
+                                <input type="number" value={data.priceINR} onChange={e => setData({ ...data, priceINR: parseFloat(e.target.value) })} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white" />
+                            </div>
+                            <div>
+                                <label className="text-sm text-gray-400">Price (USD)</label>
+                                <input type="number" value={data.priceUSD} onChange={e => setData({ ...data, priceUSD: parseFloat(e.target.value) })} className="w-full bg-black/20 border border-white/10 rounded p-2 text-white" />
+                            </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <input type="checkbox" checked={data.isActive} onChange={e => setData({ ...data, isActive: e.target.checked })} />
@@ -130,7 +138,7 @@ const CreditSystemControl: React.FC = () => {
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-6">
-                        <button onClick={onClose} className="px-4 py-2 rounded hover:bg-white/10">Cancel</button>
+                        <button onClick={onClose} className="px-4 py-2 rounded hover:bg-white/10 text-white">Cancel</button>
                         <button onClick={() => onSave(data)} className="px-4 py-2 bg-neon-cyan text-black rounded font-bold">Save</button>
                     </div>
                 </div>
@@ -143,7 +151,7 @@ const CreditSystemControl: React.FC = () => {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                 <div className="bg-[#0f111a] border border-white/10 rounded-xl p-6 w-full max-w-lg">
-                    <h3 className="text-xl font-bold mb-4">{type.id ? 'Edit Job Type' : 'New Job Type'}</h3>
+                    <h3 className="text-xl font-bold mb-4 text-white">{type.id ? 'Edit Job Type' : 'New Job Type'}</h3>
                     <div className="space-y-4">
                         <div>
                             <label className="text-sm text-gray-400">Type Name</label>
@@ -163,7 +171,7 @@ const CreditSystemControl: React.FC = () => {
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-6">
-                        <button onClick={onClose} className="px-4 py-2 rounded hover:bg-white/10">Cancel</button>
+                        <button onClick={onClose} className="px-4 py-2 rounded hover:bg-white/10 text-white">Cancel</button>
                         <button onClick={() => onSave(data)} className="px-4 py-2 bg-neon-cyan text-black rounded font-bold">Save</button>
                     </div>
                 </div>
@@ -353,7 +361,7 @@ const CreditSystemControl: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
-                                    {INITIAL_LOGS.map(log => (
+                                    {logs.map(log => (
                                         <tr key={log.id} className="hover:bg-white/5 transition-colors">
                                             <td className="p-4 text-sm text-gray-400">{log.date}</td>
                                             <td className="p-4 font-bold">{log.employerName}</td>

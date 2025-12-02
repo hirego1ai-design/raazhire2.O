@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock, Play, X } from 'lucide-react';
+import { Mail, Lock, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SocialButton from './SocialButton';
 import ToggleSwitch from './ToggleSwitch';
@@ -13,26 +13,43 @@ interface LoginCardProps {
 
 const LoginCard = ({ onClose }: LoginCardProps) => {
     const [userType, setUserType] = useState<'candidate' | 'employer'>('candidate');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Simulate login
-        if (userType === 'candidate') {
-            navigate('/candidate/dashboard');
-        } else {
-            navigate('/employer/dashboard');
-        }
-        if (onClose) onClose();
-    };
+        setIsLoading(true);
 
-    const handleDemoLogin = (type: 'candidate' | 'employer') => {
-        if (type === 'candidate') {
-            navigate('/candidate/dashboard');
-        } else {
-            navigate('/employer/dashboard');
+        if (!supabase) {
+            alert('Supabase client is not initialized.');
+            setIsLoading(false);
+            return;
         }
-        if (onClose) onClose();
+
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) throw error;
+
+            // Login Successful
+            if (userType === 'candidate') {
+                navigate('/candidate/dashboard');
+            } else {
+                navigate('/employer/dashboard');
+            }
+            if (onClose) onClose();
+
+        } catch (error: any) {
+            console.error('Login error:', error);
+            alert(error.message || 'Login failed. Please check your credentials.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSocialLogin = async (provider: 'google' | 'linkedin' | 'facebook') => {
@@ -90,33 +107,26 @@ const LoginCard = ({ onClose }: LoginCardProps) => {
                         icon={<Mail size={18} />}
                         type="email"
                         placeholder="Email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
                     />
                     <InputField
                         icon={<Lock size={18} />}
                         type="password"
                         placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         rightElement={<a href="#" className="forgot-password">Forgot Password?</a>}
+                        required
                     />
 
-                    <button type="submit" className="sign-in-btn">
-                        SIGN IN
+                    <button type="submit" className="sign-in-btn" disabled={isLoading}>
+                        {isLoading ? 'SIGNING IN...' : 'SIGN IN'}
                     </button>
                 </form>
 
-                <div className="demo-buttons">
-                    <button
-                        className="demo-btn"
-                        onClick={() => handleDemoLogin('candidate')}
-                    >
-                        <Play size={12} fill="currentColor" /> Demo Candidate
-                    </button>
-                    <button
-                        className="demo-btn"
-                        onClick={() => handleDemoLogin('employer')}
-                    >
-                        <Play size={12} fill="currentColor" /> Demo Employer
-                    </button>
-                </div>
+
             </div>
 
             {/* Right Section - Overlay */}
@@ -127,7 +137,7 @@ const LoginCard = ({ onClose }: LoginCardProps) => {
                     <button
                         className="sign-up-btn"
                         onClick={() => {
-                            const registerPath = userType === 'candidate' ? '/register/candidate' : '/register/employer';
+                            const registerPath = '/create-account';
                             navigate(registerPath);
                             if (onClose) onClose();
                         }}

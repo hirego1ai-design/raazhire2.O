@@ -3,20 +3,60 @@ import { motion } from 'framer-motion';
 import { Users, Briefcase, Server, Activity, Cpu, DollarSign, Wallet, TrendingUp } from 'lucide-react';
 import '../../styles/premium-dark-theme.css';
 
-const AdminDashboard: React.FC = () => {
-    const stats = [
-        { label: 'Total Revenue', value: '$124,500', icon: DollarSign, color: 'text-green-400' },
-        { label: 'Credits Sold', value: '45,000', icon: Wallet, color: 'text-yellow-400' },
-        { label: 'Total Users', value: '5,432', icon: Users, color: 'text-neon-cyan' },
-        { label: 'Active Jobs', value: '890', icon: Briefcase, color: 'text-neon-purple' },
-    ];
+import { supabase } from '../../lib/supabase';
 
-    const aiServices = [
-        { name: 'Gemini Pro', status: 'Active', latency: '120ms', usage: '45%' },
-        { name: 'OpenAI GPT-4', status: 'Active', latency: '250ms', usage: '30%' },
-        { name: 'Claude 3', status: 'Standby', latency: '-', usage: '0%' },
-        { name: 'DeepSeek', status: 'Active', latency: '180ms', usage: '25%' },
-    ];
+const AdminDashboard: React.FC = () => {
+    const [stats, setStats] = React.useState([
+        { label: 'Total Revenue', value: '$0', icon: DollarSign, color: 'text-green-400' },
+        { label: 'Credits Sold', value: '0', icon: Wallet, color: 'text-yellow-400' },
+        { label: 'Total Users', value: '0', icon: Users, color: 'text-neon-cyan' },
+        { label: 'Active Jobs', value: '0', icon: Briefcase, color: 'text-neon-purple' },
+    ]);
+    const [logs, setLogs] = React.useState<any[]>([]);
+    const [aiStatus, setAiStatus] = React.useState<any[]>([]);
+
+    React.useEffect(() => {
+        const fetchAdminData = async () => {
+            if (!supabase) return;
+
+            // Fetch Stats
+            const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
+            const { count: activeJobs } = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('status', 'active');
+
+            // Placeholder for revenue/credits (requires payment tables)
+            // For now, we'll just show 0 or mock logic based on users if needed, but 0 is safer for "real" data
+
+            setStats([
+                { label: 'Total Revenue', value: '$0', icon: DollarSign, color: 'text-green-400' },
+                { label: 'Credits Sold', value: '0', icon: Wallet, color: 'text-yellow-400' },
+                { label: 'Total Users', value: totalUsers?.toString() || '0', icon: Users, color: 'text-neon-cyan' },
+                { label: 'Active Jobs', value: activeJobs?.toString() || '0', icon: Briefcase, color: 'text-neon-purple' },
+            ]);
+
+            // Fetch Logs
+            const { data: systemLogs } = await supabase
+                .from('system_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            if (systemLogs) setLogs(systemLogs);
+
+            // Fetch AI Status (Mocking for now as we don't have a real-time status table yet, but could use API keys check)
+            // We can check if API keys exist to determine "Active"
+            const { data: keys } = await supabase.from('api_keys').select('provider');
+            const activeProviders = keys?.map(k => k.provider) || [];
+
+            setAiStatus([
+                { name: 'Gemini Pro', status: activeProviders.includes('gemini') ? 'Active' : 'Inactive', latency: '120ms', usage: '45%' },
+                { name: 'OpenAI GPT-4', status: activeProviders.includes('gpt4') ? 'Active' : 'Inactive', latency: '250ms', usage: '30%' },
+                { name: 'Claude 3', status: 'Standby', latency: '-', usage: '0%' }, // Not implemented yet
+                { name: 'DeepSeek', status: 'Standby', latency: '-', usage: '0%' }, // Not implemented yet
+            ]);
+        };
+
+        fetchAdminData();
+    }, []);
 
     return (
         <div className="space-y-8 bg-black/90 p-6 rounded-2xl glass">
@@ -56,12 +96,12 @@ const AdminDashboard: React.FC = () => {
                         <option>This Year</option>
                     </select>
                 </div>
-                {/* Simple bar chart mock */}
+                {/* Simple bar chart mock - keeping visual placeholder but data is 0 */}
                 <div className="h-64 flex items-end justify-between gap-2 px-4">
-                    {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
+                    {[0, 0, 0, 0, 0, 0, 0].map((h, i) => (
                         <div key={i} className="w-full bg-white/5 rounded-t-lg relative group">
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-500/20 to-green-400/50 rounded-t-lg transition-all duration-500 group-hover:from-green-500/30 group-hover:to-green-400/60" style={{ height: `${h}%` }} />
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold text-green-400">{h * 100}</div>
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold text-green-400">{h}</div>
                         </div>
                     ))}
                 </div>
@@ -74,17 +114,19 @@ const AdminDashboard: React.FC = () => {
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="p-6 rounded-xl glass border border-white/10">
                 <h3 className="text-xl font-bold mb-6">Recent System Logs</h3>
                 <div className="space-y-4">
-                    {[1, 2, 3, 4, 5].map(i => (
+                    {logs.length > 0 ? logs.map((log, i) => (
                         <div key={i} className="p-3 rounded-lg bg-white/5 text-sm font-mono border-l-2 border-neon-cyan/50 hover:bg-white/10 transition-colors">
                             <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                <span>2025-11-19</span><span>21:45:0{i}</span>
+                                <span>{new Date(log.created_at).toLocaleDateString()}</span><span>{new Date(log.created_at).toLocaleTimeString()}</span>
                             </div>
                             <div className="flex gap-2">
-                                <span className="text-neon-cyan font-bold">INFO</span>
-                                <span className="text-gray-300 truncate">Processed video assessment #{1230 + i}</span>
+                                <span className="text-neon-cyan font-bold">{log.level || 'INFO'}</span>
+                                <span className="text-gray-300 truncate">{log.message}</span>
                             </div>
                         </div>
-                    ))}
+                    )) : (
+                        <p className="text-gray-400">No logs found.</p>
+                    )}
                 </div>
             </motion.div>
 
@@ -94,7 +136,7 @@ const AdminDashboard: React.FC = () => {
                     <Cpu className="text-neon-pink" size={24} /> AI Service Status
                 </h3>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {aiServices.map((svc, i) => (
+                    {aiStatus.map((svc, i) => (
                         <div key={i} className="p-4 rounded-lg bg-white/5 border border-white/5 hover:border-white/20 transition-colors">
                             <div className="flex items-center justify-between mb-3">
                                 <span className="font-bold text-lg">{svc.name}</span>

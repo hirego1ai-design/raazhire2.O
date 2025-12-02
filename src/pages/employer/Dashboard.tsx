@@ -16,9 +16,68 @@ interface StatCard {
     onClick?: () => void;
 }
 
+import { supabase } from '../../lib/supabase';
+import { mockJobPosts, mockApplications, mockCandidates, getCandidatesForJob, getJobsForEmployer } from '../../data/mockData';
+
 const EmployerDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [pricingModel, setPricingModel] = useState<PricingModel>('subscription');
+    const [stats, setStats] = useState({
+        totalCandidates: 0,
+        activeJobs: 0,
+        shortlisted: 0,
+        interviews: 0,
+        pending: 0,
+        hires: 0,
+        due: 0
+    });
+    const [recentApplicants, setRecentApplicants] = useState<any[]>([]);
+
+    React.useEffect(() => {
+        const fetchDashboardData = async () => {
+            // Use mock data for demonstration
+            const employerId = 'emp_001'; // Default to TechCorp for demo
+            
+            // Calculate stats from mock data
+            const employerJobs = getJobsForEmployer(employerId);
+            const approvedJobs = employerJobs.filter(job => job.status === 'approved');
+            const totalCandidates = mockCandidates.length;
+            const shortlisted = mockApplications.filter(app => app.status === 'shortlisted').length;
+            const interviews = mockApplications.filter(app => app.status === 'interview_scheduled').length;
+            const pending = mockApplications.filter(app => app.status === 'applied').length;
+            const hires = mockApplications.filter(app => app.status === 'hired').length;
+            
+            setStats({
+                totalCandidates,
+                activeJobs: approvedJobs.length,
+                shortlisted,
+                interviews,
+                pending,
+                hires,
+                due: hires * 50000 // Example: ₹50k per hire
+            });
+
+            // Get recent applicants from mock data
+            const recentApps = mockApplications
+                .slice(0, 5)
+                .map(app => {
+                    const candidate = mockCandidates.find(c => c.id === app.candidate_id);
+                    const job = mockJobPosts.find(j => j.id === app.job_id);
+                    return {
+                        name: candidate?.name || 'Unknown',
+                        role: job?.title || 'Unknown',
+                        score: app.score,
+                        status: app.status.charAt(0).toUpperCase() + app.status.slice(1).replace('_', ' '),
+                        date: new Date(app.applied_at).toLocaleDateString(),
+                        isPremium: (app.score >= 85)
+                    };
+                });
+            
+            setRecentApplicants(recentApps);
+        };
+
+        fetchDashboardData();
+    }, []);
 
     // Navigation handlers
     const handleTotalCandidatesClick = () => navigate('/employer/candidates');
@@ -29,28 +88,22 @@ const EmployerDashboard: React.FC = () => {
     const handleMakeAgreementClick = () => navigate('/employer/make-agreement');
     const handlePostPPHJobClick = () => navigate('/employer/post-job?model=pph');
     const handlePostSubscriptionJobClick = () => navigate('/employer/post-job?model=subscription');
+    const handleMyJobsClick = () => navigate('/employer/jobs');
 
     const subscriptionStats: StatCard[] = [
-        { label: 'Total Candidates', value: '1,234', icon: Users, color: 'text-neon-purple', onClick: handleTotalCandidatesClick },
-        { label: 'Active Jobs', value: '12', icon: Briefcase, color: 'text-neon-cyan' },
-        { label: 'Shortlisted', value: '156', icon: CheckCircle, color: 'text-green-400', onClick: handleShortlistedClick },
-        { label: 'Interviews', value: '45', icon: Calendar, color: 'text-yellow-400', onClick: handleInterviewsClick },
-        { label: 'Pending', value: '89', icon: Clock, color: 'text-orange-400', onClick: handlePendingClick },
+        { label: 'Total Candidates', value: stats.totalCandidates.toString(), icon: Users, color: 'text-neon-purple', onClick: handleTotalCandidatesClick },
+        { label: 'Active Jobs', value: stats.activeJobs.toString(), icon: Briefcase, color: 'text-neon-cyan' },
+        { label: 'Shortlisted', value: stats.shortlisted.toString(), icon: CheckCircle, color: 'text-green-400', onClick: handleShortlistedClick },
+        { label: 'Interviews', value: stats.interviews.toString(), icon: Calendar, color: 'text-yellow-400', onClick: handleInterviewsClick },
+        { label: 'Pending', value: stats.pending.toString(), icon: Clock, color: 'text-orange-400', onClick: handlePendingClick },
     ];
 
     const pphStats: StatCard[] = [
-        { label: 'Hires', value: '8', icon: CheckCircle, color: 'text-green-400' },
-        { label: 'Due', value: '₹24k', icon: DollarSign, color: 'text-yellow-400' },
-        { label: 'Shortlisted', value: '15', icon: Users, color: 'text-neon-purple', onClick: handleShortlistedClick },
-        { label: 'Pending', value: '23', icon: Clock, color: 'text-orange-400', onClick: handlePendingClick },
-        { label: 'HIA', value: '45', icon: FileText, color: 'text-blue-400' },
-    ];
-
-    const recentApplicants = [
-        { name: 'Sarah Johnson', role: 'Senior Frontend Developer', score: 95, status: 'Shortlisted', date: '2h ago', price: 25000, isPremium: true },
-        { name: 'Michael Chen', role: 'UX/UI Designer', score: 88, status: 'Reviewing', date: '4h ago', price: 18000, isPremium: false },
-        { name: 'Emily Davis', role: 'Product Manager', score: 92, status: 'Interview', date: '5h ago', price: 30000, isPremium: true },
-        { name: 'David Wilson', role: 'DevOps Engineer', score: 78, status: 'New', date: '1d ago', price: 20000, isPremium: false },
+        { label: 'Hires', value: stats.hires.toString(), icon: CheckCircle, color: 'text-green-400' },
+        { label: 'Due', value: `₹${stats.due}`, icon: DollarSign, color: 'text-yellow-400' },
+        { label: 'Shortlisted', value: stats.shortlisted.toString(), icon: Users, color: 'text-neon-purple', onClick: handleShortlistedClick },
+        { label: 'Pending', value: stats.pending.toString(), icon: Clock, color: 'text-orange-400', onClick: handlePendingClick },
+        { label: 'HIA', value: '0', icon: FileText, color: 'text-blue-400' }, // Placeholder
     ];
 
     return (
@@ -86,6 +139,7 @@ const EmployerDashboard: React.FC = () => {
             <div className="flex flex-wrap gap-4">
                 {pricingModel === 'pph' ? (
                     <>
+                        <Button onClick={handleMyJobsClick} variant="info" size="md" icon={<Briefcase size={18} />}>My Jobs</Button>
                         <Button onClick={handleMakeAgreementClick} variant="purple" size="md" icon={<FileText size={18} />}>New Agreement</Button>
                         <Button variant="ghost" size="md" icon={<Eye size={18} />}>Status</Button>
                         <Button variant="warning" size="md" icon={<CreditCard size={18} />}>Pay Due</Button>
@@ -93,6 +147,7 @@ const EmployerDashboard: React.FC = () => {
                     </>
                 ) : (
                     <>
+                        <Button onClick={handleMyJobsClick} variant="info" size="md" icon={<Briefcase size={18} />}>My Jobs</Button>
                         <Button variant="ghost" size="md" icon={<Plus size={18} />}>Buy Credits</Button>
                         <Button onClick={handlePostSubscriptionJobClick} variant="info" size="md" icon={<Plus size={18} />} className="ml-auto">Post Job</Button>
                     </>

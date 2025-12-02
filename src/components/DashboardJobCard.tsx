@@ -1,5 +1,7 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, Video, CheckCircle } from 'lucide-react';
 
 interface DashboardJobCardProps {
     title: string;
@@ -7,10 +9,11 @@ interface DashboardJobCardProps {
     salary: string;
     payCycle: string;
     workMode: string;
-    jobType: string; // e.g., On-site, Hybrid, Remote
+    jobType: string;
     matchPercentage: number;
     colorTheme: 'green' | 'pink' | 'purple' | 'blue';
     logo?: string;
+    jobId?: string;
 }
 
 const themeStyles = {
@@ -53,12 +56,23 @@ const DashboardJobCard: React.FC<DashboardJobCardProps> = ({
     jobType,
     matchPercentage,
     colorTheme,
-    logo
+    logo,
+    jobId
 }) => {
     const theme = themeStyles[colorTheme];
+    const navigate = useNavigate();
+    const [showAssessmentModal, setShowAssessmentModal] = useState(false);
     const radius = 30;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (matchPercentage / 100) * circumference;
+
+    const handleApply = () => {
+        setShowAssessmentModal(true);
+    };
+
+    const proceedToAssessment = () => {
+        navigate(`/candidate/live-assessment/${jobId || '1'}`);
+    };
 
     return (
         <motion.div
@@ -127,6 +141,7 @@ const DashboardJobCard: React.FC<DashboardJobCardProps> = ({
                     </div>
 
                     <motion.button
+                        onClick={handleApply}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         className={`px-6 py-2 rounded-full text-white text-sm font-medium ${theme.button} shadow-lg shadow-${colorTheme}-500/20`}
@@ -135,6 +150,74 @@ const DashboardJobCard: React.FC<DashboardJobCardProps> = ({
                     </motion.button>
                 </div>
             </div>
+
+            {/* Assessment Modal */}
+            <AnimatePresence>
+                {showAssessmentModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                        onClick={() => setShowAssessmentModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-[#0f1629] border border-neon-cyan/30 rounded-xl p-8 max-w-md w-full mx-4 shadow-[0_0_30px_rgba(0,243,255,0.3)]"
+                        >
+                            <div className="text-center mb-6">
+                                <div className="inline-block p-4 rounded-full bg-neon-cyan/20 mb-4">
+                                    <Video className="text-neon-cyan" size={48} />
+                                </div>
+                                <h2 className="text-2xl font-bold mb-2">Mandatory Live Assessment</h2>
+                                <p className="text-gray-400">To complete your application, you must complete a live video assessment</p>
+                            </div>
+
+                            <div className="space-y-3 mb-6">
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                    <CheckCircle className="text-blue-400 flex-shrink-0 mt-0.5" size={18} />
+                                    <div>
+                                        <div className="font-medium text-blue-400 text-sm">7-8 Questions</div>
+                                        <div className="text-xs text-gray-400">2-3 minutes per question</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                    <CheckCircle className="text-blue-400 flex-shrink-0 mt-0.5" size={18} />
+                                    <div>
+                                        <div className="font-medium text-blue-400 text-sm">Real-time AI Analysis</div>
+                                        <div className="text-xs text-gray-400">Communication, knowledge, confidence</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                                    <AlertTriangle className="text-yellow-400 flex-shrink-0 mt-0.5" size={18} />
+                                    <div>
+                                        <div className="font-medium text-yellow-400 text-sm">Camera Required</div>
+                                        <div className="text-xs text-gray-400">Full proctoring active</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowAssessmentModal(false)}
+                                    className="flex-1 px-4 py-2 rounded-lg border border-white/10 hover:bg-white/5 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={proceedToAssessment}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-neon-purple text-white font-bold"
+                                >
+                                    Start Assessment
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };

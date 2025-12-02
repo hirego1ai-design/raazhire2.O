@@ -5,75 +5,87 @@ import DashboardJobCard from '../../components/DashboardJobCard';
 
 const Jobs: React.FC = () => {
     const [activeTab, setActiveTab] = useState('Find Jobs');
+    const [jobs, setJobs] = useState<any[]>([]);
 
-    const jobs = [
-        {
-            title: 'Senior Cyberneticist',
-            location: 'Job Location',
-            salary: 'Salary + Currency',
-            payCycle: 'Pay Cycle',
-            workMode: 'Work Mode',
-            jobType: 'On-site',
-            matchPercentage: 92,
-            colorTheme: 'green' as const,
-            logo: 'H'
-        },
-        {
-            title: 'Job Title',
-            location: 'Job Location',
-            salary: 'Salary Cycle',
-            payCycle: 'Pay Cycle',
-            workMode: 'Work Mode',
-            jobType: 'Hybrid',
-            matchPercentage: 92,
-            colorTheme: 'blue' as const,
-            logo: 'H'
-        },
-        {
-            title: 'Senior Cyberneticist',
-            location: 'Job Location',
-            salary: 'Salary + Currency',
-            payCycle: 'Pay Cycle',
-            workMode: 'Work Mode',
-            jobType: 'On-site',
-            matchPercentage: 92,
-            colorTheme: 'pink' as const,
-            logo: 'H'
-        },
-        {
-            title: 'AI Ethics Architect',
-            location: 'Job Location',
-            salary: 'Salary + Currency',
-            payCycle: 'Pay Cycle',
-            workMode: 'Work Mode',
-            jobType: 'Remote',
-            matchPercentage: 92,
-            colorTheme: 'purple' as const, // Using purple/gold theme from image
-            logo: 'H'
-        },
-        {
-            title: 'Senior Cyberneticist',
-            location: 'Job Location',
-            salary: 'Salary + Currency',
-            payCycle: 'Pay Cycle',
-            workMode: 'Work Mode',
-            jobType: 'On-site',
-            matchPercentage: 92,
-            colorTheme: 'blue' as const,
-            logo: 'H'
-        },
-        {
-            title: 'Skill Match',
-            location: 'Job Location',
-            salary: 'Salary + Currency',
-            payCycle: 'Pay Cycle',
-            workMode: 'Work Mode',
-            jobType: 'Hybrid',
-            matchPercentage: 92,
-            colorTheme: 'purple' as const,
-            logo: 'H'
-        }
-    ];
+    React.useEffect(() => {
+        // Use mock data for testing
+        const mockJobs = [
+            {
+                jobId: 1,
+                title: 'Senior Frontend Developer',
+                location: 'Bangalore, India',
+                salary: '$80,000 - $120,000',
+                payCycle: 'Yearly',
+                workMode: 'Remote',
+                jobType: 'Full-time',
+                matchPercentage: 95,
+                colorTheme: 'blue' as const,
+                logo: 'T'
+            },
+            {
+                jobId: 2,
+                title: 'Full Stack Engineer',
+                location: 'Mumbai, India',
+                salary: '$70,000 - $110,000',
+                payCycle: 'Yearly',
+                workMode: 'Hybrid',
+                jobType: 'Full-time',
+                matchPercentage: 88,
+                colorTheme: 'purple' as const,
+                logo: 'I'
+            },
+            {
+                jobId: 3,
+                title: 'React Developer',
+                location: 'Remote',
+                salary: '$60,000 - $90,000',
+                payCycle: 'Yearly',
+                workMode: 'Remote',
+                jobType: 'Contract',
+                matchPercentage: 92,
+                colorTheme: 'green' as const,
+                logo: 'S'
+            },
+            {
+                jobId: 4,
+                title: 'Backend Node.js Developer',
+                location: 'Delhi, India',
+                salary: '$75,000 - $105,000',
+                payCycle: 'Yearly',
+                workMode: 'On-site',
+                jobType: 'Full-time',
+                matchPercentage: 85,
+                colorTheme: 'pink' as const,
+                logo: 'M'
+            },
+            {
+                jobId: 5,
+                title: 'DevOps Engineer',
+                location: 'Hyderabad, India',
+                salary: '$85,000 - $125,000',
+                payCycle: 'Yearly',
+                workMode: 'Hybrid',
+                jobType: 'Full-time',
+                matchPercentage: 78,
+                colorTheme: 'blue' as const,
+                logo: 'D'
+            },
+            {
+                jobId: 6,
+                title: 'UI/UX Developer',
+                location: 'Pune, India',
+                salary: '$65,000 - $95,000',
+                payCycle: 'Yearly',
+                workMode: 'Remote',
+                jobType: 'Full-time',
+                matchPercentage: 90,
+                colorTheme: 'purple' as const,
+                logo: 'C'
+            }
+        ];
+
+        setJobs(mockJobs);
+    }, []);
 
     return (
         <div className="min-h-screen bg-[#050511] text-white p-4 md:p-8 font-outfit relative overflow-hidden">

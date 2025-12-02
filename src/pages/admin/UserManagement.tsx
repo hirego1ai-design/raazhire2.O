@@ -31,26 +31,77 @@ interface User {
 }
 
 // --- Mock Data ---
-const MOCK_USERS: User[] = [
-    { id: 'C001', name: 'Alice Johnson', email: 'alice@example.com', role: 'Candidate', status: 'Active', joinDate: '2025-11-01', location: 'New York, USA', phone: '+1 555-0101', jobApplied: 12, skills: ['React', 'Node.js'] },
-    { id: 'C002', name: 'Bob Smith', email: 'bob@example.com', role: 'Candidate', status: 'Pending', joinDate: '2025-11-05', location: 'London, UK', phone: '+44 20 7123 4567', jobApplied: 5, skills: ['Python', 'Django'] },
-    { id: 'E001', name: 'Tech Solutions Inc.', email: 'hr@techsolutions.com', role: 'Employer', status: 'Active', joinDate: '2025-10-15', location: 'San Francisco, USA', companyName: 'Tech Solutions', jobsPosted: 8, walletBalance: 450, plan: 'Professional' },
-    { id: 'E002', name: 'Creative Agency', email: 'jobs@creative.com', role: 'Employer', status: 'Blocked', joinDate: '2025-11-10', location: 'Berlin, Germany', companyName: 'Creative Agency', jobsPosted: 2, walletBalance: 10, plan: 'Basic' },
-];
+import { supabase } from '../../lib/supabase';
+
+// ... existing imports
 
 const UserManagement: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'candidates' | 'employers' | 'support'>('candidates');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [users, setUsers] = useState<User[]>(MOCK_USERS);
+    const [users, setUsers] = useState<User[]>([]);
+
+    React.useEffect(() => {
+        const fetchUsers = async () => {
+            if (!supabase) return;
+
+            // Fetch all users
+            const { data: usersData } = await supabase
+                .from('users')
+                .select('*');
+
+            if (usersData) {
+                const enrichedUsers: User[] = await Promise.all(usersData.map(async (u: any) => {
+                    let extraData = {};
+
+                    if (supabase) {
+                        if (u.role === 'candidate') {
+                            const { count } = await supabase
+                                .from('applications')
+                                .select('*', { count: 'exact', head: true })
+                                .eq('candidate_id', u.id); // Assuming user.id maps to candidate_id or similar
+                            extraData = { jobApplied: count || 0 };
+                        } else if (u.role === 'employer') {
+                            const { count } = await supabase
+                                .from('jobs')
+                                .select('*', { count: 'exact', head: true })
+                                .eq('employer_id', u.id);
+                            extraData = { jobsPosted: count || 0, companyName: u.company_name, walletBalance: u.wallet_balance || 0, plan: u.plan || 'Basic' };
+                        }
+                    }
+
+                    return {
+                        id: u.id,
+                        name: u.name || 'Unknown',
+                        email: u.email,
+                        role: u.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) as UserRole : 'Candidate',
+                        status: u.status || 'Active', // Default to Active if not set
+                        joinDate: new Date(u.created_at).toLocaleDateString(),
+                        location: u.location || 'Unknown',
+                        phone: u.phone,
+                        ...extraData
+                    };
+                }));
+                setUsers(enrichedUsers);
+            }
+        };
+
+        fetchUsers();
+    }, []);
 
     // --- Actions ---
-    const handleStatusChange = (id: string, newStatus: UserStatus) => {
+    const handleStatusChange = async (id: string, newStatus: UserStatus) => {
+        if (supabase) {
+            await supabase.from('users').update({ status: newStatus }).eq('id', id);
+        }
         setUsers(users.map(u => u.id === id ? { ...u, status: newStatus } : u));
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (window.confirm('Are you sure you want to delete this user?')) {
+            if (supabase) {
+                await supabase.from('users').delete().eq('id', id);
+            }
             setUsers(users.filter(u => u.id !== id));
             if (selectedUser?.id === id) setSelectedUser(null);
         }

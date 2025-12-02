@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     CreditCard, DollarSign, Save, Shield, Activity,
-    CheckCircle, AlertTriangle, RefreshCw, Globe, Lock
+    CheckCircle, AlertTriangle, RefreshCw, Globe, Lock, Loader
 } from 'lucide-react';
+import { endpoints } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 
 type PaymentProvider = 'razorpay' | 'stripe';
 
@@ -19,26 +21,75 @@ interface GatewayConfig {
 
 const PaymentConfig: React.FC = () => {
     const [activeGateway, setActiveGateway] = useState<PaymentProvider>('stripe');
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
     const [gateways, setGateways] = useState<Record<PaymentProvider, GatewayConfig>>({
         stripe: {
             id: 'stripe',
             name: 'Stripe',
             enabled: true,
             mode: 'test',
-            publicKey: 'pk_test_...',
-            secretKey: 'sk_test_...',
-            webhookSecret: 'whsec_...'
+            publicKey: '',
+            secretKey: '',
+            webhookSecret: ''
         },
         razorpay: {
             id: 'razorpay',
             name: 'Razorpay',
             enabled: false,
             mode: 'test',
-            publicKey: 'rzp_test_...',
-            secretKey: '****************',
-            webhookSecret: '****************'
+            publicKey: '',
+            secretKey: '',
+            webhookSecret: ''
         }
     });
+
+    useEffect(() => {
+        loadConfig();
+    }, []);
+
+    const getAuthHeaders = async () => {
+        if (!supabase) return {};
+        const { data: { session } } = await supabase.auth.getSession();
+        return session ? { 'Authorization': `Bearer ${session.access_token}` } : {};
+    };
+
+    const loadConfig = async () => {
+        setIsLoading(true);
+        try {
+            const headers = await getAuthHeaders();
+            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/payment-config`, {
+                headers: { ...headers } as any
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data) {
+                    setGateways(prev => ({
+                        stripe: {
+                            ...prev.stripe,
+                            publicKey: data.stripe_public_key || '',
+                            secretKey: data.stripe_secret_key || '',
+                            webhookSecret: data.stripe_webhook_secret || '',
+                            enabled: data.provider === 'stripe' && data.enabled,
+                        },
+                        razorpay: {
+                            ...prev.razorpay,
+                            publicKey: data.razorpay_key_id || '',
+                            secretKey: data.razorpay_key_secret || '',
+                            webhookSecret: data.razorpay_webhook_secret || '',
+                            enabled: data.provider === 'razorpay' && data.enabled,
+                        }
+                    }));
+                    if (data.provider) setActiveGateway(data.provider as PaymentProvider);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading payment config:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleGatewayUpdate = (provider: PaymentProvider, field: keyof GatewayConfig, value: any) => {
         setGateways(prev => ({
@@ -47,8 +98,43 @@ const PaymentConfig: React.FC = () => {
         }));
     };
 
-    const handleSave = () => {
-        alert('Payment Gateway Configuration Saved!');
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const headers = await getAuthHeaders();
+
+            const payload = {
+                provider: activeGateway,
+                enabled: true,
+                currency: 'USD',
+                stripe_public_key: gateways.stripe.publicKey,
+                stripe_secret_key: gateways.stripe.secretKey,
+                stripe_webhook_secret: gateways.stripe.webhookSecret,
+                razorpay_key_id: gateways.razorpay.publicKey,
+                razorpay_key_secret: gateways.razorpay.secretKey,
+                razorpay_webhook_secret: gateways.razorpay.webhookSecret
+            };
+
+            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/payment-config`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...headers
+                } as any,
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert('Payment Gateway Configuration Saved!');
+            } else {
+                alert('Failed to save configuration.');
+            }
+        } catch (error) {
+            console.error('Error saving payment config:', error);
+            alert('Error saving configuration.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -93,8 +179,8 @@ const PaymentConfig: React.FC = () => {
                                     key={gateway.id}
                                     onClick={() => setActiveGateway(gateway.id)}
                                     className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${activeGateway === gateway.id
-                                            ? 'bg-neon-cyan/10 border-neon-cyan text-white shadow-[0_0_15px_rgba(6,182,212,0.15)]'
-                                            : 'bg-white/5 border-transparent text-gray-400 hover:bg-white/10'
+                                        ? 'bg-neon-cyan/10 border-neon-cyan text-white shadow-[0_0_15px_rgba(6,182,212,0.15)]'
+                                        : 'bg-white/5 border-transparent text-gray-400 hover:bg-white/10'
                                         }`}
                                 >
                                     <div className="flex items-center gap-3">
@@ -139,8 +225,8 @@ const PaymentConfig: React.FC = () => {
                                 <button
                                     onClick={() => handleGatewayUpdate(activeGateway, 'mode', 'test')}
                                     className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${gateways[activeGateway].mode === 'test'
-                                            ? 'bg-yellow-500/20 text-yellow-400'
-                                            : 'text-gray-400 hover:text-white'
+                                        ? 'bg-yellow-500/20 text-yellow-400'
+                                        : 'text-gray-400 hover:text-white'
                                         }`}
                                 >
                                     Test Mode
@@ -148,8 +234,8 @@ const PaymentConfig: React.FC = () => {
                                 <button
                                     onClick={() => handleGatewayUpdate(activeGateway, 'mode', 'live')}
                                     className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${gateways[activeGateway].mode === 'live'
-                                            ? 'bg-green-500/20 text-green-400'
-                                            : 'text-gray-400 hover:text-white'
+                                        ? 'bg-green-500/20 text-green-400'
+                                        : 'text-gray-400 hover:text-white'
                                         }`}
                                 >
                                     Live Mode

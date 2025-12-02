@@ -1,52 +1,98 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { motion } from 'framer-motion';
 import { Trophy, Star, TrendingUp, Target, Award, Zap, Shield, BarChart2 } from 'lucide-react';
 import { ResponsiveContainer, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from 'recharts';
 
 const GamificationDashboard: React.FC = () => {
-    // Mock Data - In a real app, this would come from an API based on the user's role
-    const userStats = {
-        level: 'Gold',
-        points: 2450,
-        nextLevelPoints: 3000,
-        globalRank: 1250,
-        totalCandidates: 50000,
-        skillMastery: 82,
-        correctRate: 76,
-        challengesCompleted: 14,
-        totalAttempts: 18,
-        streak: 5
-    };
+    const [userStats, setUserStats] = useState({
+        level: 'Bronze',
+        points: 0,
+        nextLevelPoints: 1000,
+        globalRank: 0,
+        totalCandidates: 0,
+        skillMastery: 0,
+        correctRate: 0,
+        challengesCompleted: 0,
+        totalAttempts: 0,
+        streak: 0
+    });
+    const [improvementTrend, setImprovementTrend] = useState<any[]>([]);
+    const [categoryPerformance, setCategoryPerformance] = useState<any[]>([]);
+    const [badges, setBadges] = useState<any[]>([]);
+    const [suggestedChallenges, setSuggestedChallenges] = useState<any[]>([]);
 
-    const improvementTrend = [
-        { day: 'Mon', score: 65 },
-        { day: 'Tue', score: 68 },
-        { day: 'Wed', score: 75 },
-        { day: 'Thu', score: 72 },
-        { day: 'Fri', score: 80 },
-        { day: 'Sat', score: 85 },
-        { day: 'Sun', score: 82 },
-    ];
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!supabase) return;
 
-    const categoryPerformance = [
-        { name: 'React', score: 90, color: '#00f3ff' },
-        { name: 'Node.js', score: 75, color: '#bc13fe' },
-        { name: 'System Design', score: 60, color: '#ff006e' },
-        { name: 'TypeScript', score: 85, color: '#00ff9d' },
-    ];
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
 
-    const badges = [
-        { id: 1, icon: <Zap size={20} />, color: 'text-yellow-400', bg: 'bg-yellow-400/10', name: 'Fast Learner' },
-        { id: 2, icon: <Shield size={20} />, color: 'text-green-400', bg: 'bg-green-400/10', name: 'Bug Hunter' },
-        { id: 3, icon: <Trophy size={20} />, color: 'text-purple-400', bg: 'bg-purple-400/10', name: 'Top 10%' },
-        { id: 4, icon: <Star size={20} />, color: 'text-blue-400', bg: 'bg-blue-400/10', name: 'Consistent' },
-    ];
+            // Fetch User Stats
+            const { data: stats } = await supabase.from('gamification_stats').select('*').eq('user_id', user.id).single();
+            if (stats) {
+                setUserStats({
+                    level: stats.level || 'Bronze',
+                    points: stats.points || 0,
+                    nextLevelPoints: stats.next_level_points || 1000,
+                    globalRank: stats.global_rank || 0,
+                    totalCandidates: stats.total_candidates || 0, // Maybe fetch count from users table
+                    skillMastery: stats.skill_mastery || 0,
+                    correctRate: stats.correct_rate || 0,
+                    challengesCompleted: stats.challenges_completed || 0,
+                    totalAttempts: stats.total_attempts || 0,
+                    streak: stats.streak || 0
+                });
+            }
 
-    const suggestedChallenges = [
-        { id: 1, title: 'Advanced React Hooks', category: 'React', points: 150, difficulty: 'Hard' },
-        { id: 2, title: 'Node.js Performance', category: 'Backend', points: 120, difficulty: 'Medium' },
-        { id: 3, title: 'CSS Grid Mastery', category: 'Frontend', points: 100, difficulty: 'Medium' },
-    ];
+            // Fetch Improvement Trend (Mocking history for now if table missing)
+            // Assuming gamification_history table
+            const { data: history } = await supabase.from('gamification_history').select('*').eq('user_id', user.id).limit(7);
+            if (history && history.length > 0) {
+                setImprovementTrend(history.map((h: any) => ({ day: new Date(h.date).toLocaleDateString('en-US', { weekday: 'short' }), score: h.score })));
+            } else {
+                setImprovementTrend([]);
+            }
+
+            // Fetch Category Performance
+            // Assuming candidate_skills table
+            const { data: skills } = await supabase.from('candidate_skills').select('*').eq('user_id', user.id);
+            if (skills) {
+                setCategoryPerformance(skills.map((s: any) => ({
+                    name: s.skill,
+                    score: s.mastery_level || 0,
+                    color: '#00f3ff' // Dynamic color logic can be added
+                })));
+            }
+
+            // Fetch Badges
+            const { data: userBadges } = await supabase.from('user_badges').select('*, badge:badges(*)').eq('user_id', user.id);
+            if (userBadges) {
+                setBadges(userBadges.map((ub: any) => ({
+                    id: ub.badge.id,
+                    icon: <Trophy size={20} />, // Dynamic icon mapping needed
+                    color: 'text-yellow-400',
+                    bg: 'bg-yellow-400/10',
+                    name: ub.badge.name
+                })));
+            }
+
+            // Fetch Suggested Challenges
+            const { data: challenges } = await supabase.from('challenges').select('*').limit(3);
+            if (challenges) {
+                setSuggestedChallenges(challenges.map((c: any) => ({
+                    id: c.id,
+                    title: c.title,
+                    category: c.category,
+                    points: c.points,
+                    difficulty: c.difficulty
+                })));
+            }
+        };
+
+        fetchData();
+    }, []);
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
@@ -73,7 +119,7 @@ const GamificationDashboard: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="p-6 rounded-xl glass border border-[var(--glass-border)]"
+                    className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]"
                 >
                     <div className="flex justify-between items-start mb-4">
                         <div>
@@ -91,7 +137,7 @@ const GamificationDashboard: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="p-6 rounded-xl glass border border-[var(--glass-border)]"
+                    className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]"
                 >
                     <div className="flex justify-between items-start mb-4">
                         <div>
@@ -111,7 +157,7 @@ const GamificationDashboard: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="p-6 rounded-xl glass border border-[var(--glass-border)]"
+                    className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]"
                 >
                     <div className="flex justify-between items-start mb-4">
                         <div>
@@ -129,7 +175,7 @@ const GamificationDashboard: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="p-6 rounded-xl glass border border-[var(--glass-border)]"
+                    className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]"
                 >
                     <div className="flex justify-between items-start mb-4">
                         <div>
@@ -153,7 +199,7 @@ const GamificationDashboard: React.FC = () => {
                     className="lg:col-span-2 space-y-6"
                 >
                     {/* Improvement Trend */}
-                    <div className="p-6 rounded-xl glass border border-[var(--glass-border)]">
+                    <div className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]">
                         <h3 className="text-lg font-semibold mb-6 flex items-center gap-2 text-[var(--text-primary)]">
                             <TrendingUp className="text-neon-cyan" size={20} />
                             Skill Improvement Trend (Last 7 Days)
@@ -182,7 +228,7 @@ const GamificationDashboard: React.FC = () => {
                     </div>
 
                     {/* Category Performance */}
-                    <div className="p-6 rounded-xl glass border border-[var(--glass-border)]">
+                    <div className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]">
                         <h3 className="text-lg font-semibold mb-6 text-[var(--text-primary)]">Category Performance</h3>
                         <div className="space-y-4">
                             {categoryPerformance.map((cat, idx) => (
@@ -211,7 +257,7 @@ const GamificationDashboard: React.FC = () => {
                     className="space-y-6"
                 >
                     {/* Badges */}
-                    <div className="p-6 rounded-xl glass border border-[var(--glass-border)]">
+                    <div className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]">
                         <h3 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Earned Badges</h3>
                         <div className="grid grid-cols-2 gap-4">
                             {badges.map((badge) => (
@@ -226,7 +272,7 @@ const GamificationDashboard: React.FC = () => {
                     </div>
 
                     {/* Suggested Challenges */}
-                    <div className="p-6 rounded-xl glass border border-[var(--glass-border)]">
+                    <div className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]">
                         <h3 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Recommended for You</h3>
                         <div className="space-y-4">
                             {suggestedChallenges.map((challenge) => (

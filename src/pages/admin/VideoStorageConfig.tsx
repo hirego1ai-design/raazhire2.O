@@ -7,6 +7,7 @@ import {
     Eye, EyeOff
 } from 'lucide-react';
 import { endpoints } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 
 const VideoStorageConfig: React.FC = () => {
     // State
@@ -32,10 +33,19 @@ const VideoStorageConfig: React.FC = () => {
         loadYouTubeConfig();
     }, []);
 
+    const getAuthHeaders = async (): Promise<Record<string, string>> => {
+        if (!supabase) return {};
+        const { data: { session } } = await supabase.auth.getSession();
+        return session ? { 'Authorization': `Bearer ${session.access_token}` } : {};
+    };
+
     const loadYouTubeConfig = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/youtube-config`);
+            const headers = await getAuthHeaders();
+            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/youtube-config`, {
+                headers: { ...headers }
+            });
             if (response.ok) {
                 const data = await response.json();
                 if (data) {
@@ -133,9 +143,13 @@ const VideoStorageConfig: React.FC = () => {
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/youtube-config`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...headers
+                },
                 body: JSON.stringify({
                     api_key: youtubeConfig.apiKey,
                     client_id: youtubeConfig.clientId,

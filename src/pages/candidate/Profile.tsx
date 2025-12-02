@@ -1,62 +1,161 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     User, Mail, Phone, MapPin, Briefcase, GraduationCap, Folder,
     Share2, Edit2, Camera, UserPlus, MessageSquare, Trophy, Star,
     Zap, Shield, Check, Github, Linkedin, Globe, Twitter, Code, Play, Clock
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { SkillRadar, SkillCategories, SkillBar } from '../../components/SkillCharts';
 
 const Profile: React.FC = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('about');
     const [isFollowing, setIsFollowing] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'connect' | 'pending' | 'connected'>('connect');
 
-    // Mock Data
-    const radarData = [
-        { subject: 'Frontend', A: 90, fullMark: 100 },
-        { subject: 'Backend', A: 85, fullMark: 100 },
-        { subject: 'DevOps', A: 65, fullMark: 100 },
-        { subject: 'Design', A: 70, fullMark: 100 },
-        { subject: 'Soft Skills', A: 88, fullMark: 100 },
-        { subject: 'Testing', A: 75, fullMark: 100 },
-    ];
+    const [profile, setProfile] = useState<any>(null);
+    const [skills, setSkills] = useState<any>({ radar: [], pie: [], tech: [], soft: [] });
+    const [experience, setExperience] = useState<any[]>([]);
+    const [education, setEducation] = useState<any[]>([]);
+    const [portfolio, setPortfolio] = useState<any[]>([]);
+    const [gamification, setGamification] = useState<any>({ rank: 0, points: 0, masteryScore: 0, accuracy: 0, badges: [] });
+    const [assessmentResults, setAssessmentResults] = useState<any>(null);
 
-    const pieData = [
-        { name: 'Technical', value: 60, color: '#00f3ff' },
-        { name: 'Soft Skills', value: 25, color: '#bc13fe' },
-        { name: 'Tools', value: 15, color: '#ff006e' },
-    ];
+    useEffect(() => {
+        // Use mock data for testing
+        const mockProfile = {
+            name: 'John Doe',
+            title: 'Senior Full Stack Developer',
+            location: 'Bangalore, India',
+            email: 'john.doe@example.com',
+            phone: '+91 9876543210',
+            dateOfBirth: '1995-05-15',
+            currentAddress: 'Koramangala, Bangalore',
+            permanentAddress: 'Mumbai, Maharashtra',
+            bio: 'Passionate Full Stack Developer with 5+ years of experience in building scalable web applications. Expert in React, Node.js, and cloud technologies.',
+            avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
+            education10th: { board: 'CBSE', percentage: '92%', year: '2010' },
+            education12th: { board: 'CBSE', percentage: '88%', year: '2012' },
+            graduation: { degree: 'B.Tech Computer Science', college: 'IIT Bangalore', percentage: '85%', year: '2016' },
+            postGraduation: { degree: 'M.Tech AI', college: 'IIT Bangalore', percentage: '88%', year: '2018' },
+            jobProfile: 'Full Stack Developer',
+        };
 
-    const techSkills = [
-        { name: 'React', score: 95 },
-        { name: 'Node.js', score: 88 },
-        { name: 'TypeScript', score: 90 },
-        { name: 'Python', score: 75 },
-        { name: 'AWS', score: 70 },
-    ];
+        const mockSkills = {
+            radar: [
+                { subject: 'React', A: 90, fullMark: 100 },
+                { subject: 'Node.js', A: 85, fullMark: 100 },
+                { subject: 'TypeScript', A: 88, fullMark: 100 },
+                { subject: 'Python', A: 75, fullMark: 100 },
+                { subject: 'AWS', A: 80, fullMark: 100 },
+                { subject: 'Docker', A: 78, fullMark: 100 }
+            ],
+            pie: [
+                { name: 'Technical', value: 15, color: '#00f3ff' },
+                { name: 'Soft Skills', value: 8, color: '#bc13fe' }
+            ],
+            tech: [
+                { name: 'React', score: 90 },
+                { name: 'Node.js', score: 85 },
+                { name: 'TypeScript', score: 88 },
+                { name: 'Python', score: 75 },
+                { name: 'AWS', score: 80 },
+                { name: 'Docker', score: 78 },
+                { name: 'MongoDB', score: 82 },
+                { name: 'PostgreSQL', score: 85 }
+            ],
+            soft: [
+                { name: 'Communication', score: 92 },
+                { name: 'Leadership', score: 85 },
+                { name: 'Problem Solving', score: 95 },
+                { name: 'Teamwork', score: 90 }
+            ]
+        };
 
-    const softSkills = [
-        { name: 'Communication', score: 92 },
-        { name: 'Leadership', score: 85 },
-        { name: 'Problem Solving', score: 95 },
-        { name: 'Teamwork', score: 90 },
-    ];
+        const mockExperience = [
+            {
+                id: 1,
+                company: 'Tech Corp Solutions',
+                position: 'Senior Full Stack Developer',
+                start_date: '2020-01',
+                end_date: null,
+                description: 'Leading development of enterprise web applications using React and Node.js'
+            },
+            {
+                id: 2,
+                company: 'StartUp Inc',
+                position: 'Full Stack Developer',
+                start_date: '2018-06',
+                end_date: '2019-12',
+                description: 'Built scalable microservices architecture and RESTful APIs'
+            }
+        ];
 
-    const gamificationStats = {
-        rank: 1250,
-        totalCandidates: 98000,
-        points: 2450,
-        masteryScore: 850,
-        accuracy: 92,
-        badges: [
-            { id: 1, icon: <Zap size={14} />, color: 'text-yellow-400', bg: 'bg-yellow-400/10', name: 'React Expert' },
-            { id: 2, icon: <Shield size={14} />, color: 'text-green-400', bg: 'bg-green-400/10', name: 'Bug Hunter' },
-            { id: 3, icon: <Trophy size={14} />, color: 'text-purple-400', bg: 'bg-purple-400/10', name: 'Top 10%' },
-            { id: 4, icon: <Star size={14} />, color: 'text-blue-400', bg: 'bg-blue-400/10', name: 'Consistent' },
-        ]
-    };
+        const mockEducation = [
+            {
+                id: 1,
+                degree: 'M.Tech in Artificial Intelligence',
+                institution: 'IIT Bangalore',
+                start_year: 2016,
+                end_year: 2018,
+                grade: '8.8 CGPA'
+            },
+            {
+                id: 2,
+                degree: 'B.Tech in Computer Science',
+                institution: 'IIT Bangalore',
+                start_year: 2012,
+                end_year: 2016,
+                grade: '8.5 CGPA'
+            }
+        ];
+
+        const mockPortfolio = [
+            {
+                id: 1,
+                title: 'E-Commerce Platform',
+                description: 'Full-stack e-commerce solution with React and Node.js',
+                url: 'https://github.com/johndoe/ecommerce',
+                image: 'https://images.unsplash.com/photo-1557821552-17105176677c?w=400'
+            },
+            {
+                id: 2,
+                title: 'Task Management App',
+                description: 'Real-time task management with WebSocket integration',
+                url: 'https://github.com/johndoe/taskmanager',
+                image: 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?w=400'
+            }
+        ];
+
+        const mockGamification = {
+            rank: 42,
+            points: 12500,
+            masteryScore: 88,
+            accuracy: 92,
+            badges: [
+                { id: 1, icon: <Trophy size={14} />, color: 'text-yellow-400', bg: 'bg-yellow-400/10', name: 'Top Performer' },
+                { id: 2, icon: <Trophy size={14} />, color: 'text-blue-400', bg: 'bg-blue-400/10', name: 'Fast Learner' },
+                { id: 3, icon: <Trophy size={14} />, color: 'text-green-400', bg: 'bg-green-400/10', name: 'Problem Solver' }
+            ]
+        };
+
+        const mockAssessmentResults = {
+            overallScore: 88,
+            communication: 92,
+            knowledge: 85,
+            confidence: 87,
+            completedAt: new Date().toISOString()
+        };
+
+        setProfile(mockProfile);
+        setSkills(mockSkills);
+        setExperience(mockExperience);
+        setEducation(mockEducation);
+        setPortfolio(mockPortfolio);
+        setGamification(mockGamification);
+        setAssessmentResults(mockAssessmentResults);
+    }, []);
 
     const tabs = [
         { id: 'about', label: 'About', icon: <User size={16} /> },
@@ -64,12 +163,15 @@ const Profile: React.FC = () => {
         { id: 'experience', label: 'Experience', icon: <Briefcase size={16} /> },
         { id: 'education', label: 'Education', icon: <GraduationCap size={16} /> },
         { id: 'portfolio', label: 'Portfolio', icon: <Folder size={16} /> },
+        { id: 'assessment', label: 'Assessment', icon: <Star size={16} /> },
         { id: 'achievements', label: 'Achievements', icon: <Trophy size={16} /> },
     ];
 
     const handleConnect = () => {
         if (connectionStatus === 'connect') setConnectionStatus('pending');
     };
+
+    if (!profile) return <div className="p-8 text-center text-white">Loading profile...</div>;
 
     return (
         <div className="max-w-7xl mx-auto pb-8 px-4">
@@ -91,15 +193,13 @@ const Profile: React.FC = () => {
                         </div>
                     </div>
                     <div className="flex-1 text-center md:text-left">
-                        <h1 className="text-3xl font-bold mb-1 text-[var(--text-primary)]">Alex Johnson</h1>
+                        <h1 className="text-3xl font-bold mb-1 text-[var(--text-primary)]">{profile.name}</h1>
                         <div className="flex items-center justify-center md:justify-start gap-2 text-neon-cyan mb-3">
                             <Briefcase size={16} />
-                            <span className="font-medium">Full Stack Developer</span>
+                            <span className="font-medium">{profile.title}</span>
                         </div>
                         <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-[var(--text-secondary)]">
-                            <span className="flex items-center gap-1"><MapPin size={14} /> San Francisco, CA</span>
-                            <span className="flex items-center gap-1"><Mail size={14} /> alex.j@example.com</span>
-                            <span className="flex items-center gap-1"><Phone size={14} /> +1 (555) 123-4567</span>
+                            <span className="flex items-center gap-1"><MapPin size={14} /> {profile.location}</span>
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2 justify-center">
@@ -265,29 +365,43 @@ const Profile: React.FC = () => {
                                 <User size={18} className="text-neon-cyan" /> About Me
                             </h3>
                             <p className="text-[var(--text-secondary)] leading-relaxed text-sm">
-                                Passionate Full Stack Developer with 5+ years of experience building scalable web applications.
-                                Expertise in React, Node.js, and Cloud Architecture. I love solving complex problems and optimizing performance.
-                                Currently looking for opportunities to work on AI-driven projects.
+                                {profile.bio || 'Passionate Full Stack Developer with 5+ years of experience building scalable web applications. Expertise in React, Node.js, and Cloud Architecture. I love solving complex problems and optimizing performance. Currently looking for opportunities to work on AI-driven projects.'}
                             </p>
+                            {profile.jobProfile && (
+                                <div className="mt-4 pt-4 border-t border-[var(--glass-border)]">
+                                    <div className="text-xs text-[var(--text-secondary)] mb-1">Job Profile</div>
+                                    <div className="text-sm font-medium text-neon-cyan">{profile.jobProfile}</div>
+                                </div>
+                            )}
                         </motion.div>
 
-                        {/* Quick Stats Card */}
+                        {/* Personal Details Card */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
                             className="p-5 rounded-xl glass border border-[var(--glass-border)]"
                         >
-                            <h3 className="text-lg font-semibold mb-3 text-[var(--text-primary)]">Quick Stats</h3>
+                            <h3 className="text-lg font-semibold mb-3 text-[var(--text-primary)]">Personal Details</h3>
                             <div className="space-y-3">
-                                <div className="p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--glass-border)]">
-                                    <div className="text-[var(--text-secondary)] text-xs">Experience</div>
-                                    <div className="text-xl font-bold text-[var(--text-primary)]">5+ Years</div>
-                                </div>
-                                <div className="p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--glass-border)]">
-                                    <div className="text-[var(--text-secondary)] text-xs">Projects</div>
-                                    <div className="text-xl font-bold text-[var(--text-primary)]">24</div>
-                                </div>
+                                {profile.dateOfBirth && (
+                                    <div className="pb-2 border-b border-[var(--glass-border)]">
+                                        <div className="text-[var(--text-secondary)] text-xs">Date of Birth</div>
+                                        <div className="text-sm font-medium text-[var(--text-primary)] mt-1">{profile.dateOfBirth}</div>
+                                    </div>
+                                )}
+                                {profile.currentAddress && (
+                                    <div className="pb-2 border-b border-[var(--glass-border)]">
+                                        <div className="text-[var(--text-secondary)] text-xs">Current Address</div>
+                                        <div className="text-sm text-[var(--text-primary)] mt-1">{profile.currentAddress}</div>
+                                    </div>
+                                )}
+                                {profile.permanentAddress && (
+                                    <div>
+                                        <div className="text-[var(--text-secondary)] text-xs">Permanent Address</div>
+                                        <div className="text-sm text-[var(--text-primary)] mt-1">{profile.permanentAddress}</div>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
 
@@ -330,15 +444,15 @@ const Profile: React.FC = () => {
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center pb-2 border-b border-[var(--glass-border)]">
                                     <span className="text-[var(--text-secondary)] text-xs">Global Rank</span>
-                                    <span className="text-[var(--text-primary)] font-bold text-sm">#{gamificationStats.rank.toLocaleString()}</span>
+                                    <span className="text-[var(--text-primary)] font-bold text-sm">#{gamification.rank.toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between items-center pb-2 border-b border-[var(--glass-border)]">
                                     <span className="text-[var(--text-secondary)] text-xs">Total Points</span>
-                                    <span className="text-neon-pink font-bold text-sm">{gamificationStats.points}</span>
+                                    <span className="text-neon-pink font-bold text-sm">{gamification.points}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-[var(--text-secondary)] text-xs">Accuracy</span>
-                                    <span className="text-green-400 font-bold text-sm">{gamificationStats.accuracy}%</span>
+                                    <span className="text-green-400 font-bold text-sm">{gamification.accuracy}%</span>
                                 </div>
                                 <Link to="/candidate/gamification" className="block w-full py-2 mt-2 text-center text-xs font-medium text-[var(--text-primary)] bg-gradient-to-r from-neon-cyan/20 to-neon-purple/20 border border-neon-cyan/30 hover:border-neon-cyan/60 rounded-lg transition-all">
                                     View Dashboard →
@@ -356,7 +470,7 @@ const Profile: React.FC = () => {
                             animate={{ opacity: 1, y: 0 }}
                             className="lg:col-span-2"
                         >
-                            <SkillRadar data={radarData} />
+                            <SkillRadar data={skills.radar} />
                         </motion.div>
 
                         {/* Skill Categories Card */}
@@ -365,7 +479,7 @@ const Profile: React.FC = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
                         >
-                            <SkillCategories data={pieData} />
+                            <SkillCategories data={skills.pie} />
                         </motion.div>
 
                         {/* Technical Skills Card */}
@@ -375,7 +489,7 @@ const Profile: React.FC = () => {
                             transition={{ delay: 0.2 }}
                             className="lg:col-span-2"
                         >
-                            <SkillBar data={techSkills} title="Top Technical Skills" color="#ff006e" />
+                            <SkillBar data={skills.tech} title="Top Technical Skills" color="#ff006e" />
                         </motion.div>
 
                         {/* Soft Skills Card */}
@@ -384,18 +498,14 @@ const Profile: React.FC = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
                         >
-                            <SkillBar data={softSkills} title="Soft Skills" color="#bc13fe" />
+                            <SkillBar data={skills.soft} title="Soft Skills" color="#bc13fe" />
                         </motion.div>
                     </>
                 )}
 
                 {activeTab === 'experience' && (
                     <>
-                        {[
-                            { role: 'Senior Frontend Engineer', company: 'TechCorp Inc.', period: '2022 - Present', desc: 'Leading the frontend team, migrating legacy codebase to React 18.' },
-                            { role: 'Full Stack Developer', company: 'StartUp Flow', period: '2020 - 2022', desc: 'Built the MVP from scratch using MERN stack. Scaled to 100k users.' },
-                            { role: 'Junior Developer', company: 'WebSolutions', period: '2018 - 2020', desc: 'Developed responsive websites and e-commerce platforms.' }
-                        ].map((exp, idx) => (
+                        {experience.map((exp, idx) => (
                             <motion.div
                                 key={idx}
                                 initial={{ opacity: 0, y: 20 }}
@@ -409,8 +519,8 @@ const Profile: React.FC = () => {
                                     </div>
                                     <div className="flex-1">
                                         <h3 className="text-base font-semibold text-[var(--text-primary)]">{exp.role}</h3>
-                                        <div className="text-neon-cyan text-sm mb-2">{exp.company} • {exp.period}</div>
-                                        <p className="text-[var(--text-secondary)] text-sm leading-relaxed">{exp.desc}</p>
+                                        <div className="text-neon-cyan text-sm mb-2">{exp.company} • {exp.start_date} - {exp.end_date || 'Present'}</div>
+                                        <p className="text-[var(--text-secondary)] text-sm leading-relaxed">{exp.description}</p>
                                     </div>
                                 </div>
                             </motion.div>
@@ -420,64 +530,221 @@ const Profile: React.FC = () => {
 
                 {activeTab === 'education' && (
                     <>
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="p-5 rounded-xl glass border border-[var(--glass-border)] lg:col-span-2"
-                        >
-                            <div className="flex items-start gap-4">
-                                <div className="p-3 rounded-lg bg-neon-pink/10 text-neon-pink">
-                                    <GraduationCap size={24} />
+                        {/* From Registration Form - 10th */}
+                        {profile.education10th?.board && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-5 rounded-xl glass border border-[var(--glass-border)]"
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 rounded-lg bg-blue-500/10 text-blue-400">
+                                        <GraduationCap size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold text-base text-[var(--text-primary)]">10th Standard</h3>
+                                        <div className="text-[var(--text-secondary)] text-sm">{profile.education10th.board}</div>
+                                        <div className="text-neon-cyan text-sm mt-1">{profile.education10th.percentage}% • {profile.education10th.year}</div>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-lg text-[var(--text-primary)]">Master of Computer Science</h3>
-                                    <div className="text-[var(--text-secondary)] text-sm">Stanford University • 2016 - 2018</div>
-                                    <div className="text-[var(--text-secondary)] text-sm mt-2">Specialization: Artificial Intelligence & Machine Learning</div>
-                                </div>
-                            </div>
-                        </motion.div>
+                            </motion.div>
+                        )}
 
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="p-5 rounded-xl glass border border-[var(--glass-border)]"
-                        >
-                            <div className="flex items-start gap-4">
-                                <div className="p-3 rounded-lg bg-blue-500/10 text-blue-400">
-                                    <GraduationCap size={24} />
+                        {/* From Registration Form - 12th */}
+                        {profile.education12th?.board && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="p-5 rounded-xl glass border border-[var(--glass-border)]"
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 rounded-lg bg-blue-500/10 text-blue-400">
+                                        <GraduationCap size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold text-base text-[var(--text-primary)]">12th Standard</h3>
+                                        <div className="text-[var(--text-secondary)] text-sm">{profile.education12th.board}</div>
+                                        <div className="text-neon-cyan text-sm mt-1">{profile.education12th.percentage}% • {profile.education12th.year}</div>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-base text-[var(--text-primary)]">B.S. Computer Engineering</h3>
-                                    <div className="text-[var(--text-secondary)] text-sm">MIT • 2012 - 2016</div>
-                                    <div className="text-[var(--text-secondary)] text-sm mt-2">GPA: 3.9/4.0</div>
+                            </motion.div>
+                        )}
+
+                        {/* From Registration Form - Graduation */}
+                        {profile.graduation?.degree && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="p-5 rounded-xl glass border border-[var(--glass-border)]"
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 rounded-lg bg-green-500/10 text-green-400">
+                                        <GraduationCap size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold text-base text-[var(--text-primary)]">{profile.graduation.degree}</h3>
+                                        <div className="text-[var(--text-secondary)] text-sm">{profile.graduation.college}</div>
+                                        <div className="text-neon-cyan text-sm mt-1">{profile.graduation.percentage}% • {profile.graduation.year}</div>
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
+                            </motion.div>
+                        )}
+
+                        {/* From Registration Form - Post Graduation */}
+                        {profile.postGraduation?.degree && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 }}
+                                className="p-5 rounded-xl glass border border-[var(--glass-border)]"
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 rounded-lg bg-purple-500/10 text-purple-400">
+                                        <GraduationCap size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold text-base text-[var(--text-primary)]">{profile.postGraduation.degree}</h3>
+                                        <div className="text-[var(--text-secondary)] text-sm">{profile.postGraduation.college}</div>
+                                        <div className="text-neon-cyan text-sm mt-1">{profile.postGraduation.percentage}% • {profile.postGraduation.year}</div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* From Database - Additional Education */}
+                        {education.map((edu, idx) => (
+                            <motion.div
+                                key={idx}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: (idx + 4) * 0.1 }}
+                                className="p-5 rounded-xl glass border border-[var(--glass-border)]"
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 rounded-lg bg-blue-500/10 text-blue-400">
+                                        <GraduationCap size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold text-base text-[var(--text-primary)]">{edu.degree}</h3>
+                                        <div className="text-[var(--text-secondary)] text-sm">{edu.institution} • {edu.start_year} - {edu.end_year}</div>
+                                        <div className="text-[var(--text-secondary)] text-sm mt-2">{edu.description}</div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+
+                        {/* Empty State */}
+                        {!profile.education10th?.board && !profile.education12th?.board && !profile.graduation?.degree && education.length === 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="lg:col-span-3 p-12 text-center rounded-xl glass border border-white/10 border-dashed"
+                            >
+                                <GraduationCap className="mx-auto mb-4 text-gray-500" size={48} />
+                                <h3 className="text-xl font-bold mb-2">No Education Information</h3>
+                                <p className="text-gray-400 mb-4">Add your educational qualifications to complete your profile</p>
+                                <button className="px-6 py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-neon-purple text-white font-bold">
+                                    Add Education
+                                </button>
+                            </motion.div>
+                        )}
                     </>
                 )}
 
                 {activeTab === 'portfolio' && (
                     <>
-                        {[1, 2, 3, 4, 5, 6].map((item) => (
+                        {portfolio.map((item, idx) => (
                             <motion.div
-                                key={item}
+                                key={idx}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: item * 0.05 }}
+                                transition={{ delay: idx * 0.05 }}
                                 className="group relative aspect-video rounded-xl overflow-hidden bg-[var(--card-bg)] border border-[var(--glass-border)] hover:border-neon-cyan/50 transition-all cursor-pointer"
                             >
+                                <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <span className="text-white font-medium flex items-center gap-2 px-4 py-2 rounded-full bg-black/50 border border-white/20 backdrop-blur-sm text-sm">
                                         <Folder size={16} /> View Details
                                     </span>
                                 </div>
                                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent">
-                                    <div className="text-white font-semibold text-sm">AI Hiring Platform {item}</div>
-                                    <div className="text-xs text-gray-400 mt-1">React • Node.js • AI</div>
+                                    <div className="text-white font-semibold text-sm">{item.title}</div>
+                                    <div className="text-xs text-gray-400 mt-1">{item.description}</div>
                                 </div>
                             </motion.div>
                         ))}
+                    </>
+                )}
+
+                {activeTab === 'assessment' && (
+                    <>
+                        {assessmentResults ? (
+                            <>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="lg:col-span-2 p-6 rounded-xl glass border border-white/10"
+                                >
+                                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                        <Star className="text-neon-cyan" size={24} />
+                                        Latest Assessment Results
+                                    </h3>
+                                    <div className="text-center mb-6">
+                                        <div className="text-5xl font-bold bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
+                                            {assessmentResults.overallScore}%
+                                        </div>
+                                        <p className="text-gray-400 mt-2">Overall Score</p>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="text-center p-4 rounded-lg bg-white/5">
+                                            <div className="text-2xl font-bold text-blue-400">{assessmentResults.communication}%</div>
+                                            <div className="text-xs text-gray-400 mt-1">Communication</div>
+                                        </div>
+                                        <div className="text-center p-4 rounded-lg bg-white/5">
+                                            <div className="text-2xl font-bold text-purple-400">{assessmentResults.knowledge}%</div>
+                                            <div className="text-xs text-gray-400 mt-1">Knowledge</div>
+                                        </div>
+                                        <div className="text-center p-4 rounded-lg bg-white/5">
+                                            <div className="text-2xl font-bold text-pink-400">{assessmentResults.confidence}%</div>
+                                            <div className="text-xs text-gray-400 mt-1">Confidence</div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.1 }}
+                                    className="p-6 rounded-xl glass border border-white/10"
+                                >
+                                    <h3 className="font-bold mb-3">Completed At</h3>
+                                    <p className="text-gray-400">{new Date(assessmentResults.completedAt).toLocaleString()}</p>
+                                    <Link
+                                        to="/candidate/jobs"
+                                        className="mt-4 inline-block px-4 py-2 rounded-lg bg-neon-cyan/20 border border-neon-cyan/30 hover:bg-neon-cyan/30 transition-colors"
+                                    >
+                                        Take Another Assessment
+                                    </Link>
+                                </motion.div>
+                            </>
+                        ) : (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="lg:col-span-3 p-12 text-center rounded-xl glass border border-white/10 border-dashed"
+                            >
+                                <Star className="mx-auto mb-4 text-gray-500" size={48} />
+                                <h3 className="text-xl font-bold mb-2">No Assessment Results</h3>
+                                <p className="text-gray-400 mb-4">Complete a live video assessment to see your results here</p>
+                                <Link
+                                    to="/candidate/jobs"
+                                    className="inline-block px-6 py-2 rounded-lg bg-gradient-to-r from-neon-cyan to-neon-purple text-white font-bold"
+                                >
+                                    Browse Jobs & Apply
+                                </Link>
+                            </motion.div>
+                        )}
                     </>
                 )}
 
@@ -491,7 +758,7 @@ const Profile: React.FC = () => {
                         >
                             <h3 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Earned Badges</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {gamificationStats.badges.map((badge) => (
+                                {gamification.badges.map((badge: any) => (
                                     <div key={badge.id} className={`p-4 rounded-lg ${badge.bg} border border-[var(--glass-border)] flex flex-col items-center text-center gap-2 group relative cursor-help transition-transform hover:scale-105`}>
                                         <div className={`${badge.color}`}>
                                             {badge.icon}
@@ -513,11 +780,11 @@ const Profile: React.FC = () => {
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <span className="text-[var(--text-secondary)] text-sm">Skill Mastery</span>
-                                    <span className="text-neon-cyan font-bold">{gamificationStats.masteryScore}</span>
+                                    <span className="text-neon-cyan font-bold">{gamification.masteryScore}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-[var(--text-secondary)] text-sm">Accuracy</span>
-                                    <span className="text-green-400 font-bold">{gamificationStats.accuracy}%</span>
+                                    <span className="text-green-400 font-bold">{gamification.accuracy}%</span>
                                 </div>
                             </div>
                         </motion.div>

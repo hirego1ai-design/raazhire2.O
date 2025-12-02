@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -31,15 +32,33 @@ const CandidateInterview: React.FC = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
-    // Mock interview data
-    const interview = {
-        id: Number(id),
-        employerName: "TechCorp Inc.",
-        role: "Senior Frontend Developer",
-        interviewer: "John Doe",
-        duration: "45 mins",
-        scheduledTime: "10:00 AM"
-    };
+    const [interview, setInterview] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchInterview = async () => {
+            if (!supabase || !id) return;
+            const { data, error } = await supabase
+                .from('interviews')
+                .select(`
+                    *,
+                    job:jobs(title, employer:users(company_name))
+                `)
+                .eq('id', id)
+                .single();
+
+            if (data) {
+                setInterview({
+                    id: data.id,
+                    employerName: data.job?.employer?.company_name || 'Unknown Company',
+                    role: data.job?.title || 'Unknown Role',
+                    interviewer: 'Assigned Interviewer',
+                    duration: `${data.duration || 45} mins`,
+                    scheduledTime: data.time || '10:00 AM'
+                });
+            }
+        };
+        fetchInterview();
+    }, [id]);
 
     // Request camera and microphone permissions
     useEffect(() => {
@@ -189,6 +208,10 @@ const CandidateInterview: React.FC = () => {
             setChatMessage('');
         }
     };
+
+    if (!interview) {
+        return <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center text-white">Loading interview details...</div>;
+    }
 
     if (isBlocked) {
         return (

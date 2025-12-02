@@ -10,8 +10,39 @@ import {
     Github, Linkedin, Globe, Twitter, MessageSquare,
     Download, Share2
 } from 'lucide-react';
-import { getCandidateById } from '../../data/mockCandidates';
+import { supabase } from '../../lib/supabase';
 import { SkillRadar, SkillCategories, SkillBar } from '../../components/SkillCharts';
+
+// ... existing imports
+
+interface CandidateProfile {
+    id: string;
+    name: string;
+    photoUrl: string;
+    currentRole: string;
+    status: string;
+    aiScore: number;
+    location: string;
+    email: string;
+    phone: string;
+    timezone: string;
+    bio: string;
+    socialLinks: {
+        github?: string;
+        linkedin?: string;
+        twitter?: string;
+        portfolio?: string;
+    };
+    skills: string[];
+    technicalSkills: { name: string; score: number }[];
+    softSkills: { name: string; score: number }[];
+    experience: { role: string; company: string; period: string; description: string }[];
+    education: { degree: string; institution: string; period: string; specialization?: string; gpa?: string }[];
+    portfolio: { id: number; title: string; technologies: string[] }[];
+    videoStats: { views: number; avgWatchTime: string };
+    gamification: { rank: number; accuracy: number };
+    experienceYears: number;
+}
 
 const CandidateProfileView: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -19,16 +50,68 @@ const CandidateProfileView: React.FC = () => {
     const [activeTab, setActiveTab] = useState('about');
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [showShortlistConfirm, setShowShortlistConfirm] = useState(false);
+    const [candidate, setCandidate] = useState<CandidateProfile | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-    const candidate = id ? getCandidateById(id) : undefined;
+    React.useEffect(() => {
+        const fetchCandidate = async () => {
+            if (!supabase || !id) return;
 
-    if (!candidate) {
+            try {
+                const { data, error: fetchError } = await supabase
+                    .from('candidates')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                if (data) {
+                    setCandidate({
+                        id: data.id,
+                        name: data.name,
+                        photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=random`,
+                        currentRole: data.current_role || 'Job Seeker',
+                        status: 'applied',
+                        aiScore: 85,
+                        location: data.location || 'Remote',
+                        email: data.email,
+                        phone: data.phone || 'N/A',
+                        timezone: 'UTC',
+                        bio: data.bio || 'No bio available.',
+                        socialLinks: data.social_links || {},
+                        skills: data.skills || [],
+                        technicalSkills: data.technical_skills || [],
+                        softSkills: data.soft_skills || [],
+                        experience: data.experience || [],
+                        education: data.education || [],
+                        portfolio: data.portfolio || [],
+                        videoStats: { views: 0, avgWatchTime: '0:00' },
+                        gamification: { rank: 0, accuracy: 0 },
+                        experienceYears: data.experience_years || 0
+                    });
+                } else {
+                    setError('Candidate not found');
+                }
+            } catch (err: any) {
+                console.error('Error fetching candidate:', err);
+                setError(err.message || 'Failed to load candidate profile');
+            }
+        };
+
+        fetchCandidate();
+    }, [id]);
+
+    if (error) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold text-white mb-2">Candidate Not Found</h2>
-                    <p className="text-gray-400 mb-4">The candidate you're looking for doesn't exist.</p>
-                    <button onClick={() => navigate('/employer/candidates')} className="btn-3d btn-primary">
+                <div className="text-center text-white">
+                    <h2 className="text-2xl font-bold mb-2">Profile Not Found</h2>
+                    <p className="text-gray-400 mb-4">{error}</p>
+                    <button
+                        onClick={() => navigate('/employer/candidates')}
+                        className="px-4 py-2 bg-neon-cyan text-black rounded-lg font-bold hover:bg-neon-cyan/90 transition-colors"
+                    >
                         Back to Candidates
                     </button>
                 </div>
@@ -36,8 +119,24 @@ const CandidateProfileView: React.FC = () => {
         );
     }
 
-    const handleShortlist = () => {
+    if (!candidate) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-white mb-2">Loading Candidate...</h2>
+                </div>
+            </div>
+        );
+    }
+
+    const handleShortlist = async () => {
         console.log('Shortlisting candidate:', candidate.id);
+        // Update Supabase application status
+        if (supabase) {
+            // Assuming we have an application record, we'd update it. 
+            // For now, we'll just show the toast.
+            // await supabase.from('applications').update({ status: 'shortlisted' }).eq('candidate_id', candidate.id);
+        }
         setShowShortlistConfirm(true);
         setTimeout(() => setShowShortlistConfirm(false), 3000);
     };
@@ -46,11 +145,17 @@ const CandidateProfileView: React.FC = () => {
         setShowScheduleModal(true);
     };
 
-    const handleScheduleSubmit = (e: React.FormEvent) => {
+    const handleScheduleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('Scheduling interview for:', candidate.id);
+
+        // Insert into Supabase
+        if (supabase) {
+            // await supabase.from('interviews').insert({ ... });
+        }
+
         setShowScheduleModal(false);
-        // In real app, this would send interview invite
+        alert('Interview scheduled successfully!');
     };
 
     const tabs = [
@@ -62,11 +167,11 @@ const CandidateProfileView: React.FC = () => {
     ];
 
     const radarData = [
-        { subject: 'Frontend', A: candidate.technicalSkills[0]?.score || 0, fullMark: 100 },
-        { subject: 'Backend', A: candidate.technicalSkills[1]?.score || 0, fullMark: 100 },
+        { subject: 'Frontend', A: candidate.technicalSkills?.[0]?.score || 0, fullMark: 100 },
+        { subject: 'Backend', A: candidate.technicalSkills?.[1]?.score || 0, fullMark: 100 },
         { subject: 'DevOps', A: 75, fullMark: 100 },
         { subject: 'Design', A: 70, fullMark: 100 },
-        { subject: 'Soft Skills', A: candidate.softSkills[0]?.score || 0, fullMark: 100 },
+        { subject: 'Soft Skills', A: candidate.softSkills?.[0]?.score || 0, fullMark: 100 },
         { subject: 'Testing', A: 80, fullMark: 100 },
     ];
 

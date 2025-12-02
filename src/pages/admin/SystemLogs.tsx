@@ -11,24 +11,14 @@ interface LogEntry {
     source: string;
 }
 
-const MOCK_LOGS: LogEntry[] = [
-    { id: 1, timestamp: '2025-11-20 10:30:15', level: 'SUCCESS', message: 'User login successful: john.doe@example.com', source: 'AuthService' },
-    { id: 2, timestamp: '2025-11-20 10:32:00', level: 'WARNING', message: 'High latency detected on Gemini API (450ms)', source: 'AIProvider' },
-    { id: 3, timestamp: '2025-11-20 10:35:22', level: 'ERROR', message: 'Failed to process video: Format not supported', source: 'VideoService' },
-    { id: 4, timestamp: '2025-11-20 10:36:05', level: 'INFO', message: 'New job posted: Senior React Developer', source: 'JobService' },
-    { id: 5, timestamp: '2025-11-20 10:40:11', level: 'INFO', message: 'Candidate assessment started: ID #4421', source: 'AssessmentService' },
-    { id: 6, timestamp: '2025-11-20 10:42:30', level: 'WARNING', message: 'Rate limit approaching for OpenAI GPT-4', source: 'AIProvider' },
-    { id: 7, timestamp: '2025-11-20 10:45:00', level: 'SUCCESS', message: 'Database backup completed successfully', source: 'System' },
-    { id: 8, timestamp: '2025-11-20 10:48:12', level: 'ERROR', message: 'Payment gateway timeout: Transaction #9982', source: 'BillingService' },
-    { id: 9, timestamp: '2025-11-20 10:50:05', level: 'SUCCESS', message: 'Credit purchase successful: 500 Credits (Employer #E001)', source: 'CreditSystem' },
-    { id: 10, timestamp: '2025-11-20 10:55:18', level: 'INFO', message: 'Credits deducted: 25 Credits for Premium Job Post', source: 'CreditSystem' },
-];
+
 
 const SystemLogs: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterLevel, setFilterLevel] = useState('ALL');
     const [logs, setLogs] = useState<LogEntry[]>([]);
 
+    // Removed mock logs; will display empty state if fetch fails
     const fetchLogs = async () => {
         try {
             const response = await fetch(endpoints.logs);
@@ -36,8 +26,8 @@ const SystemLogs: React.FC = () => {
             const data = await response.json();
             setLogs(data);
         } catch (error) {
-            console.error("Failed to fetch logs:", error);
-            setLogs(MOCK_LOGS); // Fallback to mock data
+            console.error('Failed to fetch logs:', error);
+            setLogs([]); // Fallback to empty array
         }
     };
 

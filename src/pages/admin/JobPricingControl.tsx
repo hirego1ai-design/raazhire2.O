@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Globe, DollarSign, CreditCard, Shield, Edit, Trash2, Plus,
@@ -6,6 +6,7 @@ import {
     Briefcase, AlertTriangle, RefreshCw, Search, Filter, X,
     Save, Copy, FileText, Database, MessageSquare, Bot, Video
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 // --- Types ---
 type Currency = 'INR' | 'USD';
@@ -139,28 +140,14 @@ interface EmployerData {
 }
 
 // --- Mock Data ---
-const MOCK_EMPLOYERS: EmployerData[] = [
-    { id: 'E-2025-001', name: 'TechCorp Inc.', email: 'hr@techcorp.com', currentPlan: 'Professional', jobPostsUsed: 7, jobPostsLimit: 10, previewsUsed: 20, previewsLimit: 50, aiAccessEnabled: true, pricingModel: 'subscription' },
-    { id: 'E-2025-002', name: 'StartupHub', email: 'jobs@startuphub.io', currentPlan: 'Starter / Basic', jobPostsUsed: 1, jobPostsLimit: 2, previewsUsed: 5, previewsLimit: 10, aiAccessEnabled: false, pricingModel: 'pph' },
-    { id: 'E-2025-003', name: 'Global Solutions', email: 'recruit@globalsol.com', currentPlan: 'Professional', jobPostsUsed: 8, jobPostsLimit: 10, previewsUsed: 35, previewsLimit: 50, aiAccessEnabled: true, pricingModel: 'subscription' },
-];
-
 const INITIAL_PPH_CONFIG: PayPerHireConfig = {
-    salarySlabs: [
-        { id: 'slab1', minSalary: 12000, maxSalary: 20000, pphFee: 8000, currency: 'INR' },
-        { id: 'slab2', minSalary: 20001, maxSalary: 30000, pphFee: 12000, currency: 'INR' },
-        { id: 'slab3', minSalary: 30001, maxSalary: 50000, pphFee: 18000, currency: 'INR' },
-        { id: 'slab4', minSalary: 50001, maxSalary: 80000, pphFee: 25000, currency: 'INR' },
-        { id: 'slab5', minSalary: 80001, maxSalary: 120000, pphFee: 35000, currency: 'INR' },
-    ],
+    salarySlabs: [],
     paymentOptions: [
         { type: 'advance', discountMin: 5, discountMax: 20, allowCustomization: true, paymentTermDays: 0 },
         { type: 'postPayment', discountMin: 0, discountMax: 0, allowCustomization: false, paymentTermDays: 30 },
     ],
     customPlans: [],
-    agreementTemplates: [
-        { id: 'std1', name: 'Standard PPH Agreement', type: 'standard', content: 'Standard terms and conditions...', isActive: true },
-    ],
+    agreementTemplates: [],
     defaultAdvanceDiscount: 10,
     replacementPeriodDays: 90,
 };
@@ -209,48 +196,76 @@ const DEFAULT_PLAN: SubscriptionPlan = {
     aiChatbot: false,
 };
 
-const INITIAL_PLANS: SubscriptionPlan[] = [
-    {
-        ...DEFAULT_PLAN,
-        id: 'basic',
-        name: 'Starter / Basic',
-        description: 'Perfect for small businesses hiring occasionally.',
-        priceINR: 499,
-        priceUSD: 49,
-        jobPosts: 2,
-        candidatePreviews: 10,
-        appsPerJob: 50,
-        autoScheduleLimit: 5,
-        aiAutoScreening: true,
-        emailAlerts: true,
-    },
-    {
-        ...DEFAULT_PLAN,
-        id: 'pro',
-        name: 'Professional / Standard',
-        description: 'For growing teams needing advanced AI tools.',
-        priceINR: 1999,
-        priceUSD: 199,
-        jobPosts: 10,
-        candidatePreviews: 50,
-        appsPerJob: 200,
-        autoScheduleLimit: 20,
-        aiAutoScreening: true,
-        aiJDWriting: true,
-        aiJobMatching: true,
-        prioritySupport: true,
-    }
-];
-
 const JobPricingControl: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'plans' | 'pph' | 'employers'>('plans');
-    const [plans, setPlans] = useState<SubscriptionPlan[]>(INITIAL_PLANS);
+    const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
     const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
-    const [employers, setEmployers] = useState<EmployerData[]>(MOCK_EMPLOYERS);
+    const [employers, setEmployers] = useState<EmployerData[]>([]);
     const [selectedEmployer, setSelectedEmployer] = useState<EmployerData | null>(null);
     const [pphConfig, setPphConfig] = useState<PayPerHireConfig>(INITIAL_PPH_CONFIG);
     const [editingSlab, setEditingSlab] = useState<SalarySlab | null>(null);
     const [editingCustomPlan, setEditingCustomPlan] = useState<CustomCorporatePlan | null>(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!supabase) return;
+
+            // Fetch Plans
+            const { data: plansData } = await supabase.from('subscription_plans').select('*');
+            if (plansData) {
+                setPlans(plansData.map((p: any) => ({
+                    ...DEFAULT_PLAN,
+                    id: p.id,
+                    name: p.name,
+                    description: p.description,
+                    priceINR: p.price_inr,
+                    priceUSD: p.price_usd,
+                    duration: p.duration,
+                    isActive: p.is_active,
+                    jobPosts: p.job_posts_limit,
+                    // Map other fields as needed, assuming defaults for now or extended schema
+                })));
+            }
+
+            // Fetch Employers
+            const { data: employersData } = await supabase
+                .from('users')
+                .select('id, company_name, email, subscription_plan_id, job_posts_count, job_posts_limit') // Adjust fields
+                .eq('role', 'employer');
+
+            if (employersData) {
+                setEmployers(employersData.map((e: any) => ({
+                    id: e.id,
+                    name: e.company_name || 'Unknown',
+                    email: e.email,
+                    currentPlan: e.subscription_plan_id || 'Free',
+                    jobPostsUsed: e.job_posts_count || 0,
+                    jobPostsLimit: e.job_posts_limit || 0,
+                    previewsUsed: 0, // Placeholder
+                    previewsLimit: 0, // Placeholder
+                    aiAccessEnabled: false, // Placeholder
+                    pricingModel: 'subscription' // Placeholder
+                })));
+            }
+
+            // Fetch PPH Config (Salary Slabs)
+            const { data: slabsData } = await supabase.from('salary_slabs').select('*');
+            if (slabsData) {
+                setPphConfig(prev => ({
+                    ...prev,
+                    salarySlabs: slabsData.map((s: any) => ({
+                        id: s.id,
+                        minSalary: s.min_salary,
+                        maxSalary: s.max_salary,
+                        pphFee: s.pph_fee,
+                        currency: s.currency
+                    }))
+                }));
+            }
+        };
+
+        fetchData();
+    }, []);
 
     // --- Actions ---
     const togglePlanStatus = (id: string) => {
@@ -268,12 +283,27 @@ const JobPricingControl: React.FC = () => {
         setPlans([...plans, newPlan]);
     };
 
-    const handleSavePlan = (plan: SubscriptionPlan) => {
-        if (plans.find(p => p.id === plan.id)) {
-            setPlans(plans.map(p => p.id === plan.id ? plan : p));
+    const handleSavePlan = async (plan: SubscriptionPlan) => {
+        if (!supabase) return;
+
+        const planData = {
+            name: plan.name,
+            description: plan.description,
+            price_inr: plan.priceINR,
+            price_usd: plan.priceUSD,
+            duration: plan.duration,
+            is_active: plan.isActive,
+            job_posts_limit: plan.jobPosts,
+            // Add other fields mapping
+        };
+
+        if (plan.id && !plan.id.startsWith('new')) {
+            await supabase.from('subscription_plans').update(planData).eq('id', plan.id);
         } else {
-            setPlans([...plans, { ...plan, id: Date.now().toString() }]);
+            await supabase.from('subscription_plans').insert(planData);
         }
+
+        // Refresh or update local state
         setEditingPlan(null);
     };
 
@@ -1286,8 +1316,8 @@ const JobPricingControl: React.FC = () => {
                                             </td>
                                             <td className="p-4">
                                                 <span className={`px-2 py-1 rounded text-xs border ${employer.pricingModel === 'pph'
-                                                        ? 'bg-green-400/10 text-green-400 border-green-400/20'
-                                                        : 'bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20'
+                                                    ? 'bg-green-400/10 text-green-400 border-green-400/20'
+                                                    : 'bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20'
                                                     }`}>
                                                     {employer.pricingModel === 'pph' ? 'Pay-Per-Hire' : 'Subscription'}
                                                 </span>
@@ -1353,7 +1383,13 @@ const JobPricingControl: React.FC = () => {
                     <ManageLimitsModal
                         employer={selectedEmployer}
                         onClose={() => setSelectedEmployer(null)}
-                        onSave={(updatedEmployer) => {
+                        onSave={async (updatedEmployer) => {
+                            if (supabase) {
+                                await supabase.from('users').update({
+                                    job_posts_limit: updatedEmployer.jobPostsLimit,
+                                    // Add other limit fields here
+                                }).eq('id', updatedEmployer.id);
+                            }
                             setEmployers(employers.map(e => e.id === updatedEmployer.id ? updatedEmployer : e));
                             setSelectedEmployer(null);
                         }}
@@ -1367,7 +1403,20 @@ const JobPricingControl: React.FC = () => {
                     <EditSlabModal
                         slab={editingSlab}
                         onClose={() => setEditingSlab(null)}
-                        onSave={(updatedSlab) => {
+                        onSave={async (updatedSlab) => {
+                            if (supabase) {
+                                const slabData = {
+                                    min_salary: updatedSlab.minSalary,
+                                    max_salary: updatedSlab.maxSalary,
+                                    pph_fee: updatedSlab.pphFee,
+                                    currency: updatedSlab.currency
+                                };
+                                if (updatedSlab.id && !updatedSlab.id.startsWith('slab')) { // Assuming 'slab' prefix for mock/new
+                                    await supabase.from('salary_slabs').update(slabData).eq('id', updatedSlab.id);
+                                } else {
+                                    await supabase.from('salary_slabs').insert(slabData);
+                                }
+                            }
                             const updatedSlabs = pphConfig.salarySlabs.map(s => s.id === updatedSlab.id ? updatedSlab : s);
                             setPphConfig({ ...pphConfig, salarySlabs: updatedSlabs });
                             setEditingSlab(null);
@@ -1382,7 +1431,15 @@ const JobPricingControl: React.FC = () => {
                     <EditCustomPlanModal
                         plan={editingCustomPlan}
                         onClose={() => setEditingCustomPlan(null)}
-                        onSave={(updatedPlan) => {
+                        onSave={async (updatedPlan) => {
+                            if (supabase) {
+                                const planData = {
+                                    company_name: updatedPlan.companyName,
+                                    custom_price_per_hire: updatedPlan.customPricePerHire,
+                                    // Add other fields
+                                };
+                                // Logic to update/insert custom plan
+                            }
                             const existingIndex = pphConfig.customPlans.findIndex(p => p.id === updatedPlan.id);
                             let updatedPlans;
                             if (existingIndex >= 0) {

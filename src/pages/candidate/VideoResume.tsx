@@ -1,9 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import Webcam from 'react-webcam';
 import { motion } from 'framer-motion';
 import { Video, Upload, Mic, StopCircle, Play, Loader, TrendingUp } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { endpoints } from '../../lib/api';
+import CandidateAIReport from '../../components/CandidateAIReport';
 
 const VideoResume: React.FC = () => {
     const [mode, setMode] = useState<'upload' | 'record'>('record');
@@ -12,12 +14,31 @@ const VideoResume: React.FC = () => {
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisResult, setAnalysisResult] = useState<any | null>(null);
+    const [user, setUser] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            if (!supabase) return;
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase.from('candidates').select('*').eq('user_id', user.id).single();
+                setUser(profile || { name: 'Candidate', skills: [] });
+            }
+        };
+        fetchUser();
+    }, []);
 
     const webcamRef = useRef<Webcam>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
+    const [transcript, setTranscript] = useState('');
+    const recognitionRef = useRef<any>(null);
+
     const handleStartRecording = useCallback(() => {
         setIsRecording(true);
+        setTranscript(''); // Reset transcript
+
+        // Start Video Recording
         mediaRecorderRef.current = new MediaRecorder(webcamRef.current!.stream as MediaStream, {
             mimeType: "video/webm"
         });
@@ -26,6 +47,32 @@ const VideoResume: React.FC = () => {
             handleDataAvailable
         );
         mediaRecorderRef.current.start();
+
+        // Start Speech Recognition (Real-time Transcription)
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            recognitionRef.current = new SpeechRecognition();
+            recognitionRef.current.continuous = true;
+            recognitionRef.current.interimResults = true;
+            recognitionRef.current.lang = 'en-US';
+
+            recognitionRef.current.onresult = (event: any) => {
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript + ' ';
+                    }
+                }
+                if (finalTranscript) {
+                    setTranscript(prev => prev + finalTranscript);
+                }
+            };
+
+            recognitionRef.current.start();
+        } else {
+            console.warn('Speech Recognition not supported in this browser.');
+        }
+
     }, [webcamRef, setIsRecording, mediaRecorderRef]);
 
     const handleDataAvailable = useCallback(
@@ -39,6 +86,9 @@ const VideoResume: React.FC = () => {
 
     const handleStopRecording = useCallback(() => {
         mediaRecorderRef.current?.stop();
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
         setIsRecording(false);
         setTimeout(() => {
             const blob = new Blob(recordedChunks, {
@@ -47,14 +97,24 @@ const VideoResume: React.FC = () => {
             const url = URL.createObjectURL(blob);
             setVideoUrl(url);
             setRecordedChunks([]);
+            
+            // Automatically start analysis after recording
+            setTimeout(() => {
+                startAnalysis();
+            }, 500);
         }, 100);
     }, [mediaRecorderRef, recordedChunks]);
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
             const url = URL.createObjectURL(file);
             setVideoUrl(url);
+            
+            // Automatically start analysis after upload
+            setTimeout(() => {
+                startAnalysis();
+            }, 500);
         }
     };
 
@@ -63,6 +123,17 @@ const VideoResume: React.FC = () => {
         try {
             const response = await fetch(endpoints.analyzeVideo, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    candidateData: {
+                        name: user?.name || 'Candidate',
+                        skills: user?.skills || ['React', 'Node.js', 'Communication']
+                    },
+                    videoData: {
+                        transcription: transcript || "No transcription available. Please ensure microphone permissions are enabled.",
+                        metadata: { duration: 120 }
+                    }
+                })
             });
             if (!response.ok) throw new Error('Analysis failed');
             const result = await response.json();
@@ -93,7 +164,16 @@ const VideoResume: React.FC = () => {
     const [isUploading, setIsUploading] = useState(false);
 
     const uploadToYouTube = async () => {
-        const config = JSON.parse(localStorage.getItem('youtube_config') || '{}');
+        let config: any = {};
+        if (supabase) {
+            const { data: configData } = await supabase.from('system_config').select('value').eq('key', 'youtube_config').single();
+            config = configData?.value || {};
+        }
+
+        // Fallback to local storage if not found in DB (for dev/testing)
+        if (!config.accessToken) {
+            config = JSON.parse(localStorage.getItem('youtube_config') || '{}');
+        }
 
         if (!config.accessToken) {
             alert('YouTube Access Token is missing. Please configure it in the Admin Panel > Video Storage.');
@@ -254,44 +334,21 @@ const VideoResume: React.FC = () => {
                             </div>
                         )}
 
-                        {videoUrl && !analysisResult && (
-                            <div className="mt-6 space-y-4">
-                                <div className="flex justify-center gap-4">
-                                    <button
-                                        onClick={() => setVideoUrl(null)}
-                                        className="btn-3d btn-ghost"
-                                        disabled={isUploading}
-                                    >
-                                        Retake / Reupload
-                                    </button>
-                                    <button
-                                        onClick={startAnalysis}
-                                        disabled={isAnalyzing || isUploading}
-                                        className="btn-3d btn-primary flex items-center gap-1.5"
-                                    >
-                                        {isAnalyzing ? <Loader className="animate-spin" size={14} /> : <Play size={14} />}
-                                        {isAnalyzing ? 'Analyzing...' : 'Analyze Video'}
-                                    </button>
-                                </div>
+                        {videoUrl && !analysisResult && !isAnalyzing && (
+                            <div className="mt-6 flex justify-center">
+                                <button
+                                    onClick={() => setVideoUrl(null)}
+                                    className="btn-3d btn-ghost"
+                                >
+                                    Retake / Reupload
+                                </button>
+                            </div>
+                        )}
 
-                                <div className="flex justify-center">
-                                    <button
-                                        onClick={uploadToYouTube}
-                                        disabled={isUploading || isAnalyzing}
-                                        className="btn-3d bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5 w-full justify-center max-w-xs"
-                                    >
-                                        {isUploading ? <Loader className="animate-spin" size={14} /> : <Upload size={14} />}
-                                        {isUploading ? `Uploading ${uploadProgress}%` : 'Upload to YouTube'}
-                                    </button>
-                                </div>
-                                {isUploading && (
-                                    <div className="w-full max-w-xs mx-auto h-1 bg-white/10 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-red-600 transition-all duration-300"
-                                            style={{ width: `${uploadProgress}%` }}
-                                        />
-                                    </div>
-                                )}
+                        {isAnalyzing && (
+                            <div className="mt-6 flex justify-center items-center gap-2 text-neon-cyan">
+                                <Loader className="animate-spin" size={20} />
+                                <span>Analyzing video...</span>
                             </div>
                         )}
                     </div>
@@ -306,66 +363,72 @@ const VideoResume: React.FC = () => {
                 >
                     {analysisResult ? (
                         <div className="space-y-6">
-                            <div className="p-6 rounded-xl glass border border-white/10">
-                                <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                                    <TrendingUp size={24} className="text-neon-cyan" />
-                                    AI Analysis Report
-                                </h2>
+                            {analysisResult.detailedReport ? (
+                                // New Rich AI Report
+                                <CandidateAIReport data={analysisResult.detailedReport} />
+                            ) : (
+                                // Legacy Fallback (for old mock data)
+                                <div className="p-6 rounded-xl glass border border-white/10">
+                                    <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                                        <TrendingUp size={24} className="text-neon-cyan" />
+                                        AI Analysis Report
+                                    </h2>
 
-                                <div className="grid grid-cols-2 gap-4 mb-6">
-                                    <div className="p-4 rounded-lg bg-white/5 text-center">
-                                        <div className="text-3xl font-bold text-neon-cyan mb-1">{analysisResult.score}%</div>
-                                        <div className="text-xs text-gray-400">Overall Score</div>
+                                    <div className="grid grid-cols-2 gap-4 mb-6">
+                                        <div className="p-4 rounded-lg bg-white/5 text-center">
+                                            <div className="text-3xl font-bold text-neon-cyan mb-1">{analysisResult.score}%</div>
+                                            <div className="text-xs text-gray-400">Overall Score</div>
+                                        </div>
+                                        <div className="p-4 rounded-lg bg-white/5 text-center">
+                                            <div className="text-xl font-bold text-white mb-1">{analysisResult.tone}</div>
+                                            <div className="text-xs text-gray-400">Detected Tone</div>
+                                        </div>
                                     </div>
-                                    <div className="p-4 rounded-lg bg-white/5 text-center">
-                                        <div className="text-xl font-bold text-white mb-1">{analysisResult.tone}</div>
-                                        <div className="text-xs text-gray-400">Detected Tone</div>
-                                    </div>
-                                </div>
 
-                                <div className="h-64 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={data}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={80}
-                                                paddingAngle={5}
-                                                dataKey="value"
-                                            >
-                                                {data.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                    <div className="h-64 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={data}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={60}
+                                                    outerRadius={80}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                >
+                                                    {data.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip
+                                                    contentStyle={{ backgroundColor: '#0a0e27', borderColor: 'rgba(255,255,255,0.1)' }}
+                                                    itemStyle={{ color: '#fff' }}
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+
+                                    <div className="mt-6 space-y-4">
+                                        <div>
+                                            <h4 className="font-semibold text-gray-300 mb-2">AI Feedback</h4>
+                                            <p className="text-sm text-gray-400 leading-relaxed">
+                                                {analysisResult.feedback}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-gray-300 mb-2">Keywords Detected</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {analysisResult.keywords.map((keyword: string, i: number) => (
+                                                    <span key={i} className="text-xs px-2 py-1 rounded-full bg-white/10 border border-white/20">
+                                                        {keyword}
+                                                    </span>
                                                 ))}
-                                            </Pie>
-                                            <Tooltip
-                                                contentStyle={{ backgroundColor: '#0a0e27', borderColor: 'rgba(255,255,255,0.1)' }}
-                                                itemStyle={{ color: '#fff' }}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-
-                                <div className="mt-6 space-y-4">
-                                    <div>
-                                        <h4 className="font-semibold text-gray-300 mb-2">AI Feedback</h4>
-                                        <p className="text-sm text-gray-400 leading-relaxed">
-                                            {analysisResult.feedback}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-semibold text-gray-300 mb-2">Keywords Detected</h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {analysisResult.keywords.map((keyword: string, i: number) => (
-                                                <span key={i} className="text-xs px-2 py-1 rounded-full bg-white/10 border border-white/20">
-                                                    {keyword}
-                                                </span>
-                                            ))}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center p-12 rounded-xl glass border border-white/10 border-dashed text-center opacity-50">

@@ -23,6 +23,7 @@ const EmployerLayout: React.FC = () => {
 
     const navItems = [
         { icon: LayoutDashboard, label: 'Overview', path: '/employer/dashboard' },
+        { icon: Briefcase, label: 'My Jobs', path: '/employer/jobs' },
         { icon: PlusCircle, label: 'Post a Job', path: '/employer/post-job' },
         { icon: Users, label: 'Candidates', path: '/employer/candidates' },
         { icon: Calendar, label: 'Interviews', path: '/employer/interviews' },

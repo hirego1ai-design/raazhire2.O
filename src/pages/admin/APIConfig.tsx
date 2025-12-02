@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Save, Key, RefreshCw, AlertTriangle, Eye, EyeOff, CheckCircle, XCircle, Loader, Database } from 'lucide-react';
 import { endpoints } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 
 interface AIProvider {
     id: string;
@@ -28,10 +29,20 @@ const APIConfig: React.FC = () => {
         loadAPIKeys();
     }, []);
 
+    const getAuthHeaders = async (): Promise<Record<string, string>> => {
+        if (!supabase) return {};
+        const { data: { session } } = await supabase.auth.getSession();
+        return session ? { 'Authorization': `Bearer ${session.access_token}` } : {};
+    };
+
     const loadAPIKeys = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/api-keys`);
+            const headers = await getAuthHeaders();
+            const apiBaseUrl = endpoints.test.split('/api/test')[0];
+            const response = await fetch(`${apiBaseUrl}/api/admin/api-keys`, {
+                headers: { ...headers }
+            });
             if (response.ok) {
                 const data = await response.json();
                 setProviders(prev => prev.map(p => {
@@ -39,9 +50,11 @@ const APIConfig: React.FC = () => {
                     return {
                         ...p,
                         apiKey: savedKey?.api_key || '',
-                        status: savedKey?.api_key ? 'disconnected' : 'disconnected'
+                        status: savedKey?.api_key ? 'connected' : 'disconnected'
                     };
                 }));
+            } else {
+                console.error('Failed to load API keys:', await response.text());
             }
         } catch (error) {
             console.error('Error loading API keys:', error);
@@ -55,8 +68,10 @@ const APIConfig: React.FC = () => {
     };
 
     const handleApiKeyChange = (id: string, value: string) => {
+        // Trim whitespace when pasting API keys
+        const trimmedValue = value.trim();
         setProviders(providers.map(p =>
-            p.id === id ? { ...p, apiKey: value, status: 'disconnected' } : p
+            p.id === id ? { ...p, apiKey: trimmedValue, status: 'disconnected' } : p
         ));
     };
 
@@ -70,12 +85,17 @@ const APIConfig: React.FC = () => {
         setProviders(prev => prev.map(p => p.id === id ? { ...p, status: 'testing' } : p));
 
         try {
-            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/test-api-key`, {
+            const headers = await getAuthHeaders();
+            const apiBaseUrl = endpoints.test.split('/api/test')[0];
+            const response = await fetch(`${apiBaseUrl}/api/admin/test-api-key`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...headers
+                },
                 body: JSON.stringify({
                     provider: id,
-                    api_key: provider.apiKey
+                    api_key: provider.apiKey.trim()
                 })
             });
 
@@ -85,40 +105,57 @@ const APIConfig: React.FC = () => {
                 setProviders(prev => prev.map(p =>
                     p.id === id ? { ...p, status: 'connected', latency: result.latency } : p
                 ));
+                alert(`✅ Connected successfully! Latency: ${result.latency}`);
             } else {
                 setProviders(prev => prev.map(p =>
                     p.id === id ? { ...p, status: 'error', latency: '-' } : p
                 ));
-                alert(`Connection failed: ${result.error}`);
+                alert(`❌ Connection failed: ${result.error}`);
             }
-        } catch (error) {
+        } catch (error: any) {
             setProviders(prev => prev.map(p => p.id === id ? { ...p, status: 'error', latency: '-' } : p));
             console.error('Test connection error:', error);
+            alert(`❌ Connection error: ${error.message || 'Network error'}`);
         }
     };
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            const headers = await getAuthHeaders();
+            const apiBaseUrl = endpoints.test.split('/api/test')[0];
+            
             // Save each provider's key to backend
             const savePromises = providers
                 .filter(p => p.apiKey) // Only save if key is provided
-                .map(p =>
-                    fetch(`${endpoints.test.replace('/test', '')}/admin/api-keys`, {
+                .map(async p => {
+                    const response = await fetch(`${apiBaseUrl}/api/admin/api-keys`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...headers
+                        },
                         body: JSON.stringify({
                             provider: p.id,
-                            api_key: p.apiKey
+                            api_key: p.apiKey.trim()
                         })
-                    })
-                );
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(`Failed to save ${p.name}: ${error.error || 'Unknown error'}`);
+                    }
+                    
+                    return response.json();
+                });
 
             await Promise.all(savePromises);
-            alert('API Credentials saved successfully to secure backend storage!');
-        } catch (error) {
+            alert('✅ API Credentials saved successfully to secure backend storage!');
+            // Reload to confirm
+            await loadAPIKeys();
+        } catch (error: any) {
             console.error('Error saving API keys:', error);
-            alert('Failed to save API keys. Please try again.');
+            alert(`❌ Failed to save API keys: ${error.message || 'Please try again'}`);
         } finally {
             setIsSaving(false);
         }
@@ -188,8 +225,8 @@ const APIConfig: React.FC = () => {
                                     )}
 
                                     <span className={`text-xs capitalize ${provider.status === 'connected' ? 'text-green-400' :
-                                            provider.status === 'error' ? 'text-red-400' :
-                                                provider.status === 'testing' ? 'text-yellow-400' : 'text-gray-500'
+                                        provider.status === 'error' ? 'text-red-400' :
+                                            provider.status === 'testing' ? 'text-yellow-400' : 'text-gray-500'
                                         }`}>
                                         {provider.status}
                                     </span>

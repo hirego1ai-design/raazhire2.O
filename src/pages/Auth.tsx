@@ -19,7 +19,14 @@ const Auth = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Navigate based on user type
+
+        if (!isLogin) {
+            // For sign up, redirect to the full registration flow
+            navigate('/create-account');
+            return;
+        }
+
+        // For login, navigate based on user type
         if (userType === 'candidate') {
             navigate('/candidate/dashboard');
         } else {
@@ -308,26 +315,7 @@ const Auth = () => {
                             </motion.button>
                         </motion.form>
 
-                        {/* Demo Buttons */}
-                        <motion.div className="demo-section" variants={itemVariants}>
-                            <p className="demo-text">Quick Demo Access</p>
-                            <div className="demo-buttons">
-                                <button
-                                    className="demo-quick-btn"
-                                    onClick={() => navigate('/candidate/dashboard')}
-                                >
-                                    <span className="demo-indicator">🎯</span>
-                                    Demo Candidate
-                                </button>
-                                <button
-                                    className="demo-quick-btn"
-                                    onClick={() => navigate('/employer/dashboard')}
-                                >
-                                    <span className="demo-indicator">💼</span>
-                                    Demo Employer
-                                </button>
-                            </div>
-                        </motion.div>
+
                     </motion.div>
                 </motion.div>
             </div>

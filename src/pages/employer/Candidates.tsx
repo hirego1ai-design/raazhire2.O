@@ -1,50 +1,117 @@
 // src/pages/employer/Candidates.tsx
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, Plus, Download } from 'lucide-react';
-import CandidateCard from '../../components/CandidateCard';
-import { MOCK_CANDIDATES } from '../../data/mockCandidates';
-
-// Map the full Candidate type to the CardCandidate interface expected by CandidateCard
-interface CardCandidate {
-    id: string;
-    name: string;
-    photoUrl: string;
-    videoUrl: string;
-    appliedJobTitle: string;
-    experienceYears: number;
-    skills: string[];
-    location: string;
-    timezone: string;
-    aiScore: number;
-    status: 'applied' | 'screened' | 'shortlisted' | 'interview_scheduled' | 'hired';
-}
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Search, Filter, Plus, Download, Briefcase, Users } from 'lucide-react';
+import CandidateCard, { type Candidate as CardCandidate } from '../../components/CandidateCard';
+import { mockJobPosts, getCandidatesForJob } from '../../data/mockData';
 
 const Candidates: React.FC = () => {
+    const [searchParams] = useSearchParams();
+    const jobId = searchParams.get('jobId');
+    
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'All' | CardCandidate['status']>('All');
+    const [candidates, setCandidates] = useState<CardCandidate[]>([]);
+    const [jobTitle, setJobTitle] = useState<string>('');
+    const [totalApplicants, setTotalApplicants] = useState<number>(0);
+
+    React.useEffect(() => {
+        const fetchCandidates = async () => {
+            // Use mock data for demonstration
+            let candidatesData;
+            
+            if (jobId) {
+                // Get candidates for specific job
+                candidatesData = getCandidatesForJob(jobId);
+                const job = mockJobPosts.find(j => j.id === jobId);
+                if (job) {
+                    setJobTitle(job.title);
+                }
+                setTotalApplicants(candidatesData.length);
+            } else {
+                // Get all candidates with application data
+                candidatesData = getCandidatesForJob('job_001'); // Show sample data
+            }
+            
+            const formattedCandidates: CardCandidate[] = candidatesData
+                .filter(c => c.id) // Filter out any undefined candidates
+                .map(c => ({
+                    id: c.id || '',
+                    name: c.name || 'Unknown',
+                    photoUrl: c.profile_photo || `https://ui-avatars.com/api/?name=${c.name || 'User'}&background=random`,
+                    videoUrl: c.video_resume_url || '',
+                    appliedJobTitle: (c as any).appliedAt ? 'Applied' : 'Available',
+                    experienceYears: c.experience_years || 0,
+                    skills: c.skills?.map(s => s.skill) || [],
+                    location: c.location || 'Remote',
+                    timezone: 'IST',
+                    aiScore: (c as any).applicationScore || 85,
+                    status: ((c as any).applicationStatus || 'applied') as CardCandidate['status']
+                }));
+            
+            setCandidates(formattedCandidates);
+        };
+
+        fetchCandidates();
+    }, [jobId]);
 
     // Filtered list – memoized for performance
     const filteredCandidates = useMemo(() => {
-        return MOCK_CANDIDATES.filter(c => {
+        return candidates.filter(c => {
             const matchesSearch =
                 c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 c.appliedJobTitle.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = filterStatus === 'All' || c.status === filterStatus;
             return matchesSearch && matchesStatus;
         });
-    }, [searchTerm, filterStatus]);
+    }, [searchTerm, filterStatus, candidates]);
 
-    // Handlers for actions – currently just console.log (replace with real logic later)
+    const navigate = useNavigate();
+
+    // Handlers for actions
     const handleShortlist = (id: string) => {
-        console.log('Shortlist candidate', id);
+        // Update candidate status to shortlisted
+        setCandidates(prev => prev.map(c => 
+            c.id === id ? { ...c, status: 'shortlisted' as CardCandidate['status'] } : c
+        ));
+        console.log('Shortlisted candidate', id);
     };
+    
     const handleSchedule = (id: string) => {
-        console.log('Schedule interview for', id);
+        // Navigate to interview schedule page
+        navigate(`/employer/interview-schedule/${id}`);
     };
 
     return (
         <div className="space-y-8">
+            {/* Job-Specific Banner */}
+            {jobId && jobTitle && (
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-r from-neon-cyan/10 via-neon-purple/10 to-pink-500/10 border border-neon-cyan/30 rounded-2xl p-6 shadow-lg"
+                >
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-neon-cyan to-blue-500 flex items-center justify-center shadow-lg">
+                                <Briefcase size={24} className="text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-white mb-1">{jobTitle}</h2>
+                                <p className="text-gray-400 text-sm">Viewing candidates for this approved job post</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="px-4 py-2 rounded-full bg-green-500/20 border border-green-500/30 flex items-center gap-2">
+                                <Users size={16} className="text-green-400" />
+                                <span className="text-white font-semibold">{totalApplicants} Applicants</span>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -52,16 +119,24 @@ const Candidates: React.FC = () => {
                 className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
             >
                 <div>
-                    <h1 className="text-3xl font-bold mb-2 text-white">Candidates</h1>
-                    <p className="text-gray-400">Manage and track your candidate pipeline.</p>
+                    <h1 className="text-3xl font-bold mb-2 text-white">
+                        {jobId ? 'Job Candidates' : 'All Candidates'}
+                    </h1>
+                    <p className="text-gray-400">
+                        {jobId 
+                            ? 'Review and manage candidates who applied for this job post' 
+                            : 'Manage and track your candidate pipeline across all jobs'}
+                    </p>
                 </div>
                 <div className="flex gap-3">
                     <button className="btn-3d btn-secondary flex items-center gap-1.5">
                         <Download size={14} /> Export
                     </button>
-                    <button className="btn-3d btn-primary flex items-center gap-1.5">
-                        <Plus size={14} /> Add Candidate
-                    </button>
+                    {!jobId && (
+                        <button className="btn-3d btn-primary flex items-center gap-1.5">
+                            <Plus size={14} /> Add Candidate
+                        </button>
+                    )}
                 </div>
             </motion.div>
 
@@ -116,7 +191,21 @@ const Candidates: React.FC = () => {
                     </motion.div>
                 ))}
                 {filteredCandidates.length === 0 && (
-                    <p className="text-center text-gray-400 col-span-full">No candidates match your criteria.</p>
+                    <div className="text-center col-span-full py-12">
+                        <div className="mx-auto w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mb-4">
+                            <Users size={40} className="text-gray-600" />
+                        </div>
+                        <p className="text-gray-400 text-lg mb-2">
+                            {jobId 
+                                ? 'No candidates have applied for this job post yet' 
+                                : 'No candidates match your criteria'}
+                        </p>
+                        <p className="text-gray-500 text-sm">
+                            {jobId 
+                                ? 'Candidates will appear here once they apply for this position' 
+                                : 'Try adjusting your search or filter options'}
+                        </p>
+                    </div>
                 )}
             </div>
         </div>
