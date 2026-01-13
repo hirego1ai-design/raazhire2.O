@@ -32,8 +32,79 @@ const ProctoringConfig: React.FC = () => {
         recordEntireScreen: false,
     });
 
-    const handleSave = () => {
-        alert('Proctoring & Security Rules Updated Successfully!');
+    // Load configuration from API
+    React.useEffect(() => {
+        const fetchConfig = async () => {
+            try {
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/proctoring-config`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                });
+                const data = await response.json();
+
+                if (data.success && data.config && data.config.settings) {
+                    // Map backend settings to frontend state
+                    const s = data.config.settings;
+
+                    if (s.sensitivity) setSensitivity(s.sensitivity);
+                    if (s.interviewAI) setInterviewAI(s.interviewAI);
+                    if (s.assessmentRules) setAssessmentRules(s.assessmentRules);
+
+                    // Fallback for legacy schema
+                    if (!s.sensitivity && s.faceDetection !== undefined) {
+                        setSensitivity(prev => ({
+                            ...prev,
+                            personDetection: s.faceDetection,
+                            tabSwitchLimit: s.maxTabSwitches
+                        }));
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load proctoring config:", error);
+            }
+        };
+        fetchConfig();
+    }, []);
+
+    const handleSave = async () => {
+        try {
+            const configPayload = {
+                enabled: true,
+                settings: {
+                    sensitivity,
+                    interviewAI,
+                    assessmentRules,
+                    // Maintain legacy fields for compatibility
+                    faceDetection: sensitivity.personDetection,
+                    tabSwitchDetection: true,
+                    fullscreenRequired: assessmentRules.fullScreenMode === 'strict',
+                    maxTabSwitches: sensitivity.tabSwitchLimit
+                },
+                violationActions: {
+                    tabSwitch: 'warning',
+                    faceNotDetected: 'warning',
+                    multipleFaces: 'terminate',
+                    exitFullscreen: 'warning'
+                }
+            };
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/proctoring-config`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('sb-token')}`
+                },
+                body: JSON.stringify(configPayload)
+            });
+
+            if (response.ok) {
+                alert('Proctoring & Security Rules Updated Successfully!');
+            } else {
+                throw new Error('Failed to save config');
+            }
+        } catch (error) {
+            console.error("Error saving config:", error);
+            alert('Failed to save rules. Please try again.');
+        }
     };
 
     return (

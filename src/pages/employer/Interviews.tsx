@@ -41,39 +41,38 @@ const EmployerInterviews: React.FC = () => {
 
     // Mock Data Load
     // Load Data from Supabase
+    // Load Data from API
     useEffect(() => {
         const fetchInterviews = async () => {
-            if (!supabase) return;
+            try {
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/interviews/employer`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                });
+                const data = await response.json();
 
-            const { data } = await supabase
-                .from('interviews')
-                .select(`
-                    *,
-                    candidate:candidates(name, email, phone, location),
-                    job:jobs(title)
-                `)
-                .order('date', { ascending: true });
-
-            if (data) {
-                const formattedInterviews: Interview[] = data.map((int: any) => ({
-                    id: int.id,
-                    candidateName: int.candidate?.name || 'Unknown',
-                    role: int.job?.title || 'Unknown',
-                    date: int.date,
-                    time: int.time,
-                    duration: int.duration || "45 mins",
-                    type: int.type,
-                    status: int.status,
-                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(int.candidate?.name || 'User')}&background=random`,
-                    email: int.candidate?.email,
-                    phone: int.candidate?.phone,
-                    location: int.candidate?.location || "Remote",
-                    interviewer: int.interviewer,
-                    meetingLink: int.meeting_link,
-                    notes: int.notes,
-                    cancellationReason: int.cancellation_reason
-                }));
-                setInterviews(formattedInterviews);
+                if (data.success && data.interviews) {
+                    const formattedInterviews: Interview[] = data.interviews.map((int: any) => ({
+                        id: int.id,
+                        candidateName: int.candidate?.name || 'Unknown',
+                        role: int.job?.title || 'Unknown',
+                        date: int.scheduled_date || int.date, // Backup if schema differs
+                        time: new Date(int.scheduled_date || int.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        duration: int.duration || "45 mins",
+                        type: int.type,
+                        status: int.status,
+                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(int.candidate?.name || 'User')}&background=random`,
+                        email: int.candidate?.email,
+                        phone: int.candidate?.phone,
+                        location: int.candidate?.location || "Remote",
+                        interviewer: int.interviewer,
+                        meetingLink: int.meeting_link,
+                        notes: int.notes,
+                        cancellationReason: int.cancellation_reason
+                    }));
+                    setInterviews(formattedInterviews);
+                }
+            } catch (error) {
+                console.error('Failed to fetch interviews:', error);
             }
         };
 
@@ -233,7 +232,7 @@ const EmployerInterviews: React.FC = () => {
                         {/* Subtle 3D Background Effect */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-neon-cyan/5 to-transparent rounded-full blur-2xl"></div>
                         <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-neon-purple/5 to-transparent rounded-full blur-xl"></div>
-                        
+
                         <div className="relative z-10">
                             {/* Card Header */}
                             <div className="flex items-start gap-3 mb-4">
@@ -243,11 +242,10 @@ const EmployerInterviews: React.FC = () => {
                                         alt={interview.candidateName}
                                         className="w-12 h-12 rounded-2xl object-cover border-2 border-white/20 shadow-lg"
                                     />
-                                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0f1629] ${
-                                        interview.status === 'Scheduled' ? 'bg-green-400' :
-                                        interview.status === 'Completed' ? 'bg-blue-400' :
-                                        interview.status === 'Cancelled' ? 'bg-red-400' : 'bg-yellow-400'
-                                    }`}></div>
+                                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0f1629] ${interview.status === 'Scheduled' ? 'bg-green-400' :
+                                            interview.status === 'Completed' ? 'bg-blue-400' :
+                                                interview.status === 'Cancelled' ? 'bg-red-400' : 'bg-yellow-400'
+                                        }`}></div>
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h3 className="text-sm font-bold text-white mb-0.5 truncate">{interview.candidateName}</h3>
@@ -543,7 +541,7 @@ const EmployerInterviews: React.FC = () => {
                             <p className="text-gray-300 mb-4">
                                 How would you rate <span className="font-bold text-white">{selectedInterview.candidateName}</span>'s interview performance?
                             </p>
-                            
+
                             {/* Star Rating */}
                             <div className="flex justify-center gap-3 mb-6 p-4 bg-white/5 rounded-2xl">
                                 {[1, 2, 3, 4, 5].map((star) => (
@@ -599,12 +597,12 @@ const EmployerInterviews: React.FC = () => {
                                                 .update({ rating: rating, feedback: ratingFeedback })
                                                 .eq('id', selectedInterview.id);
                                         }
-                                        
+
                                         // Update local state
                                         setInterviews(interviews.map(i =>
                                             i.id === selectedInterview.id ? { ...i, rating: rating } : i
                                         ));
-                                        
+
                                         setShowRatingModal(false);
                                         setRating(0);
                                         setRatingFeedback('');

@@ -9,6 +9,8 @@ import { dirname, join } from 'path';
 import Stripe from 'stripe';
 import Razorpay from 'razorpay';
 import { setupAIRoutes } from './routes/ai_routes.js';
+import { setupAdminRoutes } from './routes/admin_routes.js';
+import { setupPortalRoutes } from './routes/portal_routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -256,7 +258,7 @@ app.post('/api/admin/test-api-key', authenticateUser, async (req, res) => {
         } else if (provider === 'claude') {
             response = await fetch('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'x-api-key': trimmedKey,
                     'anthropic-version': '2023-06-01',
                     'content-type': 'application/json'
@@ -753,6 +755,12 @@ app.post('/api/generate-job-description', (req, res) => {
 
 // Setup AI Routes
 setupAIRoutes(app, supabase, decrypt);
+
+// Setup Admin Routes
+setupAdminRoutes(app, supabase, authenticateUser, encrypt, decrypt, readLocalDb, writeLocalDb);
+
+// Setup Portal Routes
+setupPortalRoutes(app, supabase, authenticateUser);
 
 // Start server
 app.listen(port, () => {

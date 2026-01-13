@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SkillRadar, SkillCategories, SkillBar } from '../../components/SkillCharts';
+import { endpoints } from '../../lib/api';
 
 const Profile: React.FC = () => {
     const navigate = useNavigate();
@@ -23,138 +24,192 @@ const Profile: React.FC = () => {
     const [assessmentResults, setAssessmentResults] = useState<any>(null);
 
     useEffect(() => {
-        // Use mock data for testing
-        const mockProfile = {
-            name: 'John Doe',
-            title: 'Senior Full Stack Developer',
-            location: 'Bangalore, India',
-            email: 'john.doe@example.com',
-            phone: '+91 9876543210',
-            dateOfBirth: '1995-05-15',
-            currentAddress: 'Koramangala, Bangalore',
-            permanentAddress: 'Mumbai, Maharashtra',
-            bio: 'Passionate Full Stack Developer with 5+ years of experience in building scalable web applications. Expert in React, Node.js, and cloud technologies.',
-            avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
-            education10th: { board: 'CBSE', percentage: '92%', year: '2010' },
-            education12th: { board: 'CBSE', percentage: '88%', year: '2012' },
-            graduation: { degree: 'B.Tech Computer Science', college: 'IIT Bangalore', percentage: '85%', year: '2016' },
-            postGraduation: { degree: 'M.Tech AI', college: 'IIT Bangalore', percentage: '88%', year: '2018' },
-            jobProfile: 'Full Stack Developer',
-        };
+        const fetchProfile = async () => {
+            try {
 
-        const mockSkills = {
-            radar: [
-                { subject: 'React', A: 90, fullMark: 100 },
-                { subject: 'Node.js', A: 85, fullMark: 100 },
-                { subject: 'TypeScript', A: 88, fullMark: 100 },
-                { subject: 'Python', A: 75, fullMark: 100 },
-                { subject: 'AWS', A: 80, fullMark: 100 },
-                { subject: 'Docker', A: 78, fullMark: 100 }
-            ],
-            pie: [
-                { name: 'Technical', value: 15, color: '#00f3ff' },
-                { name: 'Soft Skills', value: 8, color: '#bc13fe' }
-            ],
-            tech: [
-                { name: 'React', score: 90 },
-                { name: 'Node.js', score: 85 },
-                { name: 'TypeScript', score: 88 },
-                { name: 'Python', score: 75 },
-                { name: 'AWS', score: 80 },
-                { name: 'Docker', score: 78 },
-                { name: 'MongoDB', score: 82 },
-                { name: 'PostgreSQL', score: 85 }
-            ],
-            soft: [
-                { name: 'Communication', score: 92 },
-                { name: 'Leadership', score: 85 },
-                { name: 'Problem Solving', score: 95 },
-                { name: 'Teamwork', score: 90 }
-            ]
-        };
+                const response = await fetch(endpoints.profile, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('sb-token')}`
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to fetch profile');
+                const data = await response.json();
 
-        const mockExperience = [
-            {
-                id: 1,
-                company: 'Tech Corp Solutions',
-                position: 'Senior Full Stack Developer',
-                start_date: '2020-01',
-                end_date: null,
-                description: 'Leading development of enterprise web applications using React and Node.js'
-            },
-            {
-                id: 2,
-                company: 'StartUp Inc',
-                position: 'Full Stack Developer',
-                start_date: '2018-06',
-                end_date: '2019-12',
-                description: 'Built scalable microservices architecture and RESTful APIs'
+                if (data.success && data.user) {
+                    const u = data.user;
+                    setProfile({
+                        name: u.name || 'User',
+                        title: u.profile?.title || 'No title set',
+                        location: u.location || 'Not set',
+                        email: u.email,
+                        phone: u.phone || 'Not set',
+                        bio: u.bio || 'No bio yet.',
+                        avatar: u.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
+                    });
+
+                    if (u.profile) {
+                        setSkills(u.profile.skills_radar || u.profile.skills_tech ? {
+                            radar: u.profile.skills_radar || [],
+                            tech: u.profile.skills_tech || [],
+                            soft: u.profile.skills_soft || []
+                        } : { radar: [], tech: [], soft: [] });
+                        setExperience(u.profile.experience_details || []);
+
+                        // Parse Education JSONB to array
+                        let eduList = [];
+                        if (u.profile.education_10th?.board) eduList.push({ ...u.profile.education_10th, degree: '10th Standard', institution: u.profile.education_10th.board });
+                        if (u.profile.education_12th?.board) eduList.push({ ...u.profile.education_12th, degree: '12th Standard', institution: u.profile.education_12th.board });
+                        if (u.profile.graduation?.degree) eduList.push({ ...u.profile.graduation, degree: u.profile.graduation.degree, institution: u.profile.graduation.college });
+                        if (u.profile.post_graduation?.degree) eduList.push({ ...u.profile.post_graduation, degree: u.profile.post_graduation.degree, institution: u.profile.post_graduation.college });
+
+                        setEducation(eduList);
+                        setPortfolio(u.profile.portfolio_details || []); // Assuming we might add this later or fetch separately
+                    }
+
+                    // Fetch Gamification Data
+                    try {
+                        const gamificationRes = await fetch(endpoints.gamification, {
+                            headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                        });
+                        if (gamificationRes.ok) {
+                            const gamificationData = await gamificationRes.json();
+                            const stats = gamificationData.stats || {};
+                            setGamification({
+                                rank: stats.global_rank || 0,
+                                points: stats.points || 0,
+                                masteryScore: stats.skill_mastery || 0,
+                                accuracy: stats.correct_rate || 0,
+                                badges: gamificationData.badges?.map((b: any) => ({
+                                    id: b.badge?.id,
+                                    name: b.badge?.name,
+                                    icon: <Trophy size={14} />, // Dynamic icons not supported easily from DB string
+                                    color: b.badge?.color || 'text-yellow-400',
+                                    bg: 'bg-yellow-400/10'
+                                })) || []
+                            });
+                        }
+                    } catch (gError) {
+                        console.error("Error fetching gamification for profile:", gError);
+                    }
+
+                }
+            } catch (error) {
+                console.error('Error fetching profile:', error);
+                // Fallback to mock data if fetch fails
+                setProfile({
+                    name: 'John Doe',
+                    title: 'Senior Full Stack Developer',
+                    location: 'Bangalore, India',
+                    email: 'john.doe@example.com',
+                    phone: '+91 9876543210',
+                    bio: 'Passionate Full Stack Developer with 5+ years of experience in building scalable web applications. Expert in React, Node.js, and cloud technologies.',
+                    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
+                });
+                // Also set mock data for other sections if fetch fails completely
+                setSkills({
+                    radar: [
+                        { subject: 'React', A: 90, fullMark: 100 },
+                        { subject: 'Node.js', A: 85, fullMark: 100 },
+                        { subject: 'TypeScript', A: 88, fullMark: 100 },
+                        { subject: 'Python', A: 75, fullMark: 100 },
+                        { subject: 'AWS', A: 80, fullMark: 100 },
+                        { subject: 'Docker', A: 78, fullMark: 100 }
+                    ],
+                    pie: [
+                        { name: 'Technical', value: 15, color: '#00f3ff' },
+                        { name: 'Soft Skills', value: 8, color: '#bc13fe' }
+                    ],
+                    tech: [
+                        { name: 'React', score: 90 },
+                        { name: 'Node.js', score: 85 },
+                        { name: 'TypeScript', score: 88 },
+                        { name: 'Python', score: 75 },
+                        { name: 'AWS', score: 80 },
+                        { name: 'Docker', score: 78 },
+                        { name: 'MongoDB', score: 82 },
+                        { name: 'PostgreSQL', score: 85 }
+                    ],
+                    soft: [
+                        { name: 'Communication', score: 92 },
+                        { name: 'Leadership', score: 85 },
+                        { name: 'Problem Solving', score: 95 },
+                        { name: 'Teamwork', score: 90 }
+                    ]
+                });
+                setExperience([
+                    {
+                        id: 1,
+                        company: 'Tech Corp Solutions',
+                        position: 'Senior Full Stack Developer',
+                        start_date: '2020-01',
+                        end_date: null,
+                        description: 'Leading development of enterprise web applications using React and Node.js'
+                    },
+                    {
+                        id: 2,
+                        company: 'StartUp Inc',
+                        position: 'Full Stack Developer',
+                        start_date: '2018-06',
+                        end_date: '2019-12',
+                        description: 'Built scalable microservices architecture and RESTful APIs'
+                    }
+                ]);
+                setEducation([
+                    {
+                        id: 1,
+                        degree: 'M.Tech in Artificial Intelligence',
+                        institution: 'IIT Bangalore',
+                        start_year: 2016,
+                        end_year: 2018,
+                        grade: '8.8 CGPA'
+                    },
+                    {
+                        id: 2,
+                        degree: 'B.Tech in Computer Science',
+                        institution: 'IIT Bangalore',
+                        start_year: 2012,
+                        end_year: 2016,
+                        grade: '8.5 CGPA'
+                    }
+                ]);
+                setPortfolio([
+                    {
+                        id: 1,
+                        title: 'E-Commerce Platform',
+                        description: 'Full-stack e-commerce solution with React and Node.js',
+                        url: 'https://github.com/johndoe/ecommerce',
+                        image: 'https://images.unsplash.com/photo-1557821552-17105176677c?w=400'
+                    },
+                    {
+                        id: 2,
+                        title: 'Task Management App',
+                        description: 'Real-time task management with WebSocket integration',
+                        url: 'https://github.com/johndoe/taskmanager',
+                        image: 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?w=400'
+                    }
+                ]);
+                setGamification({
+                    rank: 42,
+                    points: 12500,
+                    masteryScore: 88,
+                    accuracy: 92,
+                    badges: [
+                        { id: 1, icon: <Trophy size={14} />, color: 'text-yellow-400', bg: 'bg-yellow-400/10', name: 'Top Performer' },
+                        { id: 2, icon: <Trophy size={14} />, color: 'text-blue-400', bg: 'bg-blue-400/10', name: 'Fast Learner' },
+                        { id: 3, icon: <Trophy size={14} />, color: 'text-green-400', bg: 'bg-green-400/10', name: 'Problem Solver' }
+                    ]
+                });
+                setAssessmentResults({
+                    overallScore: 88,
+                    communication: 92,
+                    knowledge: 85,
+                    confidence: 87,
+                    completedAt: new Date().toISOString()
+                });
             }
-        ];
-
-        const mockEducation = [
-            {
-                id: 1,
-                degree: 'M.Tech in Artificial Intelligence',
-                institution: 'IIT Bangalore',
-                start_year: 2016,
-                end_year: 2018,
-                grade: '8.8 CGPA'
-            },
-            {
-                id: 2,
-                degree: 'B.Tech in Computer Science',
-                institution: 'IIT Bangalore',
-                start_year: 2012,
-                end_year: 2016,
-                grade: '8.5 CGPA'
-            }
-        ];
-
-        const mockPortfolio = [
-            {
-                id: 1,
-                title: 'E-Commerce Platform',
-                description: 'Full-stack e-commerce solution with React and Node.js',
-                url: 'https://github.com/johndoe/ecommerce',
-                image: 'https://images.unsplash.com/photo-1557821552-17105176677c?w=400'
-            },
-            {
-                id: 2,
-                title: 'Task Management App',
-                description: 'Real-time task management with WebSocket integration',
-                url: 'https://github.com/johndoe/taskmanager',
-                image: 'https://images.unsplash.com/photo-1540350394557-8d14678e7f91?w=400'
-            }
-        ];
-
-        const mockGamification = {
-            rank: 42,
-            points: 12500,
-            masteryScore: 88,
-            accuracy: 92,
-            badges: [
-                { id: 1, icon: <Trophy size={14} />, color: 'text-yellow-400', bg: 'bg-yellow-400/10', name: 'Top Performer' },
-                { id: 2, icon: <Trophy size={14} />, color: 'text-blue-400', bg: 'bg-blue-400/10', name: 'Fast Learner' },
-                { id: 3, icon: <Trophy size={14} />, color: 'text-green-400', bg: 'bg-green-400/10', name: 'Problem Solver' }
-            ]
         };
 
-        const mockAssessmentResults = {
-            overallScore: 88,
-            communication: 92,
-            knowledge: 85,
-            confidence: 87,
-            completedAt: new Date().toISOString()
-        };
-
-        setProfile(mockProfile);
-        setSkills(mockSkills);
-        setExperience(mockExperience);
-        setEducation(mockEducation);
-        setPortfolio(mockPortfolio);
-        setGamification(mockGamification);
-        setAssessmentResults(mockAssessmentResults);
+        fetchProfile();
     }, []);
 
     const tabs = [

@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Video, Calendar, Clock, User, Mail, Phone, MapPin,
     CheckCircle, XCircle, ArrowLeft, Edit, AlertCircle,
     Briefcase, Star, FileText
 } from 'lucide-react';
-import { getCandidateById } from '../../data/mockData';
-import type { MockCandidate } from '../../data/mockData';
+import { supabase } from '../../lib/supabase';
 
 interface InterviewSchedule {
     id: string;
@@ -23,10 +22,13 @@ interface InterviewSchedule {
 
 const InterviewSchedulePage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const [searchParams] = useSearchParams();
+    const jobId = searchParams.get('jobId');
     const navigate = useNavigate();
 
-    const [candidate, setCandidate] = useState<MockCandidate | null>(null);
-    const [interview, setInterview] = useState<InterviewSchedule | null>(null);
+    const [candidate, setCandidate] = useState<any | null>(null);
+    const [interview, setInterview] = useState<any | null>(null);
+    const [loading, setLoading] = useState(true);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
     const [showNotesModal, setShowNotesModal] = useState(false);
@@ -36,60 +38,197 @@ const InterviewSchedulePage: React.FC = () => {
     const [isShortlisted, setIsShortlisted] = useState(false);
 
     useEffect(() => {
-        if (!id) return;
+        const fetchData = async () => {
+            if (!id || !supabase) return;
+            setLoading(true);
 
-        const candidateData = getCandidateById(id);
-        if (candidateData) {
-            setCandidate(candidateData);
+            try {
+                // Fetch candidate details
+                const { data: candidateData, error: candidateError } = await supabase
+                    .from('candidates')
+                    .select('*, user:users(email, phone)') // Assuming relation or fields exist
+                    .eq('id', id)
+                    .single();
 
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            setInterview({
-                id: `int_${id}`,
-                candidateId: id,
-                date: tomorrow.toISOString().split('T')[0],
-                time: '10:00',
-                duration: 45,
-                meetingLink: `https://meet.google.com/${Math.random().toString(36).substring(7)}`,
-                status: 'scheduled',
-                notes: ''
-            });
-        }
-    }, [id]);
+                if (candidateError) {
+                    console.error('Error fetching candidate:', candidateError);
+                } else if (candidateData) {
+                    setCandidate({
+                        id: candidateData.id,
+                        name: candidateData.full_name || 'Candidate', // Adjust field name
+                        profile_photo: candidateData.profile_photo_url, // Adjust field name
+                        job_profile: candidateData.current_role || 'Applicant', // Adjust field name
+                        skills: candidateData.skills || [], // Adjust structure if needed
+                        email: candidateData.email || candidateData.user?.email, // Fallback
+                        phone: candidateData.phone || candidateData.user?.phone, // Fallback
+                        location: candidateData.location,
+                        experience_years: candidateData.experience_years
+                    });
+                }
+
+                // Fetch existing interview
+                let query = supabase
+                    .from('interviews')
+                    .select('*')
+                    .eq('candidate_id', id);
+
+                if (jobId) {
+                    query = query.eq('job_id', jobId);
+                }
+
+                // Get the most recent one if multiple
+                const { data: interviewData, error: interviewError } = await query
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                if (interviewData) {
+                    setInterview({
+                        id: interviewData.id,
+                        candidateId: interviewData.candidate_id,
+                        date: new Date(interviewData.scheduled_date).toISOString().split('T')[0],
+                        time: new Date(interviewData.scheduled_date).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+                        duration: interviewData.duration_minutes || 45,
+                        meetingLink: interviewData.meeting_link,
+                        status: interviewData.status?.toLowerCase() || 'scheduled',
+                        notes: interviewData.notes,
+                        cancelReason: interviewData.cancellation_reason
+                    });
+                    setNotes(interviewData.notes || '');
+                } else {
+                    // Initialize empty state for new interview
+                    setInterview(null); // Explicitly null to show "Schedule" UI
+                }
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [id, jobId]);
+
 
     const handleShortlist = () => {
         setIsShortlisted(true);
+        // TODO: Update application status in DB
         alert('Candidate shortlisted successfully!');
     };
 
-    const handleCancelInterview = () => {
+    const handleCreateInterview = async () => {
+        if (!rescheduleData.date || !rescheduleData.time) {
+            alert('Please select date and time');
+            return;
+        }
+
+        try {
+            const scheduledDate = new Date(`${rescheduleData.date}T${rescheduleData.time}`);
+            const { data: { user } } = await supabase!.auth.getUser();
+
+            const { data, error } = await supabase!
+                .from('interviews')
+                .insert([{
+                    candidate_id: id,
+                    employer_id: user?.id,
+                    job_id: jobId, // Might be null if not passed, handle responsibly
+                    scheduled_date: scheduledDate.toISOString(),
+                    duration_minutes: 45,
+                    status: 'Scheduled',
+                    meeting_link: `https://meet.google.com/${Math.random().toString(36).substring(7)}`,
+                    type: 'Video'
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            setInterview({
+                id: data.id,
+                candidateId: data.candidate_id,
+                date: rescheduleData.date,
+                time: rescheduleData.time,
+                duration: data.duration_minutes,
+                meetingLink: data.meeting_link,
+                status: 'scheduled',
+                notes: ''
+            });
+
+            setShowRescheduleModal(false); // Close generic modal if used
+            alert('Interview scheduled successfully!');
+
+        } catch (error) {
+            console.error('Error creating interview:', error);
+            alert('Failed to schedule interview');
+        }
+    };
+
+    const handleCancelInterview = async () => {
         if (!cancelReason.trim()) {
             alert('Please provide a reason for cancellation');
             return;
         }
         if (interview) {
-            setInterview({ ...interview, status: 'cancelled', cancelReason });
+            try {
+                const { error } = await supabase!
+                    .from('interviews')
+                    .update({
+                        status: 'Cancelled',
+                        cancellation_reason: cancelReason
+                    })
+                    .eq('id', interview.id);
+
+                if (error) throw error;
+
+                setInterview({ ...interview, status: 'cancelled', cancelReason });
+                setShowCancelModal(false);
+                alert('Interview cancelled successfully');
+            } catch (error) {
+                console.error('Error cancelling interview:', error);
+                alert('Failed to cancel interview');
+            }
         }
-        setShowCancelModal(false);
-        alert('Interview cancelled successfully');
     };
 
-    const handleReschedule = () => {
+    const handleReschedule = async () => {
         if (!rescheduleData.date || !rescheduleData.time) {
             alert('Please select both date and time');
             return;
         }
-        if (interview) {
-            setInterview({
-                ...interview,
-                date: rescheduleData.date,
-                time: rescheduleData.time,
-                status: 'rescheduled'
-            });
+
+        if (!interview) {
+            // If no interview exists, treat as create
+            handleCreateInterview();
+            return;
         }
-        setShowRescheduleModal(false);
-        alert('Interview rescheduled successfully');
+
+        if (interview) {
+            try {
+                const scheduledDate = new Date(`${rescheduleData.date}T${rescheduleData.time}`);
+                const { error } = await supabase!
+                    .from('interviews')
+                    .update({
+                        scheduled_date: scheduledDate.toISOString(),
+                        status: 'Rescheduled' // Or keep 'Scheduled'
+                    })
+                    .eq('id', interview.id);
+
+                if (error) throw error;
+
+                setInterview({
+                    ...interview,
+                    date: rescheduleData.date,
+                    time: rescheduleData.time,
+                    status: 'rescheduled'
+                });
+                setShowRescheduleModal(false);
+                alert('Interview rescheduled successfully');
+            } catch (error) {
+                console.error('Error rescheduling interview:', error);
+                alert('Failed to reschedule interview');
+            }
+        }
     };
 
     const handleJoinInterview = () => {
@@ -98,35 +237,55 @@ const InterviewSchedulePage: React.FC = () => {
         }
     };
 
-    const handleSaveNotes = () => {
+    const handleSaveNotes = async () => {
         if (interview) {
-            setInterview({ ...interview, notes });
+            try {
+                const { error } = await supabase!
+                    .from('interviews')
+                    .update({ notes })
+                    .eq('id', interview.id);
+
+                if (error) throw error;
+
+                setInterview({ ...interview, notes });
+                setShowNotesModal(false);
+                alert('Notes saved successfully');
+            } catch (error) {
+                console.error('Error saving notes:', error);
+                alert('Failed to save notes');
+            }
         }
-        setShowNotesModal(false);
-        alert('Notes saved successfully');
     };
 
-    if (!candidate || !interview) {
+    if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center text-white">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                    <p>Loading interview details...</p>
+                    <p>Loading details...</p>
                 </div>
             </div>
         );
     }
 
+    if (!candidate) {
+        return (
+            <div className="min-h-screen bg-[#0f172a] flex items-center justify-center text-white">
+                <p>Candidate not found.</p>
+            </div>
+        );
+    }
+
     const interviewDateTime = new Date(`${interview.date}T${interview.time}`);
-    const formattedDate = interviewDateTime.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+    const formattedDate = interviewDateTime.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
     });
-    const formattedTime = interviewDateTime.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+    const formattedTime = interviewDateTime.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
     });
 
     return (
@@ -147,12 +306,11 @@ const InterviewSchedulePage: React.FC = () => {
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`mb-6 p-4 rounded-2xl border-2 ${
-                        interview.status === 'scheduled' ? 'bg-blue-500/10 border-blue-500/30' :
+                    className={`mb-6 p-4 rounded-2xl border-2 ${interview.status === 'scheduled' ? 'bg-blue-500/10 border-blue-500/30' :
                         interview.status === 'cancelled' ? 'bg-red-500/10 border-red-500/30' :
-                        interview.status === 'completed' ? 'bg-green-500/10 border-green-500/30' :
-                        'bg-yellow-500/10 border-yellow-500/30'
-                    }`}
+                            interview.status === 'completed' ? 'bg-green-500/10 border-green-500/30' :
+                                'bg-yellow-500/10 border-yellow-500/30'
+                        }`}
                 >
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -196,12 +354,12 @@ const InterviewSchedulePage: React.FC = () => {
                                     <h1 className="text-2xl font-bold text-white mb-2">{candidate.name}</h1>
                                     <p className="text-gray-400 mb-3">{candidate.job_profile}</p>
                                     <div className="flex flex-wrap gap-2 mb-4">
-                                        {candidate.skills?.slice(0, 3).map((skill, idx) => (
+                                        {candidate.skills?.slice(0, 3).map((skill: any, idx: number) => (
                                             <span
                                                 key={idx}
                                                 className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm border border-blue-500/30"
                                             >
-                                                {skill.skill}
+                                                {typeof skill === 'string' ? skill : (skill.skill || JSON.stringify(skill))}
                                             </span>
                                         ))}
                                     </div>
@@ -303,11 +461,10 @@ const InterviewSchedulePage: React.FC = () => {
                                         <button
                                             onClick={handleShortlist}
                                             disabled={isShortlisted}
-                                            className={`w-full py-3 px-4 rounded-xl font-semibold transition-all border flex items-center justify-center gap-2 ${
-                                                isShortlisted
-                                                    ? 'bg-green-500/20 text-green-300 border-green-500/30 cursor-not-allowed'
-                                                    : 'bg-slate-700/50 hover:bg-green-500/20 text-white hover:text-green-300 border-slate-600/50 hover:border-green-500/30'
-                                            }`}
+                                            className={`w-full py-3 px-4 rounded-xl font-semibold transition-all border flex items-center justify-center gap-2 ${isShortlisted
+                                                ? 'bg-green-500/20 text-green-300 border-green-500/30 cursor-not-allowed'
+                                                : 'bg-slate-700/50 hover:bg-green-500/20 text-white hover:text-green-300 border-slate-600/50 hover:border-green-500/30'
+                                                }`}
                                         >
                                             <Star size={18} />
                                             {isShortlisted ? 'Shortlisted' : 'Shortlist Candidate'}

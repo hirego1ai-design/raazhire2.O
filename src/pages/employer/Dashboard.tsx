@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Users, Briefcase, Calendar, DollarSign, FileText, CreditCard, Plus, CheckCircle, Eye, ChevronRight, Search, Filter, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button';
+import { API_BASE_URL } from '../../lib/api';
 import '../../styles/premium-dark-theme.css';
 
 type PricingModel = 'subscription' | 'pph';
@@ -35,45 +36,43 @@ const EmployerDashboard: React.FC = () => {
 
     React.useEffect(() => {
         const fetchDashboardData = async () => {
-            // Use mock data for demonstration
-            const employerId = 'emp_001'; // Default to TechCorp for demo
-            
-            // Calculate stats from mock data
-            const employerJobs = getJobsForEmployer(employerId);
-            const approvedJobs = employerJobs.filter(job => job.status === 'approved');
-            const totalCandidates = mockCandidates.length;
-            const shortlisted = mockApplications.filter(app => app.status === 'shortlisted').length;
-            const interviews = mockApplications.filter(app => app.status === 'interview_scheduled').length;
-            const pending = mockApplications.filter(app => app.status === 'applied').length;
-            const hires = mockApplications.filter(app => app.status === 'hired').length;
-            
-            setStats({
-                totalCandidates,
-                activeJobs: approvedJobs.length,
-                shortlisted,
-                interviews,
-                pending,
-                hires,
-                due: hires * 50000 // Example: ₹50k per hire
-            });
-
-            // Get recent applicants from mock data
-            const recentApps = mockApplications
-                .slice(0, 5)
-                .map(app => {
-                    const candidate = mockCandidates.find(c => c.id === app.candidate_id);
-                    const job = mockJobPosts.find(j => j.id === app.job_id);
-                    return {
-                        name: candidate?.name || 'Unknown',
-                        role: job?.title || 'Unknown',
-                        score: app.score,
-                        status: app.status.charAt(0).toUpperCase() + app.status.slice(1).replace('_', ' '),
-                        date: new Date(app.applied_at).toLocaleDateString(),
-                        isPremium: (app.score >= 85)
-                    };
+            try {
+                // Fetch stats from backend
+                const response = await fetch(`${API_BASE_URL}/api/employer/stats`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('sb-token')}`
+                    }
                 });
-            
-            setRecentApplicants(recentApps);
+                const data = await response.json();
+
+                if (data.success) {
+                    setStats(prev => ({
+                        ...prev,
+                        ...data.stats,
+                        due: (data.stats.hires || 0) * 50000
+                    }));
+                }
+
+                // Fetch recent applications/candidates
+                const appsResponse = await fetch(`${API_BASE_URL}/api/applications/employer`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('sb-token')}`
+                    }
+                });
+                const appsData = await appsResponse.json();
+                if (appsData.success) {
+                    setRecentApplicants(appsData.applications.slice(0, 5).map((app: any) => ({
+                        name: app.candidate?.name || 'Unknown',
+                        role: app.job?.title || 'Unknown',
+                        score: Math.floor(Math.random() * 20) + 75, // Placeholder score
+                        status: app.status.charAt(0).toUpperCase() + app.status.slice(1),
+                        date: new Date(app.created_at).toLocaleDateString(),
+                        isPremium: Math.random() > 0.7
+                    })));
+                }
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            }
         };
 
         fetchDashboardData();

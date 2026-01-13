@@ -10,6 +10,7 @@ import SearchableMultiSelect from "../../components/SearchableMultiSelect";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import '../../styles/quill-custom.css';
+import { endpoints, API_BASE_URL } from '../../lib/api';
 
 // HireGoAI – Premium Multi-Step Job Posting Wizard
 // Features: Step-by-step navigation, high-contrast inputs, professional UI, Plan Selection.
@@ -20,8 +21,8 @@ const quillModules = {
         [{ 'header': [1, 2, 3, false] }],
         ['bold', 'italic', 'underline', 'strike'],
         [{ 'color': [] }, { 'background': [] }],
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'indent': '-1' }, { 'indent': '+1' }],
         ['link'],
         ['clean']
     ],
@@ -118,7 +119,7 @@ export default function JobPostingForm() {
                 const shouldLoad = window.confirm(
                     '📋 A saved draft was found! Do you want to continue from where you left off?'
                 );
-                
+
                 if (shouldLoad) {
                     setForm(draft.formData);
                     setCurrentStep(draft.currentStep || 1);
@@ -146,12 +147,12 @@ export default function JobPostingForm() {
                 savedAt: new Date().toISOString(),
                 status: 'draft'
             };
-            
+
             // Save to localStorage
             localStorage.setItem('jobPostingDraft', JSON.stringify(draftData));
             setDraftId(draftData.id);
             setLastSaved(new Date());
-            
+
             if (!autoSave) {
                 alert('✅ Draft saved successfully!');
             }
@@ -174,7 +175,7 @@ export default function JobPostingForm() {
     const loadJobTitles = async () => {
         try {
             // Try to fetch from backend
-            const response = await fetch('http://localhost:3000/api/ai/job-titles');
+            const response = await fetch(`${API_BASE_URL}/api/ai/job-titles`);
             if (response.ok) {
                 const data = await response.json();
                 setJobTitleDictionary(data.titles || getDefaultJobTitles());
@@ -200,13 +201,13 @@ export default function JobPostingForm() {
         "Database Administrator", "Database Developer", "SQL Developer",
         "UI/UX Designer", "Product Designer", "Graphic Designer", "Visual Designer", "Interaction Designer",
         "Technical Lead", "Engineering Manager", "Director of Engineering", "VP Engineering", "CTO",
-        
+
         // Product & Management
         "Product Manager", "Senior Product Manager", "Product Owner", "Product Lead", "Chief Product Officer",
         "Project Manager", "Program Manager", "Scrum Master", "Agile Coach",
         "Business Analyst", "Business Intelligence Analyst", "Systems Analyst",
         "Technical Project Manager", "IT Project Manager",
-        
+
         // Sales & Marketing
         "Marketing Manager", "Digital Marketing Manager", "Content Marketing Manager",
         "Social Media Manager", "Brand Manager", "Marketing Specialist",
@@ -214,57 +215,57 @@ export default function JobPostingForm() {
         "Sales Manager", "Sales Executive", "Business Development Manager", "Account Manager",
         "Sales Representative", "Inside Sales Representative", "Field Sales Representative",
         "Customer Success Manager", "Account Executive", "Sales Engineer",
-        
+
         // Finance & Accounting
         "Accountant", "Senior Accountant", "Staff Accountant", "Cost Accountant",
         "Financial Analyst", "Investment Analyst", "Budget Analyst",
         "Finance Manager", "Controller", "CFO", "Finance Director",
         "Auditor", "Internal Auditor", "External Auditor",
         "Tax Consultant", "Tax Specialist", "Payroll Specialist",
-        
+
         // Human Resources
         "HR Manager", "HR Business Partner", "HR Generalist", "HR Specialist",
         "Recruiter", "Technical Recruiter", "Talent Acquisition Specialist",
         "Training Manager", "Learning & Development Manager",
         "Compensation & Benefits Manager", "Employee Relations Manager",
-        
+
         // Operations
         "Operations Manager", "Operations Analyst", "Operations Coordinator",
         "Supply Chain Manager", "Logistics Manager", "Warehouse Manager",
         "Procurement Manager", "Purchasing Manager",
         "Administrative Assistant", "Office Manager", "Executive Assistant",
-        
+
         // Customer Service
         "Customer Service Representative", "Customer Support Specialist",
         "Technical Support Engineer", "Help Desk Technician",
         "Customer Experience Manager", "Support Team Lead",
-        
+
         // Design & Creative
         "Creative Director", "Art Director", "Design Lead",
         "Motion Graphics Designer", "Video Editor", "Animator",
         "Content Writer", "Copywriter", "Technical Writer", "Content Strategist",
         "Photographer", "Videographer", "Multimedia Specialist",
-        
+
         // Healthcare & Medical
         "Software Developer - Healthcare", "Healthcare Data Analyst",
         "Medical Billing Specialist", "Healthcare Administrator",
-        
+
         // Education & Training
         "Corporate Trainer", "Training Specialist", "Instructional Designer",
         "Educational Content Developer",
-        
+
         // Legal & Compliance
         "Legal Counsel", "Corporate Lawyer", "Compliance Officer",
         "Legal Assistant", "Paralegal",
-        
+
         // Consulting
         "Management Consultant", "Business Consultant", "IT Consultant",
         "Strategy Consultant", "Financial Consultant",
-        
+
         // Research & Development
         "Research Scientist", "R&D Engineer", "Research Analyst",
         "Innovation Manager", "Product Development Engineer",
-        
+
         // Specialized Tech Roles
         "Blockchain Developer", "Smart Contract Developer", "Web3 Developer",
         "Game Developer", "Unity Developer", "Unreal Engine Developer",
@@ -302,7 +303,7 @@ export default function JobPostingForm() {
     ];
 
     const educationLevels = [
-        "High School", "Diploma", 
+        "High School", "Diploma",
         "Undergraduate (B.Tech)", "Undergraduate (B.E.)", "Undergraduate (B.A.)", "Undergraduate (B.Sc.)", "Undergraduate (B.Com)", "Undergraduate (BBA)",
         "Postgraduate (M.Tech)", "Postgraduate (M.E.)", "Postgraduate (M.A.)", "Postgraduate (M.Sc.)", "Postgraduate (MBA)", "Postgraduate (MCA)",
         "Doctorate (Ph.D.)", "Any Graduate", "Any Postgraduate"
@@ -358,7 +359,7 @@ export default function JobPostingForm() {
     const fetchAiSkills = async (jobTitle: string) => {
         setIsLoadingSkills(true);
         try {
-            const response = await fetch('http://localhost:3000/api/ai/skills/suggest', {
+            const response = await fetch(`${API_BASE_URL}/api/ai/skills/suggest`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ jobTitle })
@@ -382,9 +383,9 @@ export default function JobPostingForm() {
                 title.toLowerCase().includes(form.jobTitle.toLowerCase())
             );
             setJobTitleSuggestions(filtered.slice(0, 10)); // Show top 10 matches
-            
+
             // Check if exact match exists
-            const exactMatch = jobTitleDictionary.some(title => 
+            const exactMatch = jobTitleDictionary.some(title =>
                 title.toLowerCase() === form.jobTitle.toLowerCase()
             );
             setShowAddJobTitle(!exactMatch && filtered.length === 0 && form.jobTitle.length > 3);
@@ -400,7 +401,7 @@ export default function JobPostingForm() {
         if (!form.jobTitle) return;
 
         try {
-            const response = await fetch('http://localhost:3000/api/ai/job-titles/add', {
+            const response = await fetch(`${API_BASE_URL}/api/ai/job-titles/add`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: form.jobTitle })
@@ -498,10 +499,10 @@ export default function JobPostingForm() {
         setIsLoadingSkills(true);
         try {
             // Try to generate with AI
-            const response = await fetch('http://localhost:3000/api/ai/job-description/generate', {
+            const response = await fetch(`${API_BASE_URL}/api/ai/job-description/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     jobTitle: form.jobTitle,
                     company: form.company,
                     skills: form.skills,
@@ -557,12 +558,12 @@ export default function JobPostingForm() {
                         <div className="grid grid-cols-1 gap-6">
                             {/* Job Title with Autocomplete */}
                             <div className="relative">
-                                <InputGroup 
-                                    label="Job Title" 
-                                    name="jobTitle" 
-                                    value={form.jobTitle} 
-                                    onChange={handleChange} 
-                                    placeholder="e.g. Senior Product Designer" 
+                                <InputGroup
+                                    label="Job Title"
+                                    name="jobTitle"
+                                    value={form.jobTitle}
+                                    onChange={handleChange}
+                                    placeholder="e.g. Senior Product Designer"
                                     icon={<Briefcase size={16} />}
                                     onFocus={() => form.jobTitle.length >= 2 && setShowJobTitleDropdown(true)}
                                     onBlur={() => setTimeout(() => setShowJobTitleDropdown(false), 200)}
@@ -678,18 +679,18 @@ export default function JobPostingForm() {
                                     )}
                                 </button>
                             </div>
-                            
+
                             {/* Rich Text Editor with 3D Effect */}
                             <div className="relative group">
                                 {/* 3D Shadow layers */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/20 to-neon-purple/20 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
                                 <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/10 to-neon-purple/10 rounded-2xl translate-x-1 translate-y-1"></div>
-                                
+
                                 {/* Main Editor Container */}
                                 <div className="relative bg-gradient-to-br from-[#1a1f3a] via-[#0f172a] to-[#1e293b] rounded-2xl overflow-hidden border-2 border-neon-cyan/30 shadow-[0_8px_30px_rgb(0,243,255,0.12),0_0_0_1px_rgb(188,19,254,0.1)] hover:shadow-[0_12px_40px_rgb(0,243,255,0.2),0_0_0_1px_rgb(188,19,254,0.15)] transition-all duration-300">
                                     {/* Neon glow effect on top */}
                                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-neon-cyan to-transparent opacity-60"></div>
-                                    
+
                                     {/* Editor wrapper with neon inner background */}
                                     <div className="p-2 bg-gradient-to-br from-neon-cyan/5 via-transparent to-neon-purple/5">
                                         <div className="rich-text-editor-wrapper bg-[#0a0e1f]/80 rounded-xl backdrop-blur-sm">
@@ -705,7 +706,7 @@ export default function JobPostingForm() {
                                             />
                                         </div>
                                     </div>
-                                    
+
                                     {/* Bottom neon glow */}
                                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-neon-purple to-transparent opacity-60"></div>
                                 </div>
@@ -717,7 +718,7 @@ export default function JobPostingForm() {
                 return (
                     <div className="space-y-6">
                         {/* Selected Skills - Drop Zone */}
-                        <div 
+                        <div
                             className="space-y-3 p-4 bg-[#0f172a] border-2 border-dashed border-gray-700 rounded-xl min-h-[120px] max-h-[180px] overflow-y-auto"
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
@@ -818,7 +819,7 @@ export default function JobPostingForm() {
                             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                                 <GraduationCap size={18} className="text-neon-cyan" /> Education Requirements
                             </h3>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <SearchableMultiSelect
                                     label="Education Level (Select multiple)"
@@ -827,7 +828,7 @@ export default function JobPostingForm() {
                                     selected={form.educationLevel}
                                     onChange={(val) => handleMultiSelectChange('educationLevel', val)}
                                 />
-                                
+
                                 <SearchableMultiSelect
                                     label="Field of Study (Select multiple)"
                                     placeholder="e.g., Computer Science, Marketing..."
@@ -836,7 +837,7 @@ export default function JobPostingForm() {
                                     onChange={(val) => handleMultiSelectChange('fieldOfStudy', val)}
                                 />
                             </div>
-                            
+
                             <p className="text-xs text-gray-400 italic">
                                 💡 Tip: Select multiple education levels and fields to broaden your candidate pool
                             </p>
@@ -975,7 +976,7 @@ export default function JobPostingForm() {
                             {/* Job Description Preview */}
                             <div className="md:col-span-2 p-6 rounded-xl glass border border-white/20">
                                 <h3 className="text-lg font-bold text-white mb-4">Job Description</h3>
-                                <div 
+                                <div
                                     className="prose prose-invert max-w-none text-sm bg-black/20 p-4 rounded-lg max-h-[300px] overflow-y-auto"
                                     dangerouslySetInnerHTML={{ __html: form.jobDescription || '<p class="text-gray-500">No job description provided</p>' }}
                                 />
@@ -1043,19 +1044,19 @@ export default function JobPostingForm() {
                                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full shadow-lg">
                                     ⭐ RECOMMENDED
                                 </div>
-                                
+
                                 {selectedPlan === "pay-per-hire" && (
                                     <div className="absolute -top-3 -right-3 bg-purple-500 text-white p-1 rounded-full shadow-md">
                                         <CheckCircle size={20} />
                                     </div>
                                 )}
-                                
+
                                 <div className="flex flex-col justify-center items-center text-center mt-4">
                                     <Award className="text-purple-500 mb-3" size={32} />
                                     <h3 className="font-bold text-lg text-white">Pay-Per-Hire</h3>
                                     <p className="text-sm text-purple-400 font-semibold mt-2">For Large Scale & Flexible Hiring</p>
                                     <p className="text-sm text-gray-400 mt-2">We handle hiring end-to-end and charge per successful placement.</p>
-                                    
+
                                     <div className="mt-4 space-y-2 text-left w-full">
                                         <div className="flex items-start gap-2 text-xs text-gray-300">
                                             <CheckCircle size={14} className="text-purple-400 mt-0.5 flex-shrink-0" />
@@ -1231,18 +1232,47 @@ export default function JobPostingForm() {
                                             <p className="text-yellow-400 text-sm font-semibold animate-pulse">⚠️ Please select a plan to continue</p>
                                         )}
                                         <button
-                                            onClick={() => {
+                                            onClick={async () => {
                                                 if (selectedPlan) {
-                                                    clearDraft();
-                                                    setShowSuccessModal(true);
+                                                    try {
+                                                        const response = await fetch(endpoints.jobs, {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/json',
+                                                                'Authorization': `Bearer ${localStorage.getItem('sb-token')}`
+                                                            },
+                                                            body: JSON.stringify({
+                                                                title: form.jobTitle,
+                                                                description: form.jobDescription,
+                                                                requirements: JSON.stringify(form.skills),
+                                                                skills: form.skills,
+                                                                location: `${form.city}, ${form.country}`,
+                                                                work_mode: form.remoteType === 'onsite' ? 'On-site' : form.remoteType.charAt(0).toUpperCase() + form.remoteType.slice(1),
+                                                                type: form.jobType.replace('_', '-').charAt(0).toUpperCase() + form.jobType.replace('_', '-').slice(1),
+                                                                salary_min: form.salaryMin,
+                                                                salary_max: form.salaryMax,
+                                                                job_type: selectedPlan
+                                                            })
+                                                        });
+
+                                                        if (response.ok) {
+                                                            clearDraft();
+                                                            setShowSuccessModal(true);
+                                                        } else {
+                                                            const errData = await response.json();
+                                                            alert(`Error: ${errData.error || 'Failed to post job'}`);
+                                                        }
+                                                    } catch (error) {
+                                                        console.error('Job submission error:', error);
+                                                        alert('Network error. Failed to post job.');
+                                                    }
                                                 }
                                             }}
                                             disabled={!selectedPlan}
-                                            className={`btn-3d flex items-center gap-2 px-10 py-3 rounded-full shadow-lg font-bold tracking-wide border-none transition-all ${
-                                                selectedPlan 
-                                                    ? 'bg-green-600 hover:bg-green-700 text-white hover:shadow-xl transform hover:-translate-y-1 cursor-pointer' 
-                                                    : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
-                                            }`}
+                                            className={`btn-3d flex items-center gap-2 px-10 py-3 rounded-full shadow-lg font-bold tracking-wide border-none transition-all ${selectedPlan
+                                                ? 'bg-green-600 hover:bg-green-700 text-white hover:shadow-xl transform hover:-translate-y-1 cursor-pointer'
+                                                : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+                                                }`}
                                         >
                                             {selectedPlan ? 'Post Job & Proceed to Pay' : 'Select a Plan First'} <CheckCircle size={20} />
                                         </button>
@@ -1275,7 +1305,7 @@ export default function JobPostingForm() {
                             {/* Animated Background Effects */}
                             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-neon-cyan via-neon-purple to-pink-500 animate-pulse"></div>
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-neon-purple to-neon-cyan animate-pulse"></div>
-                            
+
                             {/* Decorative circles */}
                             <div className="absolute -top-20 -right-20 w-40 h-40 bg-neon-cyan/20 rounded-full blur-3xl"></div>
                             <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-neon-purple/20 rounded-full blur-3xl"></div>

@@ -40,37 +40,42 @@ const CandidateInterviews: React.FC = () => {
     // Fetch Data
     useEffect(() => {
         const fetchInterviews = async () => {
-            if (supabase) {
-                const { data, error } = await supabase
-                    .from('interviews')
-                    .select(`
-                        *,
-                        job:jobs(title, description, requirements),
-                        employer:users!employer_id(company_name)
-                    `)
-                    .order('date', { ascending: true });
+            try {
+                const response = await fetch(`${endpoints.applications}/candidate-interviews`, { // Assuming we map this in api.ts or use direct string if not mapped
+                    // Wait, checking format. 
+                    // Ideally we use endpoints object.
+                    // Let's use the explicit string for now as api.ts might not have it yet
+                });
+                // actually wait, let's use the exact route i just added: /api/interviews/candidate
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/interviews/candidate`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                });
 
-                if (!error && data) {
-                    const formattedInterviews: Interview[] = data.map((int: any) => ({
+                const data = await res.json();
+
+                if (data.success && data.interviews) {
+                    const formattedInterviews: Interview[] = data.interviews.map((int: any) => ({
                         id: int.id,
-                        candidateName: 'Me', // Context user
-                        companyName: int.employer?.company_name || 'Unknown Company',
+                        candidateName: 'Me',
+                        companyName: int.employer?.name || 'Unknown Company',
                         role: int.job?.title || 'Unknown Role',
-                        date: int.date,
-                        time: int.time,
+                        date: new Date(int.scheduled_date).toLocaleDateString(),
+                        time: new Date(int.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                         type: int.type,
                         status: int.status,
-                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(int.employer?.company_name || 'Company')}&background=random`,
-                        participants: [], // Placeholder
-                        roundTag: int.round_tag || 'Round 1', // Assuming round_tag exists or defaulting
+                        avatar: int.employer?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(int.employer?.name || 'Company')}&background=random`,
+                        participants: [],
+                        roundTag: int.round || 'Round 1',
                         jobDescription: int.job?.description,
-                        companyProfile: "Company profile...", // Placeholder
-                        instructions: "Please be ready 5 mins early." // Placeholder
+                        companyProfile: int.job?.company || "Company profile...",
+                        instructions: "Please be ready 5 mins early."
                     }));
                     setInterviews(formattedInterviews);
                 } else {
                     setInterviews([]);
                 }
+            } catch (err) {
+                console.error("Failed to fetch interviews", err);
             }
         };
 

@@ -43,26 +43,26 @@ export function setupAIRoutes(app, supabase, decrypt) {
             // Simple AI analysis (mock for now - integrate with actual AI later)
             const words = transcript.split(' ').length;
             const averageWordsPerQuestion = words / questionsAnswered;
-            
+
             const communication = Math.min(100, Math.round(70 + (averageWordsPerQuestion / 10)));
             const knowledge = Math.min(100, Math.round(75 + Math.random() * 15));
             const confidence = Math.max(50, Math.min(100, 95 - (tabSwitches * 10)));
             const clarity = Math.min(100, Math.round(80 + Math.random() * 15));
             const professionalism = Math.max(60, Math.min(100, 90 - (tabSwitches * 5)));
-            
+
             const overallScore = Math.round(
-                (communication * 0.3) + 
-                (knowledge * 0.25) + 
-                (confidence * 0.25) + 
-                (clarity * 0.1) + 
+                (communication * 0.3) +
+                (knowledge * 0.25) +
+                (confidence * 0.25) +
+                (clarity * 0.1) +
                 (professionalism * 0.1)
             );
 
-            const feedback = overallScore >= 85 
+            const feedback = overallScore >= 85
                 ? 'Excellent performance! You demonstrated strong communication skills and technical knowledge.'
                 : overallScore >= 70
-                ? 'Good performance with room for improvement in some areas.'
-                : 'Fair performance. Consider practicing more before your next assessment.';
+                    ? 'Good performance with room for improvement in some areas.'
+                    : 'Fair performance. Consider practicing more before your next assessment.';
 
             res.json({
                 success: true,
@@ -124,6 +124,47 @@ export function setupAIRoutes(app, supabase, decrypt) {
                 error: 'Failed to process video',
                 details: error.message
             });
+        }
+    });
+
+    /**
+     * Analyze video content (Frontend Direct)
+     * POST /api/ai/analyze-video
+     */
+    app.post('/api/ai/analyze-video', async (req, res) => {
+        try {
+            const { candidateData, videoData } = req.body;
+
+            // Mock AI Analysis based on transcript
+            // In a real system, this would call a text analysis API
+            const transcription = videoData.transcription || "";
+            const wordCount = transcription.split(' ').length;
+
+            // Generate some plausible scores
+            const confidence = Math.min(95, 70 + (wordCount / 10)); // More words = more confidence?
+            const communication = Math.min(98, 75 + (Math.random() * 20));
+            const knowledge = Math.min(90, 60 + (candidateData.skills?.length || 0) * 5);
+
+            const keywords = ['React', 'Communication', 'Teamwork', 'Growth', 'Scalability', 'Innovation']
+                .filter(() => Math.random() > 0.5);
+
+            res.json({
+                score: Math.round((confidence + communication + knowledge) / 3),
+                communication: Math.round(communication),
+                confidence: Math.round(confidence),
+                knowledge: Math.round(knowledge),
+                tone: 'Professional & Enthusiastic',
+                keywords: keywords.length > 0 ? keywords : ['Professionalism'],
+                feedback: 'Good clear speech. Consider elaborating more on technical challenges you have faced.',
+                detailedReport: {
+                    strengths: ['Clear voice', 'Good pacing'],
+                    weaknesses: ['Could use more technical terms'],
+                    sentiment: 'Positive'
+                }
+            });
+        } catch (error) {
+            console.error('Video analysis error:', error);
+            res.status(500).json({ error: 'Failed to analyze video' });
         }
     });
 
@@ -512,17 +553,75 @@ export function setupAIRoutes(app, supabase, decrypt) {
         try {
             const metrics = await updateDailyMetrics(supabase);
 
-            res.json({
-                success: true,
-                metrics
-            });
-
+            res.json({ success: true, metrics });
         } catch (error) {
-            console.error('Error updating metrics:', error);
-            res.status(500).json({ error: 'Failed to update metrics' });
+            console.error('Performance analytics error:', error);
+            res.status(500).json({ error: 'Failed to update performance metrics' });
         }
     });
 
+    // ==================== JOB & SKILLS AI ====================
+
+    /**
+     * Get suggested job titles
+     * GET /api/ai/job-titles
+     */
+    app.get('/api/ai/job-titles', async (req, res) => {
+        try {
+            const titles = [
+                "Software Engineer", "Full Stack Developer", "Frontend Developer", "Backend Developer",
+                "Product Manager", "Data Scientist", "UI/UX Designer", "DevOps Engineer",
+                "Marketing Manager", "Sales Executive", "HR Manager", "Project Manager"
+            ];
+            res.json({ success: true, titles });
+        } catch (error) {
+            res.status(500).json({ error: 'Failed to fetch job titles' });
+        }
+    });
+
+    /**
+     * Suggest skills for a job title
+     * POST /api/ai/skills/suggest
+     */
+    app.post('/api/ai/skills/suggest', async (req, res) => {
+        try {
+            const { jobTitle } = req.body;
+            const apiKeys = await getDecryptedApiKeys(supabase, decrypt);
+
+            let skills = [];
+            try {
+                skills = await generateSkillsUsingAI(jobTitle, apiKeys);
+            } catch (err) {
+                skills = getFallbackSkills(jobTitle);
+            }
+
+            res.json({ success: true, skills });
+        } catch (error) {
+            res.status(500).json({ error: 'Failed to suggest skills' });
+        }
+    });
+
+    /**
+     * Generate Job Description
+     * POST /api/ai/job-description/generate
+     */
+    app.post('/api/ai/job-description/generate', async (req, res) => {
+        try {
+            const { jobTitle, company, skills, experience } = req.body;
+            const apiKeys = await getDecryptedApiKeys(supabase, decrypt);
+
+            let description = "";
+            try {
+                description = await generateJobDescriptionWithAI(jobTitle, company, skills, experience, apiKeys);
+            } catch (err) {
+                description = generateFallbackJobDescription(jobTitle, company, skills);
+            }
+
+            res.json({ success: true, description });
+        } catch (error) {
+            res.status(500).json({ error: 'Failed to generate description' });
+        }
+    });
     /**
      * Get performance metrics for date range
      * GET /api/ai/analytics/metrics
@@ -656,7 +755,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
                 // Skill match score
                 const candidateSkills = candidate.skills || [];
                 const jobSkills = job.skills || [];
-                const matchingSkills = candidateSkills.filter(skill => 
+                const matchingSkills = candidateSkills.filter(skill =>
                     jobSkills.some(js => js.toLowerCase().includes(skill.toLowerCase()))
                 );
                 const skillScore = jobSkills.length > 0 ? (matchingSkills.length / jobSkills.length) * 100 : 50;
@@ -669,8 +768,8 @@ export function setupAIRoutes(app, supabase, decrypt) {
 
                 // Composite score with rotation fairness
                 const compositeScore = Math.round(
-                    (skillScore * 0.5) + 
-                    (experienceScore * 0.3) + 
+                    (skillScore * 0.5) +
+                    (experienceScore * 0.3) +
                     (rotationBoost * 0.2)
                 );
 
@@ -931,6 +1030,92 @@ export function setupAIRoutes(app, supabase, decrypt) {
             });
         }
     });
+    // ==================== LIVE ASSESSMENT ANALYSIS ====================
+
+    /**
+     * Analyze live assessment recording/transcript
+     * POST /api/analyze-live-assessment
+     */
+    app.post('/api/analyze-live-assessment', async (req, res) => {
+        try {
+            const { transcript, questionsAnswered, tabSwitches, totalDuration } = req.body;
+
+            if (!transcript) {
+                // Mock response if no transcript just to test flow, or error
+                // return res.status(400).json({ error: 'Transcript is required' });
+            }
+
+            const apiKeys = await getDecryptedApiKeys(supabase, decrypt);
+
+            // Construct prompt for AI
+            const prompt = `Analyze the following interview transcript for a candidate. 
+            Transcript: "${transcript || 'No transcript provided'}"
+            Context: Questions Answered: ${questionsAnswered}, Tab Switches: ${tabSwitches}, Duration: ${totalDuration}s.
+            
+            Provide a JSON response with the following fields:
+            - overallScore (0-100)
+            - communication (0-100)
+            - knowledge (0-100)
+            - confidence (0-100)
+            - feedback (string, summary of performance)
+            - strengths (array of strings)
+            - improvements (array of strings)
+            
+            Factor in that ${tabSwitches} tab switches suggests potential cheating if high (>2).
+            `;
+
+            let analysis = null;
+
+            // Try OpenAI
+            if (apiKeys.openai) {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKeys.openai}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-3.5-turbo',
+                        messages: [
+                            { role: 'system', content: 'You are an expert interviewer and evaluator. Return ONLY JSON.' },
+                            { role: 'user', content: prompt }
+                        ],
+                        temperature: 0.5
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    try {
+                        analysis = JSON.parse(data.choices[0].message.content);
+                    } catch (e) { console.error('Error parsing AI response', e); }
+                }
+            }
+
+            // Fallback (or if OpenAI failed)
+            if (!analysis) {
+                // Mock analysis based on inputs
+                const penalty = Math.min(tabSwitches * 10, 40);
+                const baseScore = transcript ? 80 : 0;
+
+                analysis = {
+                    overallScore: Math.max(0, baseScore - penalty),
+                    communication: 85,
+                    knowledge: 75,
+                    confidence: 80,
+                    feedback: "Candidate showed good potential but analysis is based on limited data.",
+                    strengths: ["Clear speech", "Good pacing"],
+                    improvements: ["Elaborate more on technical details"]
+                };
+            }
+
+            res.json(analysis);
+
+        } catch (error) {
+            console.error('Error analyzing assessment:', error);
+            res.status(500).json({ error: 'Failed to analyze assessment' });
+        }
+    });
+
 }
 
 // ==================== HELPER FUNCTIONS ====================
@@ -1120,44 +1305,44 @@ async function generateSkillsUsingAI(jobTitle, apiKeys) {
  */
 function getFallbackSkills(jobTitle) {
     const lowerTitle = jobTitle.toLowerCase();
-    
+
     // Technical roles
     if (lowerTitle.includes('developer') || lowerTitle.includes('engineer') || lowerTitle.includes('software')) {
         return ['Programming', 'Problem Solving', 'Git', 'Agile', 'Code Review', 'Testing', 'Debugging', 'API Design', 'Database Management', 'Version Control'];
     }
-    
+
     if (lowerTitle.includes('frontend') || lowerTitle.includes('front-end')) {
         return ['React', 'JavaScript', 'HTML', 'CSS', 'TypeScript', 'Responsive Design', 'UI/UX', 'State Management', 'Web Performance', 'Cross-browser Compatibility'];
     }
-    
+
     if (lowerTitle.includes('backend') || lowerTitle.includes('back-end')) {
         return ['Node.js', 'Python', 'Java', 'SQL', 'MongoDB', 'REST API', 'GraphQL', 'Microservices', 'Security', 'Cloud Services'];
     }
-    
+
     if (lowerTitle.includes('data')) {
         return ['Python', 'SQL', 'Data Analysis', 'Machine Learning', 'Statistics', 'Pandas', 'NumPy', 'Data Visualization', 'ETL', 'Big Data'];
     }
-    
+
     if (lowerTitle.includes('devops')) {
         return ['Docker', 'Kubernetes', 'CI/CD', 'AWS', 'Linux', 'Jenkins', 'Terraform', 'Monitoring', 'Scripting', 'Cloud Infrastructure'];
     }
-    
+
     if (lowerTitle.includes('designer') || lowerTitle.includes('ux') || lowerTitle.includes('ui')) {
         return ['Figma', 'Adobe XD', 'UI Design', 'UX Research', 'Prototyping', 'Wireframing', 'User Testing', 'Design Systems', 'Typography', 'Color Theory'];
     }
-    
+
     if (lowerTitle.includes('product manager') || lowerTitle.includes('product owner')) {
         return ['Product Strategy', 'Agile', 'Roadmapping', 'User Stories', 'Stakeholder Management', 'Data Analysis', 'Market Research', 'Prioritization', 'Communication', 'Leadership'];
     }
-    
+
     if (lowerTitle.includes('marketing')) {
         return ['Digital Marketing', 'SEO', 'Content Strategy', 'Social Media', 'Google Analytics', 'Campaign Management', 'Copywriting', 'Email Marketing', 'Brand Management', 'Market Analysis'];
     }
-    
+
     if (lowerTitle.includes('sales')) {
         return ['CRM', 'Negotiation', 'Lead Generation', 'Sales Strategy', 'Communication', 'Presentation', 'Customer Relations', 'Pipeline Management', 'Cold Calling', 'Closing'];
     }
-    
+
     // Default generic skills
     return ['Communication', 'Teamwork', 'Problem Solving', 'Time Management', 'Leadership', 'Adaptability', 'Critical Thinking', 'Attention to Detail', 'Organization', 'Collaboration'];
 }

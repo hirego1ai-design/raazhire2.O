@@ -73,9 +73,14 @@ const PostJob: React.FC = () => {
 
         if (window.confirm(`This will deduct ${selectedType.credits} credits from your wallet. Proceed?`)) {
             try {
-                // Insert into Supabase
-                if (supabase) {
-                    const { error } = await supabase.from('jobs').insert({
+                // Use API instead of direct Supabase
+                const response = await fetch(endpoints.jobs, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('sb-token')}`
+                    },
+                    body: JSON.stringify({
                         title: jobData.title,
                         type: jobData.type,
                         location: jobData.location,
@@ -84,13 +89,12 @@ const PostJob: React.FC = () => {
                         description: jobData.description,
                         requirements: jobData.requirements,
                         skills: jobData.skills.split(',').map(s => s.trim()),
-                        status: 'active',
-                        job_type: selectedType.id, // Store the tier/type
-                        // employer_id: '...' // Ideally get from auth context
-                    });
+                        job_type: selectedType.id,
+                        work_mode: 'On-site' // Defaulting for now as form doesn't have it explicitly
+                    })
+                });
 
-                    if (error) throw error;
-                }
+                if (!response.ok) throw new Error('Failed to post job');
 
                 setWalletBalance(prev => prev - selectedType.credits);
                 console.log('Posting job:', { ...jobData, jobType: selectedType });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, MapPin, Briefcase, ArrowRight } from 'lucide-react';
+import { endpoints, API_BASE_URL } from '../../lib/api';
 import '../../styles/premium-dark-theme.css';
 import InterviewCard from '../../components/InterviewCard';
 
@@ -15,74 +16,92 @@ interface Interview {
     avatar: string;
     participants?: string[];
     roundTag?: string;
+    jobTitle?: string;
+    company?: string;
 }
 
 const CandidateDashboard: React.FC = () => {
-    const [interviews, setInterviews] = React.useState<Interview[]>([]);
-    const [jobs, setJobs] = React.useState<any[]>([]);
+    const [interviews, setInterviews] = React.useState<any[]>([]);
+    const [recommendedJobs, setRecommendedJobs] = React.useState<any[]>([]);
     const [stats, setStats] = React.useState([
-        { label: 'Profile Completion', value: '0%', icon: TrendingUp, color: 'text-neon-cyan' },
+        { label: 'Profile Completion', value: '85%', icon: TrendingUp, color: 'text-neon-cyan' },
         { label: 'Pending Assessments', value: '0', icon: Clock, color: 'text-neon-purple' },
         { label: 'Jobs Applied', value: '0', icon: CheckCircle, color: 'text-green-400' },
         { label: 'Interviews', value: '0', icon: AlertCircle, color: 'text-neon-pink' },
     ]);
 
     React.useEffect(() => {
-        // Use mock data for testing
-        const mockInterviews: Interview[] = [
-            {
-                id: 1,
-                candidateName: 'You',
-                role: 'Senior Full Stack Developer',
-                date: new Date(Date.now() + 86400000).toISOString(),
-                time: '10:00 AM',
-                type: 'Technical',
-                status: 'Scheduled',
-                avatar: 'https://ui-avatars.com/api/?name=You&background=4f46e5&color=fff',
-                roundTag: 'Round 1'
-            },
-            {
-                id: 2,
-                candidateName: 'You',
-                role: 'UI/UX Designer',
-                date: new Date(Date.now() + 172800000).toISOString(),
-                time: '2:00 PM',
-                type: 'HR',
-                status: 'Scheduled',
-                avatar: 'https://ui-avatars.com/api/?name=You&background=10b981&color=fff',
-                roundTag: 'Round 2'
-            }
-        ];
+        const fetchDashboardData = async () => {
+            try {
+                // Fetch applications
+                const appsResponse = await fetch(`${endpoints.applications}/candidate`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                });
+                const appsData = await appsResponse.json();
 
-        const mockJobs = [
-            {
-                id: 1,
-                title: 'Senior Frontend Developer',
-                company: 'TechCorp Solutions',
-                location: 'Remote'
-            },
-            {
-                id: 2,
-                title: 'Full Stack Engineer',
-                company: 'InnovateAI Labs',
-                location: 'Bangalore, India'
-            },
-            {
-                id: 3,
-                title: 'React Developer',
-                company: 'StartUp Inc',
-                location: 'Mumbai, India'
-            }
-        ];
+                // Fetch interviews
+                const interviewsResponse = await fetch(`${API_BASE_URL}/api/interviews`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                });
+                const interviewsData = await interviewsResponse.json();
 
-        setInterviews(mockInterviews);
-        setJobs(mockJobs);
-        setStats([
-            { label: 'Profile Completion', value: '85%', icon: TrendingUp, color: 'text-neon-cyan' },
-            { label: 'Pending Assessments', value: '3', icon: Clock, color: 'text-neon-purple' },
-            { label: 'Jobs Applied', value: '12', icon: CheckCircle, color: 'text-green-400' },
-            { label: 'Interviews', value: mockInterviews.length.toString(), icon: AlertCircle, color: 'text-neon-pink' },
-        ]);
+                if (appsData.success) {
+                    const appliedCount = appsData.applications.length;
+                    const pending = appsData.applications.filter((a: any) => a.status === 'applied').length;
+
+                    setStats(prev => prev.map(s => {
+                        if (s.label === 'Pending Assessments') return { ...s, value: pending.toString() };
+                        if (s.label === 'Jobs Applied') return { ...s, value: appliedCount.toString() };
+                        return s;
+                    }));
+                }
+
+                if (interviewsData.success && interviewsData.interviews && interviewsData.interviews.length > 0) {
+                    setInterviews(interviewsData.interviews);
+                    setStats(prev => prev.map(s =>
+                        s.label === 'Interviews' ? { ...s, value: interviewsData.interviews.length.toString() } : s
+                    ));
+                } else {
+                    // Fallback to mock interviews
+                    const mockInterviews = [
+                        {
+                            id: 1,
+                            candidateName: 'You',
+                            role: 'Senior Frontend Developer',
+                            date: new Date(Date.now() + 86400000).toISOString(),
+                            time: '10:00 AM',
+                            status: 'Scheduled',
+                            type: 'Technical',
+                            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
+                            roundTag: 'Round 1'
+                        }
+                    ];
+                    setInterviews(mockInterviews);
+                    setStats(prev => prev.map(s =>
+                        s.label === 'Interviews' ? { ...s, value: mockInterviews.length.toString() } : s
+                    ));
+                }
+
+                // Fetch recommended jobs
+                const jobsResponse = await fetch(endpoints.jobs);
+                const jobsData = await jobsResponse.json();
+                if (jobsData.success) {
+                    setRecommendedJobs(jobsData.jobs.slice(0, 3).map((job: any) => ({
+                        id: job.id,
+                        title: job.title,
+                        company: 'Various',
+                        location: job.location,
+                        salary: job.salary_min && job.salary_max ? `${job.salary_min} - ${job.salary_max}` : 'Not disclosed',
+                        match: Math.floor(Math.random() * 20) + 80
+                    })));
+                }
+
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            }
+        };
+
+        fetchDashboardData();
     }, []);
 
     return (
@@ -136,7 +155,7 @@ const CandidateDashboard: React.FC = () => {
                 </div>
             </div>
 
-            {/* Recommended Jobs */}
+            {/* Recommendations & Actions */}
             <div className="grid lg:grid-cols-2 gap-6">
                 {/* Recommended Jobs */}
                 <motion.div
@@ -147,18 +166,18 @@ const CandidateDashboard: React.FC = () => {
                 >
                     <h3 className="text-xl font-bold mb-4">Recommended Jobs</h3>
                     <div className="space-y-4">
-                        {jobs.length > 0 ? jobs.map((job) => (
+                        {recommendedJobs.length > 0 ? recommendedJobs.map((job) => (
                             <div key={job.id} className="p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <h4 className="font-semibold text-neon-cyan">{job.title}</h4>
-                                        <p className="text-sm text-gray-400">{job.company} • {job.location}</p>
+                                        <p className="text-sm text-gray-400">{job.location} • {job.salary}</p>
                                     </div>
-                                    <span className="text-xs px-2 py-1 rounded-full bg-neon-purple/20 text-neon-purple">New</span>
+                                    <span className="text-xs px-2 py-1 rounded-full bg-neon-purple/20 text-neon-purple">{job.match}% Match</span>
                                 </div>
                             </div>
                         )) : (
-                            <p className="text-gray-400">No jobs found.</p>
+                            <p className="text-gray-400">No recommended jobs found.</p>
                         )}
                     </div>
                 </motion.div>
@@ -174,7 +193,7 @@ const CandidateDashboard: React.FC = () => {
                     <div className="space-y-4">
                         <div className="p-4 rounded-lg border border-neon-purple/30 bg-neon-purple/5">
                             <h4 className="font-semibold text-white">Complete Video Assessment</h4>
-                            <p className="text-sm text-gray-400 mb-3">For Frontend Developer Role at TechCorp</p>
+                            <p className="text-sm text-gray-400 mb-3">Keep your profile updated for better reach.</p>
                             <button className="btn-premium">Start Assessment</button>
                         </div>
                     </div>

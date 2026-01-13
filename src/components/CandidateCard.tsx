@@ -18,6 +18,7 @@ export interface Candidate {
     timezone: string;
     aiScore: number; // 0-100
     status: 'applied' | 'screened' | 'shortlisted' | 'interview_scheduled' | 'hired';
+    applicationId?: string; // Links to the specific application
 }
 
 interface Props {

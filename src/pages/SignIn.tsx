@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, User, Briefcase } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 const SignIn = () => {
     const [userType, setUserType] = useState<'candidate' | 'employer'>('candidate');
@@ -12,14 +13,32 @@ const SignIn = () => {
     });
     const navigate = useNavigate();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        // Navigate based on user type
-        if (userType === 'candidate') {
-            navigate('/candidate/dashboard');
-        } else {
-            navigate('/employer/dashboard');
+
+        try {
+            if (!supabase) throw new Error('Supabase client not initialized');
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: formData.email,
+                password: formData.password
+            });
+
+            if (error) throw error;
+
+            if (data.session) {
+                localStorage.setItem('sb-token', data.session.access_token);
+
+                // Fetch user profile to determined role if not set or just navigate based on toggle
+                // For now, use the toggle selection
+                if (userType === 'candidate') {
+                    navigate('/candidate/dashboard');
+                } else {
+                    navigate('/employer/dashboard');
+                }
+            }
+        } catch (error: any) {
+            console.error('Login error:', error);
+            alert(error.message || 'Failed to sign in');
         }
     };
 
@@ -58,11 +77,10 @@ const SignIn = () => {
                         <button
                             type="button"
                             onClick={() => setUserType('candidate')}
-                            className={`flex-1 py-3 px-4 rounded-2xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
-                                userType === 'candidate'
-                                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/50'
-                                    : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
-                            }`}
+                            className={`flex-1 py-3 px-4 rounded-2xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${userType === 'candidate'
+                                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/50'
+                                : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                                }`}
                         >
                             <User size={18} />
                             Candidate
@@ -70,11 +88,10 @@ const SignIn = () => {
                         <button
                             type="button"
                             onClick={() => setUserType('employer')}
-                            className={`flex-1 py-3 px-4 rounded-2xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
-                                userType === 'employer'
-                                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/50'
-                                    : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
-                            }`}
+                            className={`flex-1 py-3 px-4 rounded-2xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${userType === 'employer'
+                                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/50'
+                                : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                                }`}
                         >
                             <Briefcase size={18} />
                             Employer

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Briefcase, 
-    MapPin, 
-    Clock, 
-    Users, 
-    TrendingUp, 
+import {
+    Briefcase,
+    MapPin,
+    Clock,
+    Users,
+    TrendingUp,
     Eye,
     Edit,
     Trash2,
@@ -17,6 +17,7 @@ import {
     DollarSign
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { API_BASE_URL } from '../../lib/api';
 import { getJobsForEmployer, getApplicationsForJob } from '../../data/mockData';
 
 interface Job {
@@ -48,32 +49,38 @@ const MyJobs: React.FC = () => {
 
     const fetchJobs = async () => {
         try {
-            // Use mock data for demonstration
-            const employerId = 'emp_001'; // Default to TechCorp for demo
-            const employerJobs = getJobsForEmployer(employerId);
-            
-            // Calculate application counts for each job
-            const jobsWithCounts = employerJobs.map(job => {
-                const applications = getApplicationsForJob(job.id);
-                
-                return {
-                    id: job.id,
-                    title: job.title,
-                    location: job.location,
-                    type: job.job_type,
-                    status: job.status === 'approved' ? 'active' : job.status,
-                    salary_min: Math.round(job.salary_min / 100000), // Convert to lakhs
-                    salary_max: Math.round(job.salary_max / 100000),
-                    skills: job.skills,
-                    created_at: job.created_at,
-                    applicants_count: applications.length,
-                    screened_count: applications.filter(app => app.status === 'screened').length,
-                    shortlisted_count: applications.filter(app => app.status === 'shortlisted').length,
-                    hired_count: applications.filter(app => app.status === 'hired').length
-                } as Job;
+            const token = localStorage.getItem('sb-token');
+            if (!token) return;
+
+            const response = await fetch(`${API_BASE_URL}/api/employer/jobs`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
-            
-            setJobs(jobsWithCounts);
+
+            if (!response.ok) throw new Error('Failed to fetch jobs');
+            const data = await response.json();
+
+            // For each job, we would ideally fetch application counts from a summary endpoint
+            // but for now we can just use the job data. 
+            // In a real app, you'd join with application counts in the SQL query.
+            const formattedJobs = data.jobs.map((job: any) => ({
+                id: job.id,
+                title: job.title,
+                location: job.location,
+                type: job.type,
+                status: job.status || 'active',
+                salary_min: job.salary_min,
+                salary_max: job.salary_max,
+                skills: typeof job.skills === 'string' ? JSON.parse(job.skills) : (job.skills || []),
+                created_at: job.created_at,
+                applicants_count: 0, // Would be fetched from backend in production
+                screened_count: 0,
+                shortlisted_count: 0,
+                hired_count: 0
+            })) as Job[];
+
+            setJobs(formattedJobs);
         } catch (error) {
             console.error('Error fetching jobs:', error);
         } finally {
@@ -83,7 +90,7 @@ const MyJobs: React.FC = () => {
 
     const filteredJobs = jobs.filter(job => {
         const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            job.location.toLowerCase().includes(searchTerm.toLowerCase());
+            job.location.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = filterStatus === 'all' || job.status === filterStatus;
         return matchesSearch && matchesStatus;
     });
@@ -99,7 +106,7 @@ const MyJobs: React.FC = () => {
 
     const handleDeleteJob = async (jobId: string) => {
         if (!window.confirm('Are you sure you want to delete this job?')) return;
-        
+
         try {
             await supabase?.from('jobs').delete().eq('id', jobId);
             setJobs(prev => prev.filter(j => j.id !== jobId));
@@ -243,11 +250,10 @@ const MyJobs: React.FC = () => {
                                 </div>
                             </div>
                             <div className="relative">
-                                <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                    job.status === 'active' 
-                                        ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-                                        : 'bg-gray-500/10 text-gray-400 border border-gray-500/30'
-                                }`}>
+                                <span className={`px-2 py-1 rounded text-xs font-bold ${job.status === 'active'
+                                    ? 'bg-green-500/10 text-green-400 border border-green-500/30'
+                                    : 'bg-gray-500/10 text-gray-400 border border-gray-500/30'
+                                    }`}>
                                     {job.status}
                                 </span>
                             </div>

@@ -2,89 +2,46 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, User } from 'lucide-react';
 import DashboardJobCard from '../../components/DashboardJobCard';
+import { endpoints } from '../../lib/api';
 
 const Jobs: React.FC = () => {
     const [activeTab, setActiveTab] = useState('Find Jobs');
     const [jobs, setJobs] = useState<any[]>([]);
 
     React.useEffect(() => {
-        // Use mock data for testing
-        const mockJobs = [
-            {
-                jobId: 1,
-                title: 'Senior Frontend Developer',
-                location: 'Bangalore, India',
-                salary: '$80,000 - $120,000',
-                payCycle: 'Yearly',
-                workMode: 'Remote',
-                jobType: 'Full-time',
-                matchPercentage: 95,
-                colorTheme: 'blue' as const,
-                logo: 'T'
-            },
-            {
-                jobId: 2,
-                title: 'Full Stack Engineer',
-                location: 'Mumbai, India',
-                salary: '$70,000 - $110,000',
-                payCycle: 'Yearly',
-                workMode: 'Hybrid',
-                jobType: 'Full-time',
-                matchPercentage: 88,
-                colorTheme: 'purple' as const,
-                logo: 'I'
-            },
-            {
-                jobId: 3,
-                title: 'React Developer',
-                location: 'Remote',
-                salary: '$60,000 - $90,000',
-                payCycle: 'Yearly',
-                workMode: 'Remote',
-                jobType: 'Contract',
-                matchPercentage: 92,
-                colorTheme: 'green' as const,
-                logo: 'S'
-            },
-            {
-                jobId: 4,
-                title: 'Backend Node.js Developer',
-                location: 'Delhi, India',
-                salary: '$75,000 - $105,000',
-                payCycle: 'Yearly',
-                workMode: 'On-site',
-                jobType: 'Full-time',
-                matchPercentage: 85,
-                colorTheme: 'pink' as const,
-                logo: 'M'
-            },
-            {
-                jobId: 5,
-                title: 'DevOps Engineer',
-                location: 'Hyderabad, India',
-                salary: '$85,000 - $125,000',
-                payCycle: 'Yearly',
-                workMode: 'Hybrid',
-                jobType: 'Full-time',
-                matchPercentage: 78,
-                colorTheme: 'blue' as const,
-                logo: 'D'
-            },
-            {
-                jobId: 6,
-                title: 'UI/UX Developer',
-                location: 'Pune, India',
-                salary: '$65,000 - $95,000',
-                payCycle: 'Yearly',
-                workMode: 'Remote',
-                jobType: 'Full-time',
-                matchPercentage: 90,
-                colorTheme: 'purple' as const,
-                logo: 'C'
+        const fetchJobs = async () => {
+            try {
+                const response = await fetch(endpoints.jobs);
+                if (!response.ok) throw new Error('Failed to fetch jobs');
+                const data = await response.json();
+                if (data.jobs && data.jobs.length > 0) {
+                    // Map backend data to frontend format
+                    const formattedJobs = data.jobs.map((job: any) => ({
+                        jobId: job.id,
+                        title: job.title,
+                        location: job.location,
+                        salary: job.salary_min && job.salary_max ? `${job.salary_min} - ${job.salary_max}` : 'Not disclosed',
+                        payCycle: 'Yearly',
+                        workMode: job.work_mode,
+                        jobType: job.type,
+                        matchPercentage: Math.floor(Math.random() * 20) + 80, // Mock for now
+                        colorTheme: 'blue',
+                        logo: job.title.charAt(0)
+                    }));
+                    setJobs(formattedJobs);
+                } else {
+                    // Fallback to mock data if no jobs in DB
+                    const mockJobs = [
+                        { jobId: 1, title: 'Senior Frontend Developer', location: 'Bangalore, India', salary: '$80,000 - $120,000', payCycle: 'Yearly', workMode: 'Remote', jobType: 'Full-time', matchPercentage: 95, colorTheme: 'blue' as const, logo: 'T' }
+                    ];
+                    setJobs(mockJobs);
+                }
+            } catch (error) {
+                console.error('Error fetching jobs:', error);
             }
-        ];
+        };
 
-        setJobs(mockJobs);
+        fetchJobs();
     }, []);
 
     return (

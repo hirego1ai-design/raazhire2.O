@@ -49,6 +49,47 @@ const AIControl: React.FC = () => {
         admin: 'running'
     });
 
+    // Fetch configuration on mount
+    React.useEffect(() => {
+        const fetchConfig = async () => {
+            try {
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/ai-config`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                });
+                const data = await response.json();
+                if (data.success && data.config) {
+                    setDefaultModel(data.config.primaryProvider);
+                    // Update other state from config if needed
+                    // For now, we connect the primary model selection
+                }
+            } catch (error) {
+                console.error("Failed to fetch AI config", error);
+            }
+        };
+        fetchConfig();
+    }, []);
+
+    const saveConfig = async (newModel: AIModel) => {
+        try {
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/ai-config`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('sb-token')}`
+                },
+                body: JSON.stringify({
+                    primaryProvider: newModel,
+                    fallbackProvider: newModel === 'gpt4' ? 'gemini' : 'gpt4', // simple logic
+                    features: { resumeScreening: true, videoAnalysis: true }, // defaults
+                    weights: {},
+                    thresholds: {}
+                })
+            });
+        } catch (error) {
+            console.error("Failed to save AI config", error);
+        }
+    };
+
     const models: { id: AIModel; name: string }[] = [
         { id: 'gpt4', name: 'GPT-4' },
         { id: 'gemini', name: 'Gemini Pro' },
@@ -59,6 +100,11 @@ const AIControl: React.FC = () => {
 
     const handleModelChange = (taskId: string, model: AIModel) => {
         setTaskModels(prev => prev.map(t => t.id === taskId ? { ...t, model } : t));
+    };
+
+    const handleDefaultModelChange = (model: AIModel) => {
+        setDefaultModel(model);
+        saveConfig(model);
     };
 
     const toggleAgent = (agent: 'candidate' | 'employer' | 'admin') => {
@@ -125,7 +171,7 @@ const AIControl: React.FC = () => {
                             {models.map(m => (
                                 <button
                                     key={m.id}
-                                    onClick={() => setDefaultModel(m.id)}
+                                    onClick={() => handleDefaultModelChange(m.id)}
                                     className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${defaultModel === m.id
                                         ? 'bg-neon-cyan/10 border-neon-cyan text-white'
                                         : 'bg-white/5 border-transparent text-gray-400 hover:bg-white/10'

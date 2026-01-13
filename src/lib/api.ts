@@ -6,4 +6,10 @@ export const endpoints = {
     logs: `${API_BASE_URL}/api/logs`,
     analyzeVideo: `${API_BASE_URL}/api/analyze-video`,
     generateJobDescription: `${API_BASE_URL}/api/generate-job-description`,
+
+    // Portal Endpoints
+    jobs: `${API_BASE_URL}/api/jobs`,
+    applications: `${API_BASE_URL}/api/applications`,
+    profile: `${API_BASE_URL}/api/profile`,
+    gamification: `${API_BASE_URL}/api/gamification`,
 };
