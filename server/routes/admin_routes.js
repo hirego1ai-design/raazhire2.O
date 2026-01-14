@@ -810,7 +810,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
                 const { data: existing } = await supabase
                     .from('proctoring_config')
                     .select('id')
-                    .single();
+                    .maybeSingle();
 
                 if (existing) {
                     const { data } = await supabase
@@ -1162,7 +1162,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
             if (error) throw error;
 
             if (format === 'csv') {
-                const csv = data.map(log => 
+                const csv = data.map(log =>
                     `${log.created_at},${log.level},${log.source},${log.message}`
                 ).join('\n');
 

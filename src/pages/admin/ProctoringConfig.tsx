@@ -98,12 +98,15 @@ const ProctoringConfig: React.FC = () => {
 
             if (response.ok) {
                 alert('Proctoring & Security Rules Updated Successfully!');
+                // Refetch to ensure state is synced
+                // fetchConfig(); 
             } else {
-                throw new Error('Failed to save config');
+                const errData = await response.json();
+                throw new Error(errData.error || `Server Error: ${response.status}`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving config:", error);
-            alert('Failed to save rules. Please try again.');
+            alert(`Failed to save rules: ${error.message}`);
         }
     };
 

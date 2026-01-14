@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
     Mail, Lock, User, Phone, MapPin, Briefcase, GraduationCap,
     Code, Upload, ArrowRight, ArrowLeft, Building, Users, Globe,
@@ -17,8 +17,32 @@ interface RegisterFormProps {
 
 const RegisterForm: React.FC<RegisterFormProps> = ({ userType }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [step, setStep] = useState(1);
     const [selectedRole, setSelectedRole] = useState<'candidate' | 'employer' | ''>(userType || '');
+
+    // Handle initial data from SignUp page
+    React.useEffect(() => {
+        const initialData = location.state?.initialData;
+        if (initialData) {
+            setFormData(prev => ({
+                ...prev,
+                email: initialData.email || '',
+                password: initialData.password || '',
+                confirmPassword: initialData.confirmPassword || '',
+                fullName: initialData.fullName || '',
+            }));
+
+            if (initialData.role) {
+                setSelectedRole(initialData.role);
+            }
+
+            // Skip to Step 3 (Details) if we have account info
+            if (initialData.email && initialData.password) {
+                setStep(3);
+            }
+        }
+    }, [location.state]);
 
     // Testing mode - enable by pressing Ctrl+T or adding ?test=true to URL
     const [testingMode, setTestingMode] = useState(() => {

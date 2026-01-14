@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import HomePage from './pages/HomePage';
+import SkillDevelopment from './pages/SkillDevelopment';
 import Landing from './pages/Landing';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
@@ -46,6 +48,8 @@ import PerformanceAnalytics from './pages/admin/PerformanceAnalytics';
 import MyJobs from './pages/employer/MyJobs';
 import JobDetail from './pages/employer/JobDetail';
 
+import GeneralPage from './pages/GeneralPage';
+
 function App() {
   const [showLogin, setShowLogin] = React.useState(false);
 
@@ -54,7 +58,19 @@ function App() {
       <div className="min-h-screen bg-space-dark text-white font-outfit">
         <Navbar />
         <Routes>
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/skill-development" element={<SkillDevelopment />} />
+
+          {/* Public Pages */}
+          <Route path="/post-job-public" element={<GeneralPage title="Post a Job" subtitle="Start your hiring journey with HireGo AI." />} />
+          <Route path="/ai-features" element={<GeneralPage title="AI Features" subtitle="Explore our cutting-edge autonomous agents." />} />
+          <Route path="/pricing" element={<GeneralPage title="Pricing" subtitle="Flexible plans for teams of all sizes." />} />
+          <Route path="/enterprise" element={<GeneralPage title="Enterprise" subtitle="Scalable solutions for global organizations." />} />
+          <Route path="/find-jobs" element={<GeneralPage title="Find Jobs" subtitle="Discover your next career opportunity." />} />
+          <Route path="/certifications" element={<GeneralPage title="Certifications" subtitle="Validate your skills with our AI assessments." />} />
+          <Route path="/career-resources" element={<GeneralPage title="Career Resources" subtitle="Guides, tips, and tools for your career growth." />} />
+
+          <Route path="/landing-old" element={<Landing />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/register/candidate" element={<CandidateRegister />} />
