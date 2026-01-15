@@ -41,12 +41,6 @@ const CandidateInterviews: React.FC = () => {
     useEffect(() => {
         const fetchInterviews = async () => {
             try {
-                const response = await fetch(`${endpoints.applications}/candidate-interviews`, { // Assuming we map this in api.ts or use direct string if not mapped
-                    // Wait, checking format. 
-                    // Ideally we use endpoints object.
-                    // Let's use the explicit string for now as api.ts might not have it yet
-                });
-                // actually wait, let's use the exact route i just added: /api/interviews/candidate
                 const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/interviews/candidate`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
