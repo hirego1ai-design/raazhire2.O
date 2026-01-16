@@ -3,6 +3,14 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import SkillDevelopment from './pages/SkillDevelopment';
+import UpskillLanding from './pages/upskill/UpskillLanding';
+import CourseList from './pages/upskill/CourseList';
+import CourseDetail from './pages/upskill/CourseDetail';
+import Lesson from './pages/upskill/Lesson';
+import Assessment from './pages/upskill/Assessment';
+import SkillDashboard from './pages/upskill/SkillDashboard';
+import Certificate from './pages/upskill/Certificate';
+import JobConnection from './pages/upskill/JobConnection';
 import Landing from './pages/Landing';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
@@ -60,6 +68,16 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/skill-development" element={<SkillDevelopment />} />
+
+          {/* Upskill Portal Routes */}
+          <Route path="/upskill" element={<UpskillLanding />} />
+          <Route path="/upskill/courses" element={<CourseList />} />
+          <Route path="/upskill/course/:id" element={<CourseDetail />} />
+          <Route path="/upskill/course/:courseId/lesson/:lessonId" element={<Lesson />} />
+          <Route path="/upskill/assessment/:id" element={<Assessment />} />
+          <Route path="/upskill/dashboard" element={<SkillDashboard />} />
+          <Route path="/upskill/certificate/:id" element={<Certificate />} />
+          <Route path="/upskill/jobs" element={<JobConnection />} />
 
           {/* Public Pages */}
           <Route path="/post-job-public" element={<GeneralPage title="Post a Job" subtitle="Start your hiring journey with HireGo AI." />} />
