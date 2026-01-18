@@ -52,6 +52,11 @@ const UpskillCourseManagement: React.FC = () => {
     const fetchCourses = async () => {
         setIsLoading(true);
         try {
+            if (!supabase) {
+                console.warn('Supabase not configured');
+                setIsLoading(false);
+                return;
+            }
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
@@ -89,28 +94,39 @@ const UpskillCourseManagement: React.FC = () => {
     );
 
     const handleDeleteCourse = async (id: string) => {
-        if (window.confirm('Are you sure you want to delete this course?')) {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                const token = session?.access_token;
+        if (!window.confirm('Are you sure you want to delete this course?')) return;
 
-                const response = await fetch(`${endpoints.admin.upskill.courses}/${id}`, {
-                    method: 'DELETE',
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                });
+        try {
+            if (!supabase) {
+                alert('Authentication not configured');
+                return;
+            }
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
 
-                if (response.ok) {
-                    setCourses(courses.filter(c => c.id !== id));
-                }
-            } catch (error) {
-                console.error('Error deleting course:', error);
+            const response = await fetch(`${endpoints.admin.upskill.courses}/${id}`, {
+                method: 'DELETE',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+
+            if (response.ok) {
+                setCourses(courses.filter(c => c.id !== id));
+            } else {
+                console.error('Failed to delete course:', response.statusText);
                 alert('Failed to delete course');
             }
+        } catch (error) {
+            console.error('Error deleting course:', error);
+            alert('Failed to delete course');
         }
     };
 
     const handleToggleStatus = async (id: string) => {
         try {
+            if (!supabase) {
+                alert('Authentication not configured');
+                return;
+            }
             const course = courses.find(c => c.id === id);
             if (!course) return;
 
@@ -132,6 +148,9 @@ const UpskillCourseManagement: React.FC = () => {
                 setCourses(courses.map(c =>
                     c.id === id ? { ...c, status: newStatus } : c
                 ));
+            } else {
+                console.error('Failed to update status:', response.statusText);
+                alert('Failed to update status');
             }
         } catch (error) {
             console.error('Error updating status:', error);
@@ -181,6 +200,10 @@ const UpskillCourseManagement: React.FC = () => {
 
         const handleSave = async () => {
             try {
+                if (!supabase) {
+                    alert('Authentication not configured');
+                    return;
+                }
                 const { data: { session } } = await supabase.auth.getSession();
                 const token = session?.access_token;
 

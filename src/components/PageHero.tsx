@@ -37,7 +37,7 @@ const PageHero: React.FC<PageHeroProps> = ({
                 <motion.h1
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: "outBack" }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
                     className="text-5xl md:text-7xl font-extrabold text-white mb-6 tracking-tight drop-shadow-2xl"
                 >
                     {title}
