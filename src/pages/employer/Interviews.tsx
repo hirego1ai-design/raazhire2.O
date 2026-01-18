@@ -45,7 +45,7 @@ const EmployerInterviews: React.FC = () => {
     useEffect(() => {
         const fetchInterviews = async () => {
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/interviews/employer`, {
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/interviews/employer`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
                 const data = await response.json();
@@ -243,8 +243,8 @@ const EmployerInterviews: React.FC = () => {
                                         className="w-12 h-12 rounded-2xl object-cover border-2 border-white/20 shadow-lg"
                                     />
                                     <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0f1629] ${interview.status === 'Scheduled' ? 'bg-green-400' :
-                                            interview.status === 'Completed' ? 'bg-blue-400' :
-                                                interview.status === 'Cancelled' ? 'bg-red-400' : 'bg-yellow-400'
+                                        interview.status === 'Completed' ? 'bg-blue-400' :
+                                            interview.status === 'Cancelled' ? 'bg-red-400' : 'bg-yellow-400'
                                         }`}></div>
                                 </div>
                                 <div className="flex-1 min-w-0">

@@ -38,10 +38,11 @@ import {
     Command,
     Slack,
     Figma,
-    Chrome,
     Github,
-    Cloud
+    Cloud,
+    Chrome
 } from 'lucide-react';
+// import AnimatedGlobe from '../components/AnimatedGlobe'; // Removed as user preferred image
 
 // ============================================
 // 3D FLOATING CARD COMPONENT
@@ -50,47 +51,45 @@ interface Card3DProps {
     children: React.ReactNode;
     className?: string;
     delay?: number;
-    glowColor?: 'cyan' | 'purple' | 'green' | 'pink';
+    glowColor?: 'cyan' | 'purple' | 'green' | 'pink' | 'india';
 }
 
 const Card3D: React.FC<Card3DProps> = ({ children, className = '', delay = 0, glowColor = 'cyan' }) => {
-    const glowShadows = {
-        cyan: 'hover:shadow-3d-glow-cyan',
-        purple: 'hover:shadow-3d-glow-purple',
-        green: 'hover:shadow-3d-glow-green',
-        pink: 'hover:shadow-neon-pink'
+    const glowColors = {
+        cyan: 'from-hg-blue via-accent-cyan to-hg-green',
+        purple: 'from-accent-violet via-accent-pink to-hg-red',
+        green: 'from-hg-green via-accent-cyan to-hg-blue',
+        pink: 'from-hg-red via-accent-orange to-hg-yellow',
+        india: 'from-[#FF9933]/40 via-white/80 to-[#138808]/40'
     };
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay }}
             whileHover={{ y: -8, scale: 1.02 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay }}
             className={`
                 relative overflow-hidden
-                bg-white/95 backdrop-blur-xl
-                rounded-4xl
-                border border-white/20
-                shadow-3d-card
-                ${glowShadows[glowColor]}
+                bg-white
+                rounded-xl
+                border border-light-border
+                hover:border-hg-blue/40
+                shadow-colorful-md hover:shadow-card-hover
                 transition-all duration-500 ease-out
+                group
+                cursor-pointer
                 ${className}
             `}
         >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-transparent pointer-events-none" />
-            <div className="absolute inset-0 rounded-4xl overflow-hidden pointer-events-none">
-                <div
-                    className="absolute inset-0"
-                    style={{
-                        background: `linear-gradient(90deg, transparent, ${glowColor === 'cyan' ? 'rgba(0, 243, 255, 0.5)' : glowColor === 'purple' ? 'rgba(188, 19, 254, 0.5)' : glowColor === 'green' ? 'rgba(57, 255, 20, 0.5)' : 'rgba(255, 0, 110, 0.5)'}, transparent)`,
-                        opacity: 0.3,
-                        padding: '1px',
-                        borderRadius: '2rem'
-                    }}
-                />
-            </div>
+            {/* Animated gradient border - PERMANENTLY VISIBLE */}
+            <div className={`absolute inset-0 rounded-xl bg-gradient-to-r ${glowColors[glowColor]} opacity-70 transition-opacity duration-500 -z-10 blur-xl`} />
+
+            {/* Top highlight - PERMANENTLY VISIBLE */}
+            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-hg-blue/40 to-transparent opacity-100 transition-opacity duration-500" />
+
+            {/* Content */}
             <div className="relative z-10">{children}</div>
         </motion.div>
     );
@@ -111,47 +110,44 @@ interface Button3DProps {
 const Button3D: React.FC<Button3DProps> = ({ children, variant = 'primary', onClick, className = '', icon, size = 'md' }) => {
     const variants = {
         primary: `
-            bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-cyan
-            bg-[length:200%_100%]
-            animate-gradient-shift
-            text-white font-bold
-            shadow-btn-3d
-            hover:shadow-neon-cyan
-            active:shadow-btn-3d-pressed active:translate-y-1
+            bg-gradient-to-r from-hg-blue to-accent-violet text-white font-bold
+            hover:from-hg-blue hover:to-hg-red
+            shadow-button-glow hover:shadow-colorful-lg
         `,
         secondary: `
-            bg-white text-gray-900 font-semibold
-            border-2 border-gray-200
-            shadow-3d-card
-            hover:border-neon-cyan hover:shadow-3d-glow-cyan
+            bg-white text-text-primary font-semibold
+            border-2 border-hg-blue/20 hover:border-hg-blue
+            hover:bg-hg-blue/5
+            shadow-colorful-sm hover:shadow-colorful-md
         `,
         ghost: `
-            bg-transparent text-gray-600
-            hover:text-neon-purple hover:bg-gray-50
-            font-medium
+            bg-transparent text-hg-blue
+            hover:text-hg-red hover:bg-hg-blue/5
+            font-semibold
         `,
         outline: `
-            bg-transparent text-neon-purple font-semibold
-            border-2 border-neon-purple/30
-            hover:bg-neon-purple/10 hover:border-neon-purple
+            bg-transparent text-hg-blue font-bold
+            border-2 border-hg-blue
+            hover:bg-hg-blue hover:text-white
+            transition-colors
         `
     };
 
     const sizes = {
-        sm: 'px-4 py-2 text-sm',
-        md: 'px-6 py-3',
-        lg: 'px-8 py-4 text-lg'
+        sm: 'px-5 py-2.5 text-sm',
+        md: 'px-7 py-3.5',
+        lg: 'px-10 py-5 text-lg'
     };
 
     return (
         <motion.button
-            whileHover={{ scale: 1.03 }}
+            whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={onClick}
             className={`
                 ${sizes[size]}
-                rounded-full
-                flex items-center justify-center gap-2
+                rounded-xl
+                flex items-center justify-center gap-3
                 transition-all duration-300
                 cursor-pointer
                 ${variants[variant]}
@@ -159,7 +155,7 @@ const Button3D: React.FC<Button3DProps> = ({ children, variant = 'primary', onCl
             `}
         >
             {children}
-            {icon && <span>{icon}</span>}
+            {icon && <span className="animate-bounce-slow">{icon}</span>}
         </motion.button>
     );
 };
@@ -171,19 +167,47 @@ const FloatingOrb: React.FC<{ color: string; size: string; position: string; del
     color, size, position, delay
 }) => (
     <motion.div
-        className={`absolute ${position} ${size} rounded-full blur-xl opacity-30 pointer-events-none`}
+        className={`absolute ${position} ${size} rounded-full blur-[120px] opacity-20 pointer-events-none`}
         style={{ background: color }}
         animate={{
-            y: [0, -30, 0],
-            x: [0, 15, 0],
+            y: [0, -40, 0],
             scale: [1, 1.1, 1],
         }}
         transition={{
-            duration: 6 + delay,
+            duration: 8 + delay,
             repeat: Infinity,
             ease: "easeInOut"
         }}
     />
+);
+
+// ============================================
+// 3D GREEN SQUARE BOX COMPONENT
+// ============================================
+const ThreeDSquareBox: React.FC<{ size?: string; className?: string; delay?: number }> = ({ size = "w-24 h-24", className = "", delay = 0 }) => (
+    <motion.div
+        initial={{ opacity: 0, rotateX: 45, rotateY: -45, scale: 0.8 }}
+        whileInView={{ opacity: 1, rotateX: 25, rotateY: -25, scale: 1 }}
+        transition={{ duration: 1, delay, ease: "easeOut" }}
+        className={`relative ${size} ${className}`}
+        style={{ perspective: "1000px", transformStyle: "preserve-3d" }}
+    >
+        {/* Front - Soft Saffron (Orange) */}
+        <div className="absolute inset-0 bg-[#FF9933]/60 shadow-lg border border-white/20" style={{ transform: "translateZ(50px)" }} />
+        {/* Back - Soft Green */}
+        <div className="absolute inset-0 bg-[#138808]/50 opacity-90" style={{ transform: "translateZ(-50px) rotateY(180deg)" }} />
+        {/* Right - Milky White */}
+        <div className="absolute inset-0 bg-white/80" style={{ transform: "rotateY(90deg) translateZ(50px)" }} />
+        {/* Left - Soft Navy (Chakra color) */}
+        <div className="absolute inset-0 bg-[#000080]/20" style={{ transform: "rotateY(-90deg) translateZ(50px)" }} />
+        {/* Top - Very Light Saffron */}
+        <div className="absolute inset-0 bg-[#FFB366]/40" style={{ transform: "rotateX(90deg) translateZ(50px)" }} />
+        {/* Bottom - Very Light Green */}
+        <div className="absolute inset-0 bg-[#90EE90]/40" style={{ transform: "rotateX(-90deg) translateZ(50px)" }} />
+
+        {/* Glow effect - Subtle Tricolor Glow */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#FF9933]/10 via-white/10 to-[#138808]/10 blur-3xl opacity-20 -z-10 animate-pulse-soft" />
+    </motion.div>
 );
 
 // ============================================
@@ -194,27 +218,28 @@ interface FeatureCardProps {
     title: string;
     outcome: string;
     description: string;
-    color: 'cyan' | 'purple' | 'green' | 'pink';
+    color: 'cyan' | 'purple' | 'green' | 'pink' | 'india';
     delay: number;
 }
 
 const FeatureCard: React.FC<FeatureCardProps> = ({ icon: Icon, title, outcome, description, color, delay }) => {
-    const colorClasses = {
-        cyan: 'bg-gradient-to-br from-cyan-400 to-blue-500',
-        purple: 'bg-gradient-to-br from-purple-400 to-violet-600',
-        green: 'bg-gradient-to-br from-green-400 to-emerald-500',
-        pink: 'bg-gradient-to-br from-pink-400 to-rose-500'
+    const colorMap = {
+        cyan: { bg: 'bg-hg-blue/10', border: 'border-hg-blue/20', text: 'text-hg-blue', accent: 'text-hg-blue' },
+        purple: { bg: 'bg-accent-violet/10', border: 'border-accent-violet/20', text: 'text-accent-violet', accent: 'text-hg-red' },
+        green: { bg: 'bg-hg-green/10', border: 'border-hg-green/20', text: 'text-hg-green', accent: 'text-hg-green' },
+        pink: { bg: 'bg-hg-red/10', border: 'border-hg-red/20', text: 'text-hg-red', accent: 'text-hg-yellow' },
+        india: { bg: 'bg-[#FF9933]/10', border: 'border-[#FF9933]/20', text: 'text-[#FF9933]', accent: 'text-[#138808]' }
     };
 
     return (
-        <Card3D delay={delay} glowColor={color} className="p-6 h-full">
-            <div className="flex flex-col items-center text-center h-full">
-                <div className={`w-12 h-12 rounded-2xl ${colorClasses[color]} flex items-center justify-center mb-4 shadow-lg shadow-${color}-500/20`}>
-                    <Icon className="w-6 h-6 text-white" strokeWidth={2} />
+        <Card3D delay={delay} glowColor="india" className="p-8 h-full flex flex-col items-center text-center">
+            <div className="flex flex-col h-full items-center">
+                <div className={`w-16 h-16 rounded-xl ${colorMap[color].bg} border ${colorMap[color].border} flex items-center justify-center mb-6 mx-auto group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className={`w-8 h-8 ${colorMap[color].text}`} />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-neon-purple font-semibold text-xs uppercase tracking-wide mb-3">{outcome}</p>
-                <p className="text-gray-500 text-sm leading-relaxed">{description}</p>
+                <h3 className="text-xl font-bold text-text-primary mb-2">{title}</h3>
+                <p className={`text-xs font-bold ${colorMap[color].accent} uppercase tracking-widest mb-4`}>{outcome}</p>
+                <p className="text-text-secondary leading-relaxed text-sm max-w-[250px]">{description}</p>
             </div>
         </Card3D>
     );
@@ -228,35 +253,25 @@ interface StatProps {
     label: string;
     context?: string;
     icon: React.ElementType;
-    color: 'cyan' | 'purple' | 'green' | 'pink';
+    color: 'cyan' | 'purple' | 'green' | 'pink' | 'india';
     delay: number;
 }
 
 const StatItemCard: React.FC<StatProps> = ({ value, label, context, icon: Icon, color, delay }) => {
-    const iconColors = {
-        cyan: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
-        purple: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-        green: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-        pink: 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+    const colorMap = {
+        cyan: { gradient: 'from-hg-blue to-accent-cyan', text: 'text-hg-blue' },
+        purple: { gradient: 'from-accent-violet to-hg-red', text: 'text-accent-violet' },
+        green: { gradient: 'from-hg-green to-accent-cyan', text: 'text-hg-green' },
+        pink: { gradient: 'from-hg-red to-hg-yellow', text: 'text-hg-red' },
+        india: { gradient: 'from-[#FF9933] to-[#138808]', text: 'text-[#FF9933]' }
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay }}
-            className="flex-1 min-w-[200px]"
-        >
-            <Card3D glowColor={color} className="p-6 h-full flex flex-col items-center text-center">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 border ${iconColors[color]}`}>
-                    <Icon className="w-6 h-6" strokeWidth={2.5} />
-                </div>
-                <div className="text-3xl font-black text-gray-900 mb-1">{value}</div>
-                <div className="text-gray-700 font-bold text-sm mb-1">{label}</div>
-                {context && <div className="text-gray-400 text-xs">{context}</div>}
-            </Card3D>
-        </motion.div>
+        <Card3D delay={delay} glowColor="india" className="p-8 h-full flex flex-col items-center text-center">
+            <div className={`text-5xl font-black bg-gradient-to-r ${colorMap[color].gradient} bg-clip-text text-transparent mb-3 tracking-tighter`}>{value}</div>
+            <div className="text-sm font-bold text-text-primary uppercase tracking-[0.15em] mb-2">{label}</div>
+            {context && <div className="text-xs text-text-tertiary font-medium">{context}</div>}
+        </Card3D>
     );
 };
 
@@ -268,35 +283,28 @@ interface ProcessStepProps {
     title: string;
     description: string;
     microcopy: string;
-    color: 'cyan' | 'purple' | 'green' | 'pink';
+    color: 'cyan' | 'purple' | 'green' | 'pink' | 'india';
     delay: number;
 }
 
 const ProcessStep: React.FC<ProcessStepProps> = ({ number, title, description, microcopy, color, delay }) => {
-    const colorClasses = {
-        cyan: 'from-neon-cyan to-blue-500',
-        purple: 'from-neon-purple to-violet-600',
-        green: 'from-neon-green to-emerald-500',
-        pink: 'from-neon-pink to-rose-500'
+    const colorMap = {
+        cyan: { bg: 'bg-gradient-to-br from-hg-blue to-accent-cyan', text: 'text-white' },
+        purple: { bg: 'bg-gradient-to-br from-accent-violet to-hg-red', text: 'text-white' },
+        green: { bg: 'bg-gradient-to-br from-hg-green to-accent-cyan', text: 'text-white' },
+        pink: { bg: 'bg-gradient-to-br from-hg-red to-hg-yellow', text: 'text-white' },
+        india: { bg: 'bg-gradient-to-br from-[#FF9933] to-[#138808]', text: 'text-white' }
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay }}
-            className="relative"
-        >
-            <Card3D className="p-6 text-center h-full" glowColor={color}>
-                <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${colorClasses[color]} flex items-center justify-center mx-auto mb-4 text-white font-bold text-lg`}>
-                    {number}
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-gray-600 text-sm mb-3">{description}</p>
-                <p className="text-xs text-gray-400 italic">{microcopy}</p>
-            </Card3D>
-        </motion.div>
+        <Card3D delay={delay} glowColor="india" className="p-8 text-center h-full">
+            <div className={`w-14 h-14 rounded-xl ${colorMap[color].bg} ${colorMap[color].text} font-black text-xl flex items-center justify-center mx-auto mb-6 shadow-colorful-md group-hover:scale-110 transition-transform duration-300`}>
+                {number}
+            </div>
+            <h3 className="text-xl font-bold text-text-primary mb-3">{title}</h3>
+            <p className="text-text-secondary text-sm mb-4 leading-relaxed">{description}</p>
+            <p className="text-[10px] text-hg-blue font-bold uppercase tracking-widest">{microcopy}</p>
+        </Card3D>
     );
 };
 
@@ -306,12 +314,12 @@ const ProcessStep: React.FC<ProcessStepProps> = ({ number, title, description, m
 const CompanyLogo: React.FC<{ name: string; icon: React.ElementType }> = ({ name, icon: Icon }) => (
     <motion.div
         whileHover={{ y: -5, scale: 1.05 }}
-        className="px-6 py-4 bg-white/40 backdrop-blur-md rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3 grayscale hover:grayscale-0 transition-all duration-300"
+        className="px-6 py-4 bg-white rounded-xl border border-light-border shadow-colorful-sm hover:shadow-colorful-md flex items-center gap-3 transition-all duration-300 cursor-pointer group"
     >
-        <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-white">
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-hg-blue to-accent-violet flex items-center justify-center text-white group-hover:scale-110 transition-transform">
             <Icon className="w-5 h-5" />
         </div>
-        <span className="text-gray-700 font-bold tracking-tight">{name}</span>
+        <span className="text-text-primary font-bold tracking-tight">{name}</span>
     </motion.div>
 );
 
@@ -326,8 +334,8 @@ const HomePage: React.FC = () => {
         offset: ["start start", "end start"]
     });
 
-    const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
-    const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.8]);
+    const heroOpacity = 1;
+    const heroScale = 1;
 
     // Features ordered by importance to employers
     const features = [
@@ -409,316 +417,176 @@ const HomePage: React.FC = () => {
     const trustedCompanies = ['TechCorp', 'StartupXYZ', 'GlobalInc', 'InnovateCo', 'ScaleUp', 'FutureTech'];
 
     return (
-        <div className="bg-gradient-to-b from-cream via-white to-soft-gray min-h-screen overflow-hidden">
+        <div className="bg-gradient-hero min-h-screen overflow-hidden max-w-full w-full">
+            {/* ============================================ */}
+            {/* HERO SECTION */}
             {/* ============================================ */}
             {/* HERO SECTION */}
             {/* ============================================ */}
             <motion.section
                 ref={heroRef}
-                style={{ opacity: heroOpacity, scale: heroScale }}
-                className="relative min-h-screen flex items-center pt-24 pb-16 overflow-hidden"
+                className="relative pt-32 pb-40 overflow-hidden min-h-[90vh] flex flex-col justify-center w-full max-w-full"
             >
-                {/* Background Elements */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    <FloatingOrb color="linear-gradient(135deg, #00f3ff, #0066ff)" size="w-96 h-96" position="top-1/4 -left-48" delay={0} />
-                    <FloatingOrb color="linear-gradient(135deg, #bc13fe, #7c3aed)" size="w-80 h-80" position="top-1/3 right-0" delay={2} />
-                    <FloatingOrb color="linear-gradient(135deg, #39FF14, #10b981)" size="w-64 h-64" position="bottom-1/4 left-1/4" delay={1} />
-                    <div
-                        className="absolute inset-0 opacity-[0.02]"
-                        style={{
-                            backgroundImage: `
-                                linear-gradient(rgba(0, 243, 255, 0.5) 1px, transparent 1px),
-                                linear-gradient(90deg, rgba(0, 243, 255, 0.5) 1px, transparent 1px)
-                            `,
-                            backgroundSize: '60px 60px'
-                        }}
-                    />
+                {/* Full Width World Map Background */}
+                <div className="absolute inset-0 z-0 select-none overflow-hidden">
+                    <motion.div
+                        initial={{ scale: 1.1 }}
+                        animate={{ scale: 1 }}
+                        transition={{ duration: 20, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
+                        className="absolute inset-0"
+                    >
+                        <img
+                            src="/images/full_page_world_map_hero.png"
+                            alt="Global Hiring Network"
+                            className="w-full h-full object-cover object-center"
+                        />
+                    </motion.div>
+
+                    {/* Light Overlay - Reduced darkness, world map clearly visible */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-slate-900/20 to-[#F8FAFF]/90" />
                 </div>
 
-                <div className="container mx-auto max-w-7xl px-4 relative z-10">
-                    <div className="grid lg:grid-cols-2 gap-12 items-center">
-                        {/* Left Content */}
-                        <div className="order-2 lg:order-1">
-                            {/* Audience Badge */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5 }}
-                                className="flex flex-wrap items-center gap-3 mb-6"
-                            >
-                                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-neon-cyan/10 to-neon-purple/10 border border-neon-cyan/30">
-                                    <Building2 className="w-4 h-4 text-neon-cyan" />
-                                    <span className="text-sm font-semibold text-gray-700">For Employers</span>
-                                </span>
-                                <span className="text-gray-400 text-sm">Fast-growing startups & enterprises hiring globally</span>
-                            </motion.div>
+                <div className="container mx-auto max-w-5xl px-6 relative z-10 text-center w-full">
+                    {/* Main Headline */}
+                    <motion.h1
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2, duration: 0.8 }}
+                        className="text-4xl sm:text-5xl md:text-7xl font-black leading-[1.1] mb-6 tracking-tighter drop-shadow-2xl"
+                    >
+                        <span className="text-white">World's </span>
+                        <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">Fastest Hiring</span>
+                        <br />
+                        <span className="text-white">Platform.</span>
+                    </motion.h1>
 
-                            {/* Headline - Refined for readability */}
-                            <motion.h1
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.6, delay: 0.1 }}
-                                className="text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight mb-5 tracking-tight"
-                            >
-                                Hire verified talent in{' '}
-                                <span className="relative inline-block whitespace-nowrap">
-                                    <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
-                                        10 minutes
-                                    </span>
-                                    <motion.div
-                                        className="absolute -bottom-1 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full opacity-30"
-                                        initial={{ scaleX: 0 }}
-                                        animate={{ scaleX: 1 }}
-                                        transition={{ duration: 0.8, delay: 0.5 }}
-                                    />
-                                </span>{' '}
-                                using autonomous AI agents
-                            </motion.h1>
+                    {/* Subtext */}
+                    <motion.p
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-lg md:text-xl text-slate-200 mb-10 max-w-3xl mx-auto leading-relaxed px-4 font-medium drop-shadow-md"
+                    >
+                        Reducing recruitment time by up to <span className="text-cyan-400 font-bold">90%</span>. Screen, assess, and interview candidates automatically with intelligent agents across the globe.
+                    </motion.p>
 
-                            {/* Subtext - Clear explanation */}
-                            <motion.p
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.6, delay: 0.2 }}
-                                className="text-lg text-gray-600 mb-6 max-w-lg leading-relaxed font-medium"
-                            >
-                                Screen, assess, interview, and shortlist candidates automatically—
-                                <strong className="text-gray-900 font-bold">no recruiter needed</strong>. Our AI agents do the heavy lifting 24/7.
-                            </motion.p>
-
-                            {/* Social Proof Line */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.6, delay: 0.3 }}
-                                className="flex items-center gap-2 mb-8"
-                            >
-                                <div className="flex -space-x-2">
-                                    {[1, 2, 3, 4].map((i) => (
-                                        <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-white" />
-                                    ))}
-                                </div>
-                                <span className="text-sm text-gray-600">
-                                    <strong className="text-gray-900">Trusted by 10K+ companies</strong> worldwide
-                                </span>
-                                <div className="flex items-center gap-1 text-amber-500">
-                                    {[1, 2, 3, 4, 5].map((i) => (
-                                        <Star key={i} className="w-4 h-4 fill-current" />
-                                    ))}
-                                </div>
-                            </motion.div>
-
-                            {/* CTA Buttons - One primary, others secondary */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.6, delay: 0.4 }}
-                                className="flex flex-col sm:flex-row gap-4 mb-4"
-                            >
-                                <Button3D
-                                    variant="primary"
-                                    size="lg"
-                                    onClick={() => navigate('/signup?type=employer')}
-                                    icon={<Rocket className="w-5 h-5" />}
-                                >
-                                    Start Hiring in 10 Minutes
-                                </Button3D>
-                                <Button3D
-                                    variant="outline"
-                                    size="lg"
-                                    onClick={() => navigate('/demo')}
-                                    icon={<Play className="w-5 h-5" />}
-                                >
-                                    Watch Demo
-                                </Button3D>
-                            </motion.div>
-
-                            {/* Risk Reversal */}
-                            <motion.p
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.6, delay: 0.5 }}
-                                className="text-sm text-gray-500 flex items-center gap-2"
-                            >
-                                <CheckCircle className="w-4 h-4 text-neon-green" />
-                                No credit card required • First job posting free
-                            </motion.p>
-                        </div>
-
-                        {/* Right Content - Hero Visual */}
-                        <motion.div
-                            initial={{ opacity: 0, x: 50 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.8, delay: 0.2 }}
-                            className="order-1 lg:order-2 relative"
+                    {/* Impact CTAs */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                        className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-8"
+                    >
+                        <Button3D
+                            variant="primary"
+                            size="lg"
+                            className="w-full sm:w-auto min-w-[220px] shadow-2xl shadow-cyan-500/20 box-border border-white/10"
+                            onClick={() => navigate('/signup?type=employer')}
                         >
-                            <div className="relative">
-                                <Card3D className="overflow-hidden" glowColor="cyan">
-                                    <img
-                                        src="/hero-hiring.png"
-                                        alt="AI Hiring Platform"
-                                        className="w-full h-auto rounded-4xl"
-                                    />
-                                </Card3D>
-                                {/* Floating Stats Card */}
-                                <motion.div
-                                    animate={{ y: [0, -10, 0] }}
-                                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                                    className="absolute -bottom-6 -left-6 bg-white rounded-3xl shadow-3d-card p-5 border border-white/50"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-neon-cyan to-blue-500 flex items-center justify-center">
-                                            <Clock className="w-6 h-6 text-white" />
-                                        </div>
-                                        <div>
-                                            <div className="text-2xl font-extrabold text-gray-900">10 min</div>
-                                            <div className="text-gray-500 text-sm font-medium">Avg. time-to-hire</div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                                {/* Floating Agent Orb */}
-                                <motion.div
-                                    animate={{ y: [0, -15, 0], rotate: [0, 5, 0] }}
-                                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                                    className="absolute -top-4 -right-4 bg-gradient-to-br from-neon-purple to-violet-600 rounded-2xl shadow-neon-purple p-4"
-                                >
-                                    <Bot className="w-8 h-8 text-white" />
-                                </motion.div>
-                            </div>
-                        </motion.div>
-                    </div>
+                            Get Started Free
+                        </Button3D>
+                        <div className="backdrop-blur-md rounded-xl">
+                            <Button3D
+                                variant="outline" // This might need style override for white text
+                                size="lg"
+                                className="w-full sm:w-auto min-w-[220px] !text-white !border-white/30 hover:!bg-white/10"
+                                onClick={() => navigate('/demo')}
+                            >
+                                Watch Demo
+                            </Button3D>
+                        </div>
+                    </motion.div>
                 </div>
             </motion.section>
 
             {/* ============================================ */}
-            {/* TRUSTED BY 200+ HIRING PARTNERS - MARQUEE */}
+            {/* TRUSTED BY - COLORFUL TICKER */}
             {/* ============================================ */}
-            <section className="py-24 relative overflow-hidden">
-                <div className="container mx-auto max-w-7xl px-4 relative z-10">
-                    <div className="text-center mb-16">
-                        <motion.h2
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4"
-                        >
-                            Trusted by <span className="bg-gradient-to-r from-neon-purple to-neon-cyan bg-clip-text text-transparent">200+</span> Hiring Partners
-                        </motion.h2>
-                        <motion.p
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.1 }}
-                            className="text-xl text-gray-600 max-w-2xl mx-auto"
-                        >
-                            Our talent gets placed at the world's leading technology companies
-                        </motion.p>
-                    </div>
+            <section className="py-12 bg-white relative border-y border-light-border overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-white via-transparent to-white z-20 pointer-events-none" />
 
-                    <div className="relative w-full overflow-hidden mask-linear-fade">
-                        <style>{`
-                            .mask-linear-fade {
-                                mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-                            }
-                        `}</style>
+                <div className="container mx-auto px-4 relative z-10">
+                    <h2 className="text-center text-xl md:text-2xl font-bold text-text-primary mb-8 tracking-tight opacity-90">
+                        Trusted by 10,000+ companies worldwide
+                    </h2>
 
-                        {/* First Row of Icons - Tech & Cloud */}
-                        <motion.div
-                            className="flex gap-16 whitespace-nowrap mb-12"
-                            animate={{ x: [0, -1700] }}
-                            transition={{ repeat: Infinity, duration: 40, ease: "linear" }}
-                        >
-                            {[...Array(3)].map((_, i) => (
-                                <React.Fragment key={i}>
-                                    {[
-                                        { icon: Chrome, color: "text-blue-600", bg: "bg-blue-50" },
-                                        { icon: Layout, color: "text-sky-600", bg: "bg-sky-50" },
-                                        { icon: ShoppingBag, color: "text-orange-500", bg: "bg-orange-50" },
-                                        { icon: Cpu, color: "text-indigo-600", bg: "bg-indigo-50" },
-                                        { icon: Database, color: "text-red-600", bg: "bg-red-50" },
-                                        { icon: Cloud, color: "text-cyan-500", bg: "bg-cyan-50" },
-                                        { icon: Server, color: "text-violet-600", bg: "bg-violet-50" },
-                                        { icon: Github, color: "text-gray-800", bg: "bg-gray-100" },
-                                        { icon: Smartphone, color: "text-green-500", bg: "bg-green-50" },
-                                    ].map((logo, idx) => (
-                                        <div key={idx} className={`w-20 h-20 rounded-2xl ${logo.bg} flex items-center justify-center border border-white/50 shadow-sm mx-4 transform hover:scale-110 transition-transform duration-300`}>
-                                            <logo.icon className={`w-10 h-10 ${logo.color}`} strokeWidth={1.5} />
-                                        </div>
-                                    ))}
-                                </React.Fragment>
-                            ))}
-                        </motion.div>
+                    {/* 3D Curved Box Container */}
+                    <div className="relative max-w-5xl mx-auto">
+                        <div className="absolute inset-0 bg-gradient-to-r from-hg-blue/5 via-white/40 to-hg-green/5 blur-xl rounded-[2rem] transform rotate-1 opacity-50" />
 
-                        {/* Second Row of Icons - Tools & Startups */}
-                        <motion.div
-                            className="flex gap-16 whitespace-nowrap"
-                            animate={{ x: [-1700, 0] }}
-                            transition={{ repeat: Infinity, duration: 45, ease: "linear" }}
-                        >
-                            {[...Array(3)].map((_, i) => (
-                                <React.Fragment key={i}>
-                                    {[
-                                        { icon: Slack, color: "text-fuchsia-600", bg: "bg-fuchsia-50" },
-                                        { icon: Figma, color: "text-purple-600", bg: "bg-purple-50" },
-                                        { icon: Box, color: "text-emerald-500", bg: "bg-emerald-50" },
-                                        { icon: Command, color: "text-rose-600", bg: "bg-rose-50" },
-                                        { icon: Hexagon, color: "text-amber-500", bg: "bg-amber-50" },
-                                        { icon: Globe, color: "text-teal-500", bg: "bg-teal-50" },
-                                        { icon: Zap, color: "text-yellow-500", bg: "bg-yellow-50" },
-                                        { icon: TrendingUp, color: "text-green-600", bg: "bg-green-50" },
-                                        { icon: Video, color: "text-red-500", bg: "bg-red-50" },
-                                    ].map((logo, idx) => (
-                                        <div key={idx} className={`w-20 h-20 rounded-2xl ${logo.bg} flex items-center justify-center border border-white/50 shadow-sm mx-4 transform hover:scale-110 transition-transform duration-300`}>
-                                            <logo.icon className={`w-10 h-10 ${logo.color}`} strokeWidth={1.5} />
-                                        </div>
-                                    ))}
-                                </React.Fragment>
-                            ))}
-                        </motion.div>
+                        <div className="relative bg-white/60 backdrop-blur-md border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.05)] rounded-[2rem] p-8 overflow-hidden transform hover:scale-[1.01] transition-transform duration-500">
+
+                            <motion.div
+                                className="flex gap-16 whitespace-nowrap items-center"
+                                animate={{ x: [0, -1000] }}
+                                transition={{ repeat: Infinity, duration: 30, ease: "linear" }}
+                            >
+                                {[...Array(4)].map((_, i) => (
+                                    <React.Fragment key={i}>
+                                        {[
+                                            { name: "Google", icon: Chrome, color: 'text-hg-blue' },
+                                            { name: "Salesforce", icon: Cloud, color: 'text-hg-green' },
+                                            { name: "Amazon", icon: ShoppingBag, color: 'text-hg-yellow' },
+                                            { name: "Apple", icon: Command, color: 'text-hg-red' },
+                                            { name: "Microsoft", icon: Layout, color: 'text-hg-blue' },
+                                            { name: "Slack", icon: Slack, color: 'text-accent-violet' },
+                                            { name: "Tesla", icon: Zap, color: 'text-hg-red' },
+                                            { name: "Airbnb", icon: Star, color: 'text-hg-green' }
+                                        ].map((company, idx) => (
+                                            <div
+                                                key={`${i}-${idx}`}
+                                                className="flex items-center gap-3 opacity-60 hover:opacity-100 transition-opacity duration-300"
+                                            >
+                                                <company.icon className={`w-8 h-8 ${company.color} filter drop-shadow-sm`} />
+                                                <span className="text-xl font-bold text-text-primary tracking-tight">{company.name}</span>
+                                            </div>
+                                        ))}
+                                    </React.Fragment>
+                                ))}
+                            </motion.div>
+                        </div>
                     </div>
                 </div>
-
-                {/* Background Decor */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-neon-purple/5 blur-[120px] rounded-full pointer-events-none" />
             </section>
 
             {/* ============================================ */}
-            {/* STATS SECTION - REDESIGNED GRID */}
+            {/* STATS SECTION */}
             {/* ============================================ */}
-            <section className="py-24 relative overflow-hidden">
-                {/* Background Decor */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[300px] bg-neon-cyan/5 blur-[120px] rounded-full pointer-events-none" />
-
-                <div className="container mx-auto max-w-7xl px-4 relative z-10">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            <section className="py-10 relative bg-mesh-colorful">
+                <div className="container mx-auto max-w-6xl px-6 relative z-10">
+                    <div className="text-center mb-16">
+                        <h2 className="text-2xl lg:text-3xl font-black text-text-primary mb-3">Trusted Results Worldwide</h2>
+                        <p className="text-text-secondary">Join companies across 🇺🇸 🇨🇦 🇬🇧 🇦🇺 🇦🇪 🇪🇺</p>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                         <StatItemCard
                             value="10 min"
                             label="Avg. time-to-hire"
-                            context="From post to shortlist"
+                            context="Industry lead: 45 days"
                             icon={Clock}
                             color="cyan"
                             delay={0.1}
                         />
                         <StatItemCard
                             value="85%"
-                            label="Faster hiring"
-                            context="vs. traditional methods"
+                            label="Cost Reduction"
+                            context="Global average save"
                             icon={Zap}
                             color="purple"
                             delay={0.2}
                         />
                         <StatItemCard
                             value="500K+"
-                            label="Successful hires"
-                            context="Since 2023"
+                            label="Successful Hires"
+                            context="Across 12 countries"
                             icon={CheckCircle}
                             color="green"
                             delay={0.3}
                         />
                         <StatItemCard
-                            value="95%"
-                            label="Client satisfaction"
-                            context="Based on surveys"
+                            value="99.9%"
+                            label="Accuracy Rate"
+                            context="Verified AI matching"
                             icon={Star}
                             color="pink"
                             delay={0.4}
@@ -728,40 +596,20 @@ const HomePage: React.FC = () => {
             </section>
 
             {/* ============================================ */}
-            {/* FEATURES SECTION - REORDERED WITH OUTCOMES */}
+            {/* FEATURES SECTION */}
             {/* ============================================ */}
-            <section className="py-24 relative">
-                <div className="container mx-auto max-w-7xl px-4">
-                    <div className="text-center mb-16">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neon-purple/10 border border-neon-purple/30 mb-4"
-                        >
-                            <Cpu className="w-4 h-4 text-neon-purple" />
-                            <span className="text-sm font-semibold text-neon-purple">AI-Powered Features</span>
-                        </motion.div>
-                        <motion.h2
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.1 }}
-                            className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4"
-                        >
-                            Why 10K+ Companies Choose HireGo
-                        </motion.h2>
-                        <motion.p
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.2 }}
-                            className="text-xl text-gray-600 max-w-2xl mx-auto"
-                        >
-                            Measurable results from day one—not promises
-                        </motion.p>
+            <section className="py-12 relative bg-light-bg overflow-hidden border-t border-light-border">
+                {/* Decorative squares for features */}
+                <ThreeDSquareBox size="w-24 h-24" className="absolute -top-10 -left-10 opacity-20" delay={0.3} />
+                <ThreeDSquareBox size="w-16 h-16" className="absolute bottom-10 right-10 opacity-15" delay={0.6} />
+
+                <div className="container mx-auto max-w-6xl px-6 text-center">
+                    <div className="mb-12">
+                        <h2 className="text-2xl md:text-3xl font-bold text-text-primary mb-4">Built for scale.</h2>
+                        <p className="text-lg text-text-secondary max-w-2xl mx-auto text-center px-4">Premium features designed for modern engineering teams and global enterprises.</p>
                     </div>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {features.map((feature, index) => (
                             <FeatureCard
                                 key={index}
@@ -778,280 +626,179 @@ const HomePage: React.FC = () => {
             </section>
 
             {/* ============================================ */}
-            {/* HOW IT WORKS - WITH MICROCOPY */}
+            {/* AI DASHBOARD PREVIEW */}
             {/* ============================================ */}
-            <section className="py-24 relative bg-gradient-to-b from-soft-gray to-white">
-                <div className="container mx-auto max-w-7xl px-4">
-                    <div className="text-center mb-16">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neon-green/10 border border-neon-green/30 mb-4"
-                        >
-                            <Zap className="w-4 h-4 text-neon-green" />
-                            <span className="text-sm font-semibold text-neon-green">4-Step Process</span>
-                        </motion.div>
-                        <motion.h2
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.1 }}
-                            className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4"
-                        >
-                            From Job Posting to Hire in Minutes
-                        </motion.h2>
+            <section className="py-10 relative overflow-hidden bg-gradient-to-b from-light-muted to-light-bg">
+                {/* Decorative squares for AI dashboard */}
+                <ThreeDSquareBox size="w-20 h-20" className="absolute top-10 right-[10%] opacity-20" delay={0.4} />
+                <ThreeDSquareBox size="w-12 h-12" className="absolute bottom-20 left-[5%] opacity-15" delay={0.7} />
+
+                <div className="container mx-auto max-w-6xl px-6 relative z-10">
+                    <div className="grid lg:grid-cols-2 gap-20 items-center">
+                        <div className="relative">
+                            <div className="absolute -inset-4 bg-accent-blue/5 blur-[100px] rounded-full" />
+                            <div className="relative rounded-xl border border-light-border overflow-hidden shadow-light-xl">
+                                <img
+                                    src="/images/ai-dashboard.png"
+                                    alt="Management Dashboard"
+                                    className="w-full h-auto"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-accent-blue/10 border border-accent-blue/20 mb-6">
+                                <Bot className="w-4 h-4 text-accent-blue" />
+                                <span className="text-xs font-bold text-accent-blue uppercase tracking-wider">AI Intelligence</span>
+                            </div>
+                            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-text-primary mb-4 leading-tight">
+                                Management <br />
+                                <span className="text-text-tertiary">at your fingertips.</span>
+                            </h2>
+                            <p className="text-lg text-text-secondary mb-8 leading-relaxed">
+                                Our AI goes beyond resumes. Get deep behavioral insights, skill verification, and culture fit analysis in a single, intuitive dashboard.
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-8 mb-10">
+                                <div>
+                                    <div className="text-3xl font-bold text-text-primary mb-1">98.5%</div>
+                                    <div className="text-sm text-text-tertiary font-medium">Matching Accuracy</div>
+                                </div>
+                                <div>
+                                    <div className="text-3xl font-bold text-text-primary mb-1">10 min</div>
+                                    <div className="text-sm text-text-tertiary font-medium">Time to Shortlist</div>
+                                </div>
+                            </div>
+
+                            <Button3D variant="outline" size="lg" onClick={() => navigate('/ai-features')}>
+                                Explore AI Features
+                            </Button3D>
+                        </div>
                     </div>
+                </div>
+            </section>
+
+            {/* ============================================ */}
+            {/* HOW IT WORKS */}
+            {/* ============================================ */}
+            <section className="py-12 relative bg-white border-t border-light-border">
+                <div className="absolute inset-0 bg-mesh-colorful opacity-50 pointer-events-none" />
+                {/* Decorative squares for How it works */}
+                <ThreeDSquareBox size="w-16 h-16" className="absolute top-20 left-[5%] opacity-20" delay={0.2} />
+                <ThreeDSquareBox size="w-24 h-24" className="absolute bottom-20 right-[5%] opacity-15" delay={0.5} />
+
+                <div className="container mx-auto max-w-6xl px-6 text-center mb-12 relative z-10 w-full">
+                    <h2 className="text-2xl md:text-3xl lg:text-4xl font-black mb-4">
+                        <span className="text-text-primary">Simple, </span>
+                        <span className="bg-gradient-to-r from-hg-blue to-hg-green bg-clip-text text-transparent">yet powerful.</span>
+                    </h2>
+                    <p className="text-lg text-text-secondary max-w-2xl mx-auto">From job posting to offer letter in record time.</p>
+                </div>
+
+                <div className="container mx-auto max-w-6xl px-6 relative z-10">
                     <div className="grid md:grid-cols-4 gap-6">
                         {processSteps.map((step, index) => (
-                            <div key={index} className="relative">
-                                <ProcessStep {...step} delay={index * 0.15} />
-                                {index < processSteps.length - 1 && (
-                                    <div className="hidden md:block absolute top-1/2 -right-3 transform -translate-y-1/2 z-10">
-                                        <ArrowRight className="w-6 h-6 text-gray-300" />
-                                    </div>
-                                )}
-                            </div>
+                            <ProcessStep key={index} {...step} delay={index * 0.1} />
                         ))}
                     </div>
                 </div>
             </section>
 
             {/* ============================================ */}
-            {/* TESTIMONIAL / SOCIAL PROOF */}
+            {/* TESTIMONIALS */}
             {/* ============================================ */}
+            <section className="py-12 relative bg-light-muted border-y border-light-border overflow-hidden">
+                {/* Decorative squares for Testimonials */}
+                <ThreeDSquareBox size="w-24 h-24" className="absolute top-0 right-0 opacity-10" delay={0.5} />
+                <ThreeDSquareBox size="w-24 h-24" className="absolute bottom-0 left-0 opacity-10" delay={0.9} />
+
+                <div className="container mx-auto max-w-6xl px-6 text-center mb-10 w-full">
+                    <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-text-primary mb-4">Trusted by leaders.</h2>
+                    <p className="text-xl text-text-secondary max-w-2xl mx-auto px-4">See why the world's best companies hire with HireGo.</p>
+                </div>
+
+                <div className="relative w-full overflow-hidden">
+                    <motion.div
+                        className="flex gap-6"
+                        animate={{ x: [0, -2000] }}
+                        transition={{ repeat: Infinity, duration: 60, ease: "linear" }}
+                    >
+                        {[...Array(2)].map((_, i) => (
+                            <React.Fragment key={i}>
+                                {[
+                                    { name: "Priya Sharma", role: "HR Director, TCS", quote: "HireGo's AI agents slashed our time-to-hire by 70%. We closed 15 senior dev roles in a week." },
+                                    { name: "James Wilson", role: "CTO, Microsoft", quote: "The technical assessments vary dynamically. It's impossible to cheat, and the candidates are top-tier." },
+                                    { name: "Anita Desai", role: "Talent Lead, Infosys", quote: "Finally, an AI tool that actually understands 'culture fit'. The candidate summaries are scary accurate." },
+                                    { name: "Rahul Verma", role: "Founder, Razorpay", quote: "As a small team, we couldn't afford a recruiter. HireGo acted as our entire HR department." }
+                                ].map((testi, idx) => (
+                                    <div key={idx} className="w-[400px] flex-shrink-0">
+                                        <Card3D glowColor="india" className="p-8 h-full bg-light-surface">
+                                            <div className="flex gap-1 text-amber-500 mb-6">
+                                                {[...Array(5)].map((_, s) => <Star key={s} className="w-3 h-3 fill-current" />)}
+                                            </div>
+                                            <p className="text-lg text-text-secondary mb-8 font-medium">"{testi.quote}"</p>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-lg bg-accent-blue/10 flex items-center justify-center text-accent-blue font-bold">
+                                                    {testi.name[0]}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-text-primary text-sm">{testi.name}</div>
+                                                    <div className="text-xs text-text-tertiary uppercase tracking-wider">{testi.role}</div>
+                                                </div>
+                                            </div>
+                                        </Card3D>
+                                    </div>
+                                ))}
+                            </React.Fragment>
+                        ))}
+                    </motion.div>
+                </div>
+            </section>
+
             {/* ============================================ */}
-            {/* TESTIMONIAL / SOCIAL PROOF - MARQUEE */}
+            {/* FINAL CTA */}
             {/* ============================================ */}
-            <section className="py-24 bg-white overflow-hidden">
-                <div className="container mx-auto max-w-7xl px-4 mb-16 text-center">
+            <section className="py-10 relative overflow-hidden">
+                {/* Vibrant gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-hg-blue/10 via-white to-hg-green/10 pointer-events-none" />
+                <div className="absolute inset-0 bg-mesh-colorful pointer-events-none" />
+
+                {/* Decorative squares for Final CTA */}
+                <ThreeDSquareBox size="w-32 h-32" className="absolute -top-10 -right-10 opacity-30" delay={0.4} />
+                <ThreeDSquareBox size="w-20 h-20" className="absolute -bottom-10 -left-10 opacity-20" delay={0.8} />
+
+                <div className="container mx-auto max-w-4xl px-4 text-center relative z-10">
+                    <motion.h2
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        className="text-3xl md:text-4xl lg:text-5xl font-black mb-6 tracking-tighter"
+                    >
+                        <span className="text-text-primary">Ready to </span>
+                        <span className="bg-gradient-to-r from-hg-blue via-accent-violet to-hg-red bg-clip-text text-transparent">scale?</span>
+                    </motion.h2>
+                    <motion.p
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.1 }}
+                        className="text-lg text-text-secondary mb-10 max-w-xl mx-auto leading-relaxed"
+                    >
+                        Join 10,000+ companies in 🇺🇸 🇨🇦 🇬🇧 🇦🇺 🇦🇪 🇪🇺 using HireGo AI to find the best talent. Start free today.
+                    </motion.p>
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30 mb-4"
+                        transition={{ delay: 0.2 }}
+                        className="flex flex-col sm:flex-row gap-4 justify-center"
                     >
-                        <Quote className="w-4 h-4 text-amber-500" />
-                        <span className="text-sm font-semibold text-amber-600">Client Success Stories</span>
-                    </motion.div>
-                    <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">What HR Leaders Are Saying</h2>
-                    <p className="text-xl text-gray-600">Real feedback from teams that scaled with HireGo</p>
-                </div>
-
-                <div className="relative w-full mask-linear-fade">
-                    <style>{`
-                        .mask-linear-fade {
-                            mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-                        }
-                    `}</style>
-                    <motion.div
-                        className="flex gap-6 py-4"
-                        animate={{ x: [0, -3800] }}
-                        transition={{ repeat: Infinity, duration: 50, ease: "linear" }}
-                    >
-                        {/* Duplicating array for seamless loop */}
-                        {[...[
-                            { name: "Priya Sharma", role: "HR Director, TCS", quote: "HireGo's AI agents slashed our time-to-hire by 70%. We closed 15 senior dev roles in a week.", color: "cyan" },
-                            { name: "James Wilson", role: "CTO, Microsoft", quote: "The technical assessments vary dynamically. It's impossible to cheat, and the candidates we get are top-tier.", color: "purple" },
-                            { name: "Anita Desai", role: "Talent Lead, Infosys", quote: "Finally, an AI tool that actually understands 'culture fit'. The candidate summaries are scary accurate.", color: "green" },
-                            { name: "Rahul Verma", role: "Founder, Razorpay", quote: "As a small team, we couldn't afford a recruiter. HireGo acted as our entire HR department for a fraction of the cost.", color: "pink" },
-                            { name: "Sarah Jenkins", role: "VP of People, Accenture", quote: "The video interview analysis helped us spot soft skills we usually miss. A game changer for remote hiring.", color: "cyan" },
-                            { name: "Amit Patel", role: "Eng Manager, Swiggy", quote: "I used to spend 20 hours a week screening resumes. Now I spend zero. The shortlist is always spot on.", color: "purple" },
-                            { name: "Emily Chen", role: "Recruiting Mgr, Amazon", quote: "The global reach is real. We hired developers from Brazil and India seamlessly through the platform.", color: "green" },
-                            { name: "Vikram Singh", role: "Ops Director, Zomato", quote: "Speed is everything. Using HireGo, we went from job post to offer letter in just 3 days.", color: "pink" },
-                            { name: "Lisa Thompson", role: "Head of Talent, Deloitte", quote: "The candidate experience is fantastic. They love the instant feedback and smooth process.", color: "cyan" },
-                            { name: "Arjun Reddy", role: "CEO, Ola", quote: "We practice what we preach. We built our entire core AI team using HireGo's own agents.", color: "purple" }
-                        ], ...[
-                            { name: "Priya Sharma", role: "HR Director, TCS", quote: "HireGo's AI agents slashed our time-to-hire by 70%. We closed 15 senior dev roles in a week.", color: "cyan" },
-                            { name: "James Wilson", role: "CTO, Microsoft", quote: "The technical assessments vary dynamically. It's impossible to cheat, and the candidates we get are top-tier.", color: "purple" },
-                            { name: "Anita Desai", role: "Talent Lead, Infosys", quote: "Finally, an AI tool that actually understands 'culture fit'. The candidate summaries are scary accurate.", color: "green" },
-                            { name: "Rahul Verma", role: "Founder, Razorpay", quote: "As a small team, we couldn't afford a recruiter. HireGo acted as our entire HR department for a fraction of the cost.", color: "pink" },
-                            { name: "Sarah Jenkins", role: "VP of People, Accenture", quote: "The video interview analysis helped us spot soft skills we usually miss. A game changer for remote hiring.", color: "cyan" },
-                            { name: "Amit Patel", role: "Eng Manager, Swiggy", quote: "I used to spend 20 hours a week screening resumes. Now I spend zero. The shortlist is always spot on.", color: "purple" },
-                            { name: "Emily Chen", role: "Recruiting Mgr, Amazon", quote: "The global reach is real. We hired developers from Brazil and India seamlessly through the platform.", color: "green" },
-                            { name: "Vikram Singh", role: "Ops Director, Zomato", quote: "Speed is everything. Using HireGo, we went from job post to offer letter in just 3 days.", color: "pink" },
-                            { name: "Lisa Thompson", role: "Head of Talent, Deloitte", quote: "The candidate experience is fantastic. They love the instant feedback and smooth process.", color: "cyan" },
-                            { name: "Arjun Reddy", role: "CEO, Ola", quote: "We practice what we preach. We built our entire core AI team using HireGo's own agents.", color: "purple" }
-                        ]].map((testimonial, i) => (
-                            <div key={i} className="w-[350px] flex-shrink-0">
-                                <Card3D className="p-6 h-full" glowColor={testimonial.color as any}>
-                                    <div className="flex flex-col h-full">
-                                        <div className="mb-4 flex-1">
-                                            <div className="flex gap-1 text-amber-500 mb-3">
-                                                {[1, 2, 3, 4, 5].map(star => <Star key={star} className="w-3 h-3 fill-current" />)}
-                                            </div>
-                                            <p className="text-base text-gray-700 italic leading-relaxed">"{testimonial.quote}"</p>
-                                        </div>
-                                        <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
-                                            <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${testimonial.color === 'cyan' ? 'from-cyan-400 to-blue-500' : testimonial.color === 'purple' ? 'from-purple-400 to-violet-600' : testimonial.color === 'green' ? 'from-green-400 to-emerald-500' : 'from-pink-400 to-rose-500'}`} />
-                                            <div>
-                                                <div className="font-bold text-gray-900 text-sm">{testimonial.name}</div>
-                                                <div className="text-xs text-gray-500 font-medium">{testimonial.role}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Card3D>
-                            </div>
-                        ))}
-                    </motion.div>
-                </div>
-            </section>
-
-            {/* ============================================ */}
-            {/* FOR CANDIDATES / SKILLS SECTION */}
-            {/* ============================================ */}
-            <section className="py-24 bg-gradient-to-br from-emerald-50 via-white to-cyan-50 relative overflow-hidden">
-                <div className="absolute inset-0 pointer-events-none">
-                    <FloatingOrb color="linear-gradient(135deg, #39FF14, #10b981)" size="w-64 h-64" position="top-0 right-0" delay={0} />
-                    <FloatingOrb color="linear-gradient(135deg, #00f3ff, #0066ff)" size="w-48 h-48" position="bottom-0 left-0" delay={1} />
-                </div>
-                <div className="container mx-auto max-w-7xl px-4 relative z-10">
-                    <div className="grid lg:grid-cols-2 gap-12 items-center">
-                        <div>
-                            {/* Audience Badge */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-neon-green/10 to-emerald-500/10 border border-neon-green/30 mb-6"
-                            >
-                                <GraduationCap className="w-4 h-4 text-neon-green" />
-                                <span className="text-sm font-semibold text-gray-700">For Candidates in India</span>
-                            </motion.div>
-
-                            <motion.h2
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: 0.1 }}
-                                className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6"
-                            >
-                                Upskill with AI & Get{' '}
-                                <span className="bg-gradient-to-r from-neon-green to-neon-cyan bg-clip-text text-transparent">
-                                    Matched to Top Companies
-                                </span>
-                            </motion.h2>
-
-                            <motion.p
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: 0.2 }}
-                                className="text-lg text-gray-600 mb-8 leading-relaxed"
-                            >
-                                Take AI-driven skill assessments, earn verified certifications,
-                                and get automatically matched to companies hiring for your exact skillset.
-                            </motion.p>
-
-                            {/* Benefits List */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: 0.3 }}
-                                className="space-y-4 mb-8"
-                            >
-                                {[
-                                    { icon: BadgeCheck, text: 'Industry-recognized certifications' },
-                                    { icon: Target, text: 'AI-powered job matching to 200+ companies' },
-                                    { icon: TrendingUp, text: '85% placement rate for certified learners' }
-                                ].map((item, i) => (
-                                    <div key={i} className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-neon-green/10 flex items-center justify-center">
-                                            <item.icon className="w-4 h-4 text-neon-green" />
-                                        </div>
-                                        <span className="text-gray-700 font-medium">{item.text}</span>
-                                    </div>
-                                ))}
-                            </motion.div>
-
-                            {/* Two distinct CTAs */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: 0.4 }}
-                                className="flex flex-col sm:flex-row gap-4"
-                            >
-                                <Button3D
-                                    variant="primary"
-                                    onClick={() => navigate('/skill-development')}
-                                    icon={<FileText className="w-5 h-5" />}
-                                    className="!bg-gradient-to-r !from-neon-green !via-emerald-500 !to-neon-green"
-                                >
-                                    Take Skill Assessment
-                                </Button3D>
-                                <Button3D
-                                    variant="secondary"
-                                    onClick={() => navigate('/jobs')}
-                                    icon={<Briefcase className="w-5 h-5" />}
-                                >
-                                    View Matching Jobs
-                                </Button3D>
-                            </motion.div>
-                        </div>
-
-                        {/* Right Visual */}
-                        <motion.div
-                            initial={{ opacity: 0, x: 50 }}
-                            whileInView={{ opacity: 1, x: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.8 }}
-                        >
-                            <Card3D className="overflow-hidden" glowColor="green">
-                                <img
-                                    src="/hero-skills.png"
-                                    alt="Skill Development"
-                                    className="w-full h-auto rounded-4xl"
-                                />
-                            </Card3D>
-                        </motion.div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ============================================ */}
-            {/* FINAL CTA SECTION */}
-            {/* ============================================ */}
-            <section className="py-24 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-space-dark via-space-blue to-space-dark" />
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <FloatingOrb color="rgba(0, 243, 255, 0.3)" size="w-64 h-64" position="-top-32 -left-32" delay={0} />
-                    <FloatingOrb color="rgba(188, 19, 254, 0.3)" size="w-96 h-96" position="-bottom-48 -right-48" delay={2} />
-                </div>
-                <div className="container mx-auto max-w-4xl px-4 text-center relative z-10">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                    >
-                        <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6">
-                            Ready to Hire Smarter, Faster?
-                        </h2>
-                        <p className="text-xl text-gray-300 mb-4 max-w-2xl mx-auto">
-                            Join 10,000+ companies using HireGo AI to find the best talent in record time.
-                        </p>
-                        <p className="text-gray-400 mb-10 flex items-center justify-center gap-2">
-                            <CheckCircle className="w-5 h-5 text-neon-green" />
-                            No credit card required • First job posting free • Setup in 2 minutes
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <Button3D
-                                variant="primary"
-                                size="lg"
-                                onClick={() => navigate('/signup?type=employer')}
-                                icon={<ArrowRight className="w-5 h-5" />}
-                            >
-                                Start Hiring for Free
-                            </Button3D>
-                            <Button3D
-                                variant="secondary"
-                                size="lg"
-                                onClick={() => navigate('/contact')}
-                            >
-                                Talk to Sales
-                            </Button3D>
-                        </div>
+                        <Button3D variant="primary" size="lg" onClick={() => navigate('/signup')}>
+                            Get Started Free 🚀
+                        </Button3D>
+                        <Button3D variant="secondary" size="lg" onClick={() => navigate('/contact')}>
+                            Contact Sales
+                        </Button3D>
                     </motion.div>
                 </div>
             </section>
@@ -1059,42 +806,38 @@ const HomePage: React.FC = () => {
             {/* ============================================ */}
             {/* FOOTER */}
             {/* ============================================ */}
-            <footer className="py-16 bg-gray-50 border-t border-gray-200">
-                <div className="container mx-auto max-w-7xl px-4">
-                    <div className="grid md:grid-cols-4 gap-12">
-                        <div className="md:col-span-2">
-                            <div className="flex items-center gap-3 mb-4">
-                                <img
-                                    src="/hirego-logo.png"
-                                    alt="HireGo AI"
-                                    className="h-20 w-auto object-contain"
-                                />
-                            </div>
-                            <p className="text-gray-600 max-w-md">
-                                The world's fastest autonomous AI hiring platform. Revolutionizing recruitment with intelligent agents.
+            <footer className="py-12 bg-light-surface border-t border-light-border text-text-tertiary">
+                <div className="container mx-auto max-w-6xl px-6">
+                    <div className="grid md:grid-cols-4 gap-12 mb-20">
+                        <div className="col-span-2">
+                            <img src="/hirego-logo.png" alt="HireGo" className="h-12 mb-6 opacity-90" />
+                            <p className="max-w-sm mb-8 leading-relaxed text-text-secondary">
+                                The global standard for autonomous AI recruitment. Building the future of work with intelligence.
                             </p>
                         </div>
                         <div>
-                            <h4 className="font-bold text-gray-900 mb-4">For Employers</h4>
-                            <ul className="space-y-3">
-                                <li><Link to="/post-job-public" className="text-gray-600 hover:text-neon-cyan transition-colors">Post a Job</Link></li>
-                                <li><Link to="/ai-features" className="text-gray-600 hover:text-neon-cyan transition-colors">AI Features</Link></li>
-                                <li><Link to="/pricing" className="text-gray-600 hover:text-neon-cyan transition-colors">Pricing</Link></li>
-                                <li><Link to="/enterprise" className="text-gray-600 hover:text-neon-cyan transition-colors">Enterprise</Link></li>
+                            <h4 className="text-text-primary font-bold mb-6">Platform</h4>
+                            <ul className="space-y-4 text-sm">
+                                <li><Link to="/features" className="hover:text-text-primary transition-colors">Features</Link></li>
+                                <li><Link to="/pricing" className="hover:text-text-primary transition-colors">Pricing</Link></li>
+                                <li><Link to="/enterprise" className="hover:text-text-primary transition-colors">Enterprise</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h4 className="font-bold text-gray-900 mb-4">For Candidates</h4>
-                            <ul className="space-y-3">
-                                <li><Link to="/skill-development" className="text-gray-600 hover:text-neon-cyan transition-colors">Skill Assessments</Link></li>
-                                <li><Link to="/find-jobs" className="text-gray-600 hover:text-neon-cyan transition-colors">Find Jobs</Link></li>
-                                <li><Link to="/certifications" className="text-gray-600 hover:text-neon-cyan transition-colors">Certifications</Link></li>
-                                <li><Link to="/career-resources" className="text-gray-600 hover:text-neon-cyan transition-colors">Career Resources</Link></li>
+                            <h4 className="text-text-primary font-bold mb-6">Company</h4>
+                            <ul className="space-y-4 text-sm">
+                                <li><Link to="/about" className="hover:text-text-primary transition-colors">About</Link></li>
+                                <li><Link to="/careers" className="hover:text-text-primary transition-colors">Careers</Link></li>
+                                <li><Link to="/blog" className="hover:text-text-primary transition-colors">Blog</Link></li>
                             </ul>
                         </div>
                     </div>
-                    <div className="mt-12 pt-8 border-t border-gray-200 text-center text-gray-500">
+                    <div className="pt-8 border-t border-light-border flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium uppercase tracking-widest">
                         <p>© 2026 HireGo AI. All rights reserved.</p>
+                        <div className="flex gap-8">
+                            <Link to="/terms" className="hover:text-text-primary transition-colors">Terms of Service</Link>
+                            <Link to="/privacy" className="hover:text-text-primary transition-colors">Privacy Policy</Link>
+                        </div>
                     </div>
                 </div>
             </footer>

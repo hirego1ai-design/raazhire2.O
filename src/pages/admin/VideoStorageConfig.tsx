@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { endpoints } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
+import AdminButton3D from '../../components/AdminButton3D';
 
 const VideoStorageConfig: React.FC = () => {
     // State
@@ -192,7 +193,7 @@ const VideoStorageConfig: React.FC = () => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex justify-between items-end"
+                className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4"
             >
                 <div>
                     <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-red-500 to-red-600 bg-clip-text text-transparent flex items-center gap-3">
@@ -204,14 +205,15 @@ const VideoStorageConfig: React.FC = () => {
                         Manage YouTube API integration (encrypted storage)
                     </p>
                 </div>
-                <button
+                <AdminButton3D
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="btn-3d bg-red-600 hover:bg-red-700 text-white px-6 py-2 flex items-center gap-2 rounded-lg transition-all disabled:opacity-50"
+                    variant="danger"
+                    size="md"
+                    icon={isSaving ? <Loader className="animate-spin" size={18} /> : <Save size={18} />}
                 >
-                    {isSaving ? <Loader className="animate-spin" size={18} /> : <Save size={18} />}
                     {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
+                </AdminButton3D>
             </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

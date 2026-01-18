@@ -4,8 +4,9 @@ import {
     Search, Filter, Trash2, Ban, CheckCircle,
     User, Briefcase, MessageSquare, FileText, Activity, Edit,
     Lock, Eye, AlertTriangle, Mail, Phone, MapPin,
-    Calendar, Download, ExternalLink, X, Wallet, CreditCard, History
+    Calendar, Download, ExternalLink, X, Wallet, CreditCard, History, Plus, RefreshCw
 } from 'lucide-react';
+import AdminButton3D from '../../components/AdminButton3D';
 
 // --- Types ---
 type UserRole = 'Candidate' | 'Employer' | 'Admin';
@@ -163,12 +164,14 @@ const UserManagement: React.FC = () => {
                                 </td>
                             )}
                             <td className="p-4 text-right">
-                                <button
+                                <AdminButton3D
                                     onClick={() => setSelectedUser(user)}
-                                    className="px-3 py-1.5 rounded-lg bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 text-sm font-medium transition-colors"
+                                    variant="info"
+                                    size="sm"
+                                    icon={<Eye size={14} />}
                                 >
                                     Manage
-                                </button>
+                                </AdminButton3D>
                             </td>
                         </tr>
                     ))}
@@ -383,6 +386,22 @@ const UserManagement: React.FC = () => {
                         User Management
                     </h1>
                     <p className="text-gray-400">Control, monitor, and manage all candidate and employer accounts.</p>
+                </div>
+                <div className="flex gap-3">
+                    <AdminButton3D
+                        variant="outline"
+                        size="sm"
+                        icon={<RefreshCw size={14} />}
+                    >
+                        Refresh
+                    </AdminButton3D>
+                    <AdminButton3D
+                        variant="primary"
+                        size="sm"
+                        icon={<Plus size={14} />}
+                    >
+                        Add User
+                    </AdminButton3D>
                 </div>
             </motion.div>
 

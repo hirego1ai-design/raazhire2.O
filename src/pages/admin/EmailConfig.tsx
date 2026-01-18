@@ -3,8 +3,9 @@ import { motion } from 'framer-motion';
 import {
     Save, Mail, ToggleLeft, ToggleRight,
     CheckCircle, AlertCircle, RefreshCw, Send,
-    Server, Shield, Activity, Settings, AlertTriangle
+    Server, Shield, Activity, Settings, AlertTriangle, Loader
 } from 'lucide-react';
+import AdminButton3D from '../../components/AdminButton3D';
 
 // Types
 type EmailProvider = 'sendgrid' | 'mailgun' | 'ses';
@@ -95,7 +96,7 @@ const EmailConfig: React.FC = () => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex justify-between items-end"
+                className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4"
             >
                 <div>
                     <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-neon-pink to-neon-purple bg-clip-text text-transparent">
@@ -103,13 +104,14 @@ const EmailConfig: React.FC = () => {
                     </h1>
                     <p className="text-gray-400">Manage email delivery services, API keys, and sender identity.</p>
                 </div>
-                <button
+                <AdminButton3D
                     onClick={handleSave}
-                    className="btn-3d btn-primary px-6 py-2 flex items-center gap-2"
+                    variant="primary"
+                    size="md"
+                    icon={<Save size={18} />}
                 >
-                    <Save size={18} />
                     Save Changes
-                </button>
+                </AdminButton3D>
             </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -138,8 +140,8 @@ const EmailConfig: React.FC = () => {
                                     key={p.id}
                                     onClick={() => handleProviderSwitch(p.id as EmailProvider)}
                                     className={`relative p-4 rounded-xl border transition-all duration-300 flex flex-col items-center gap-3 ${activeProvider === p.id
-                                            ? 'bg-neon-pink/10 border-neon-pink shadow-[0_0_15px_rgba(236,72,153,0.3)]'
-                                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                        ? 'bg-neon-pink/10 border-neon-pink shadow-[0_0_15px_rgba(236,72,153,0.3)]'
+                                        : 'bg-white/5 border-white/10 hover:bg-white/10'
                                         }`}
                                 >
                                     <p.icon size={32} className={activeProvider === p.id ? 'text-neon-pink' : 'text-gray-400'} />
@@ -375,14 +377,16 @@ const EmailConfig: React.FC = () => {
                                 onChange={(e) => setTestEmail(e.target.value)}
                                 className="w-full bg-white/5 border border-white/10 rounded-lg p-3 focus:border-neon-pink focus:outline-none"
                             />
-                            <button
+                            <AdminButton3D
                                 onClick={handleSendTest}
                                 disabled={sendingTest || !testEmail}
-                                className="w-full btn-3d btn-primary py-2 flex items-center justify-center gap-2 disabled:opacity-50"
+                                variant="info"
+                                size="md"
+                                icon={sendingTest ? <RefreshCw className="animate-spin" size={18} /> : <Send size={18} />}
+                                className="w-full"
                             >
-                                {sendingTest ? <RefreshCw className="animate-spin" size={18} /> : <Send size={18} />}
                                 {sendingTest ? 'Sending...' : 'Send Test Email'}
-                            </button>
+                            </AdminButton3D>
                         </div>
                     </motion.div>
 
@@ -426,7 +430,7 @@ const EmailConfig: React.FC = () => {
                                 <div key={log.id} className="text-sm border-b border-white/5 pb-2 last:border-0">
                                     <div className="flex justify-between items-center mb-1">
                                         <span className={`uppercase text-xs font-bold ${log.provider === 'sendgrid' ? 'text-blue-400' :
-                                                log.provider === 'mailgun' ? 'text-red-400' : 'text-orange-400'
+                                            log.provider === 'mailgun' ? 'text-red-400' : 'text-orange-400'
                                             }`}>
                                             {log.provider}
                                         </span>

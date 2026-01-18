@@ -4,8 +4,9 @@ import {
     Video, Users, Calendar, Clock, CheckCircle, XCircle, AlertTriangle,
     Eye, Monitor, Lock, Unlock, Play, Pause, SkipForward, UserCheck,
     FileText, Download, Send, MessageSquare, Shield, Activity, Camera,
-    Mic, MicOff, VideoOff, Maximize, Settings, BarChart, TrendingUp
+    Mic, MicOff, VideoOff, Maximize, Settings, BarChart, TrendingUp, Plus
 } from 'lucide-react';
+import AdminButton3D from '../../components/AdminButton3D';
 
 // --- Types ---
 type InterviewStatus = 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
@@ -386,7 +387,7 @@ const InterviewManagement: React.FC = () => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex justify-between items-end"
+                className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4"
             >
                 <div>
                     <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
@@ -394,11 +395,13 @@ const InterviewManagement: React.FC = () => {
                     </h1>
                     <p className="text-gray-400">Monitor live interviews, manage proctoring, and evaluate candidates</p>
                 </div>
-                <div className="flex gap-3">
-                    <button className="btn-3d btn-primary px-4 py-2 flex items-center gap-2">
-                        <Calendar size={18} /> Schedule Interview
-                    </button>
-                </div>
+                <AdminButton3D
+                    variant="primary"
+                    size="md"
+                    icon={<Calendar size={18} />}
+                >
+                    Schedule Interview
+                </AdminButton3D>
             </motion.div>
 
             {/* Stats Cards */}

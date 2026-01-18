@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { endpoints } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
+import AdminButton3D from '../../components/AdminButton3D';
 
 type PaymentProvider = 'razorpay' | 'stripe';
 
@@ -143,7 +144,7 @@ const PaymentConfig: React.FC = () => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex justify-between items-end"
+                className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4"
             >
                 <div>
                     <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent">
@@ -151,13 +152,15 @@ const PaymentConfig: React.FC = () => {
                     </h1>
                     <p className="text-gray-400">Configure Stripe and Razorpay for processing payments.</p>
                 </div>
-                <button
+                <AdminButton3D
                     onClick={handleSave}
-                    className="btn-3d btn-primary px-6 py-2 flex items-center gap-2"
+                    variant="success"
+                    size="md"
+                    icon={isSaving ? <Loader className="animate-spin" size={18} /> : <Save size={18} />}
+                    disabled={isSaving}
                 >
-                    <Save size={18} />
-                    Save Configuration
-                </button>
+                    {isSaving ? 'Saving...' : 'Save Configuration'}
+                </AdminButton3D>
             </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

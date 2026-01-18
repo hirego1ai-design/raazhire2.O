@@ -5,6 +5,7 @@ import {
     Video, UserCheck, Lock, Save, Activity,
     Sliders, FileWarning, Brain
 } from 'lucide-react';
+import AdminButton3D from '../../components/AdminButton3D';
 
 const ProctoringConfig: React.FC = () => {
     // 1. AI Proctoring Sensitivity
@@ -32,11 +33,13 @@ const ProctoringConfig: React.FC = () => {
         recordEntireScreen: false,
     });
 
+    const [isSaving, setIsSaving] = useState(false);
+
     // Load configuration from API
     React.useEffect(() => {
         const fetchConfig = async () => {
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/proctoring-config`, {
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/proctoring-config`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
                 const data = await response.json();
@@ -66,6 +69,7 @@ const ProctoringConfig: React.FC = () => {
     }, []);
 
     const handleSave = async () => {
+        setIsSaving(true);
         try {
             const configPayload = {
                 enabled: true,
@@ -87,7 +91,7 @@ const ProctoringConfig: React.FC = () => {
                 }
             };
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/proctoring-config`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/proctoring-config`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -98,8 +102,6 @@ const ProctoringConfig: React.FC = () => {
 
             if (response.ok) {
                 alert('Proctoring & Security Rules Updated Successfully!');
-                // Refetch to ensure state is synced
-                // fetchConfig(); 
             } else {
                 const errData = await response.json();
                 throw new Error(errData.error || `Server Error: ${response.status}`);
@@ -107,6 +109,8 @@ const ProctoringConfig: React.FC = () => {
         } catch (error: any) {
             console.error("Error saving config:", error);
             alert(`Failed to save rules: ${error.message}`);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -116,7 +120,7 @@ const ProctoringConfig: React.FC = () => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex justify-between items-end"
+                className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4"
             >
                 <div>
                     <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-red-400 to-neon-pink bg-clip-text text-transparent">
@@ -124,13 +128,15 @@ const ProctoringConfig: React.FC = () => {
                     </h1>
                     <p className="text-gray-400">Configure anti-cheating rules, live interview assistance, and assessment security.</p>
                 </div>
-                <button
+                <AdminButton3D
                     onClick={handleSave}
-                    className="btn-3d btn-primary px-6 py-2 flex items-center gap-2"
+                    variant="danger"
+                    size="md"
+                    icon={<Save size={18} />}
+                    disabled={isSaving}
                 >
-                    <Save size={18} />
-                    Save Rules
-                </button>
+                    {isSaving ? 'Saving...' : 'Save Rules'}
+                </AdminButton3D>
             </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

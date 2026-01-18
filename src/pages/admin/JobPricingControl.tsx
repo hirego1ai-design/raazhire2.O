@@ -7,6 +7,7 @@ import {
     Save, Copy, FileText, Database, MessageSquare, Bot, Video
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import AdminButton3D from '../../components/AdminButton3D';
 
 // --- Types ---
 type Currency = 'INR' | 'USD';
@@ -892,12 +893,14 @@ const JobPricingControl: React.FC = () => {
                         className="space-y-6"
                     >
                         <div className="flex justify-end">
-                            <button
+                            <AdminButton3D
                                 onClick={() => setEditingPlan(DEFAULT_PLAN)}
-                                className="btn-3d btn-primary px-4 py-2 flex items-center gap-2 text-sm"
+                                variant="warning"
+                                size="md"
+                                icon={<Plus size={18} />}
                             >
-                                <Plus size={16} /> Create New Plan
-                            </button>
+                                Create New Plan
+                            </AdminButton3D>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

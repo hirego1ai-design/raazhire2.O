@@ -1,28 +1,88 @@
 {
   "api_keys": [
     {
-      "id": 1764499702109,
-      "provider": "gpt4",
-      "api_key": "94e0737802d7a020f41a7999a11d7966:66470117a3b83786d541324b3f8861b2f6e1899105df8e286112540fe56872671b6f12b6f5b8918af31e8eeffdf92bb3f43c940a02751d147ec60e14e44e2a4c97a869fb91e79fa01db82e737e6a8fcd6d60705c8b8060838acdbaaf63d9c07c0915f4e8901c3f3938598c9b9f61d80135a0108c8bc1da747202ff6dece5c333ab1175eea223981ac8bf9b1aaddba780dcd8efa1afd1f41adfa12d9de4545bcc5ee69ee96567b76be42b9a794a82ffaf",
+      "id": 1768716492630,
+      "provider": "gemini",
+      "api_key": "34d1bf7654c93d70e7bd1c82c1cf490e:13c1826546ee75c3af6862a8b74533fd599621e90c637b45e83ce054332d33659fa25fb71d2241b7990a0820c20af810",
       "client_id": null,
       "client_secret": null,
       "access_token": null,
       "metadata": {},
-      "updated_at": "2025-11-30T10:48:22.108Z",
-      "created_at": "2025-11-30T10:48:22.109Z"
+      "updated_at": "2026-01-18T06:08:12.414Z",
+      "created_at": "2026-01-18T06:08:12.630Z"
+    },
+    {
+      "id": 1768717344098,
+      "provider": "gpt4",
+      "api_key": "099f8b39bbf4a26b5d682d4790b35450:9809c1656fbdb6e4e0f34c87ff1dcd586d6e6207fb4362a8035dc513d0c86c8ca5309cec09acc9935a39fed524b7160b9f702fe66a86b5b9016dc5c6fe694c11e398feea40ba3629bb7c06760e5945a464744b424afc1b7fa019a91e514e70469b3d157eeb0c3502ee6e892feabbf5e113dac4b94e4eb2aa7787aa84de328d619b2d52aec1b40b73cc8d5653e095e5fe4d54e1cb15ae2c27f3a2f965666a5c5cf21c1134f4e8e079b73f15ba8b015c4b",
+      "client_id": null,
+      "client_secret": null,
+      "access_token": null,
+      "metadata": {},
+      "updated_at": "2026-01-18T06:22:24.070Z",
+      "created_at": "2026-01-18T06:22:24.098Z"
+    },
+    {
+      "id": 1768717745132,
+      "provider": "deepseek",
+      "api_key": "dea93ec14d6077b52a721629a828857d:21e01c875ba7c1bd6b464d3ce8afa72e39ba716ff07c3b47031b4de4b4bedfec39324cb786991b2d53202b667d8def32",
+      "client_id": null,
+      "client_secret": null,
+      "access_token": null,
+      "metadata": {},
+      "updated_at": "2026-01-18T06:29:05.072Z",
+      "created_at": "2026-01-18T06:29:05.132Z"
     }
   ],
   "youtube_config": {
     "id": 1,
-    "api_key": "c887f0ec52b2f3b2fd8db866055156aa:d485d58561d05f3735ff72031d02abf944e0309ee66c977e56de04236f591732608b26764b2ae88dbf39a08c9cc6ef97",
-    "client_id": "923b8e4a4dc6e82c716dc0c4243c4a14:6d927eec02eba7748ee27b93fd9891bbdffe2c76a0c080e508cefb90297bf0134aded126f532f95c90ee40cedf70339a4912da98fc0ef3fbad0f9f971d62df428f868a7f224601c535cf4580607921a7",
-    "client_secret": "6d4ecf5c2ab8c94f5bfd92c9d91bfcc3:f0db4a542d27a744aa58929453acfb8d43ab869b244472186f9ae28fd5b598f0f6691ab4a4e618130d0e2d13f7e8a556",
-    "access_token": "65f44f782d8f2f973bcb2c49d8d2eeef:a915008aa25148b4fc07a5344d56f8dff28a1d256bb013d1bcc83f1be0b2ba9b43e65994ae2ebbe2ee33ba3774c8c56b34901eded1a166f0e51f4ca6fd41da57c92fd535157b1017fca6a9b525c09d3ff06a742fb7c72c265085db4e42ee4cf5f6a9cc2775fe8bda4e60cdad011268fe5a80c5710604266d6b9bad2920e07644b8b5ffb97e5ef9fc0536dc116b01d75aa130c4e0fc001a7aa755745c591994f2b568667a9b8e3921361be864b75eb0f71dc24d178c6719247eb204220d72a975579ab43b8e5815c4d26b21012e0df3810ca18ed394497cc396aecce162bacf2771f6be620fdf99540fe316473883341a1b3f56ba0308ae117a93f861bef87629",
-    "channel_id": "UC4zE6xC0AS5r6pbcKHHQD3A",
-    "privacy_status": "private",
+    "api_key": "c735d72e20a346da00d97bd6b94617a9:c00c7d179bd8dff576f918be9abfffc83fd706b590f0d08356271b187fe587eebca0d63c765b8ad06f845b5e482a6741",
+    "client_id": "c24d260766d6a8311002df0493c6485d:824fbeefe09a14bf6896a91cabf4b282781d6b526de5a24109b500124f344c50c4b645d393ab384ab2936560cae25ef1982d5723bd849d202b3721dc171c595e99573d99024fd78e269c48ba7056ef27",
+    "client_secret": "886ac2d3a0f7a1d72b668dab14ae28d2:53b8cd17824f92b2901d12f60e5ce102e646bc68a20dc3d26d76231315852be69bdfac68ac6985e5002e6f6f82a9f8a2",
+    "access_token": "e971e0c69cae6ce16b0c59d4544d2d4b:31d62feef8ccc18f81d1d72aefead8047c425924fb46ab52b8aec692b0aa82fc225ca0c80b67054d7475537790a1db7391dd26d11648d4ca307e9463c49c0e3ad80fc34488392d2b43029ab5860a584d48601d6241f849114856215fc01e4d382a793051bc82afa255e7bd5deb071c17b82f8f2e99808c1087bf16af3410d1b7c5d160cccb4dc74e20ad72a01925fc4ec61feb65813c3ab8eb981edf3681a2e1f34468eaf3ba8f13ddf0d5cac7180244259d5748f6f393faf62737d36bea0c720b4006d334c34f711080d78a235192b8fc15dadace7e49c9132f14cd6d9154ef0e962cf52fb08e46f801592ee2ebb102385dfac3b5b662760036acfa4459995a",
+    "channel_id": "UCUuovxDtFtIAw6581lOc-kA",
+    "privacy_status": "unlisted",
     "auto_upload": true,
-    "updated_at": "2025-11-30T10:57:39.765Z",
-    "created_at": "2025-11-30T10:57:39.782Z"
+    "updated_at": "2026-01-18T08:19:06.869Z",
+    "created_at": "2026-01-18T08:04:44.895Z"
   },
-  "payment_config": null
+  "payment_config": null,
+  "proctoring_config": {
+    "id": 1,
+    "enabled": true,
+    "settings": {
+      "sensitivity": {
+        "gazeTracking": 88,
+        "personDetection": true,
+        "objectDetection": true,
+        "audioEnvironment": 87,
+        "tabSwitchLimit": 3
+      },
+      "interviewAI": {
+        "realTimeTranscription": true,
+        "sentimentAnalysis": true,
+        "autoFollowUpQuestions": true,
+        "behavioralCues": false
+      },
+      "assessmentRules": {
+        "fullScreenMode": "strict",
+        "copyPasteBlock": true,
+        "browserLockdown": true,
+        "recordEntireScreen": false
+      },
+      "faceDetection": true,
+      "tabSwitchDetection": true,
+      "fullscreenRequired": true,
+      "maxTabSwitches": 3
+    },
+    "violationActions": {
+      "tabSwitch": "warning",
+      "faceNotDetected": "warning",
+      "multipleFaces": "terminate",
+      "exitFullscreen": "warning"
+    },
+    "updated_at": "2026-01-18T06:29:59.931Z",
+    "created_at": "2026-01-18T06:29:43.680Z"
+  },
+  "gamification_settings": null
 }

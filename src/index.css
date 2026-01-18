@@ -1,87 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root[data-theme='light'] {
-    /* Light theme palette */
-    --bg-primary: #FAFAFA;
-    /* page background */
-    --text-primary: #1A1A1A;
-    /* headings */
-    --text-secondary: #555555;
-    /* secondary text */
-    --card-bg: #FFFFFF;
-    /* card background */
-    --card-border: #E4E4E4;
-    /* card border */
-    --card-shadow: 0px 4px 12px rgba(0, 0, 0, 0.06);
-    /* soft shadow */
-    --input-bg: #F7F7F7;
-    /* input background */
-    --input-border: #E4E4E4;
-    /* input border */
-    --button-primary-bg: #000000;
-    /* black button for both themes */
-    --button-primary-text: #FFFFFF;
-    /* white text */
-    --button-primary-border: #D8D8D8;
-    /* subtle border in light mode */
-    --button-secondary-bg: #D4AF37;
-    /* optional gold accent */
-    --button-secondary-text: #FFFFFF;
-    /* white text on gold */
-    --button-secondary-border: #D4AF37;
-    /* gold border */
-    --navbar-bg: #F1F1F1;
-    /* navbar/sidebar background */
-    --navbar-text: #2A2A2A;
-    /* navbar text */
-  }
-
   :root {
-    /* Dark (neon) theme palette */
-    --bg-primary: #0a0e27;
-    /* dark navy */
-    --text-primary: #ffffff;
-    /* white */
-    --text-secondary: #9ca3af;
-    /* gray */
-    --card-bg: rgba(255, 255, 255, 0.05);
-    /* dark glass effect */
-    --card-border: rgba(255, 255, 255, 0.1);
-    --card-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
-    /* deeper shadow */
-    --input-bg: rgba(255, 255, 255, 0.05);
-    --input-border: rgba(255, 255, 255, 0.1);
-    --button-primary-bg: #000000;
-    /* black button */
-    --button-primary-text: #ffffff;
-    /* white text */
-    --button-primary-border: transparent;
-    /* no border in dark */
-    --button-secondary-bg: #D4AF37;
-    /* gold accent */
-    --button-secondary-text: #ffffff;
-    --button-secondary-border: #D4AF37;
-    --navbar-bg: #0a0e27;
-    /* keep dark background */
-    --navbar-text: #ffffff;
+    /* HireGo Vibrant Colorful Palette */
+    --bg-primary: #F8FAFF;
+    --text-primary: #1E3A5F;
+    --text-secondary: #475569;
+    --accent-blue: #4285F4;
+    --accent-red: #EA4335;
+    --accent-green: #34A853;
+    --accent-yellow: #FBBC05;
   }
 
   body {
-    background-color: var(--bg-primary);
+    background: linear-gradient(135deg, #F8FAFF 0%, #FFFFFF 50%, #FFFBF5 100%);
     color: var(--text-primary);
-    @apply font-outfit;
+    @apply font-inter antialiased;
     margin: 0;
     padding: 0;
     overflow-x: hidden;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    min-height: 100vh;
+    max-width: 100vw;
+    width: 100%;
   }
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  #root {
+    overflow-x: hidden;
+    max-width: 100vw;
+    width: 100%;
   }
 }
 
@@ -114,22 +69,22 @@
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Colorful Theme */
 ::-webkit-scrollbar {
   width: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0e27;
+  background: #F1F5F9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #00f3ff, #bc13fe);
-  border-radius: 5px;
+  background: linear-gradient(180deg, #4285F4, #34A853);
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #bc13fe, #ff006e);
+  background: linear-gradient(180deg, #4285F4, #EA4335);
 }
 
 /* Custom scrollbar class for specific elements */
@@ -367,15 +322,20 @@
 
 /* Blob animation for Sign In/Sign Up pages */
 @keyframes blob {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
+
   25% {
     transform: translate(20px, -20px) scale(1.1);
   }
+
   50% {
     transform: translate(-20px, 20px) scale(0.9);
   }
+
   75% {
     transform: translate(20px, 10px) scale(1.05);
   }

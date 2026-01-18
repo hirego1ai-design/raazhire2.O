@@ -15,12 +15,26 @@ import {
     Briefcase,
     Coins,
     Video,
-    Youtube
+    Youtube,
+    BookOpen,
+    GraduationCap
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
     const [isSidebarOpen, setSidebarOpen] = React.useState(true);
     const navigate = useNavigate();
+
+    // Force dark background for admin pages
+    React.useEffect(() => {
+        document.body.style.background = '#0a0a0f';
+        document.body.style.color = '#ffffff';
+
+        return () => {
+            // Reset to default when leaving admin
+            document.body.style.background = '';
+            document.body.style.color = '';
+        };
+    }, []);
 
     const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
@@ -36,6 +50,8 @@ const AdminLayout: React.FC = () => {
         { icon: CreditCard, label: 'Payment Gateway', path: '/admin/payment-config' },
         { icon: Briefcase, label: 'Job & Pricing', path: '/admin/job-pricing' },
         { icon: Coins, label: 'Credit System', path: '/admin/credit-system' },
+        { icon: BookOpen, label: 'Upskill Courses', path: '/admin/upskill-courses' },
+        { icon: GraduationCap, label: 'Upskill Learners', path: '/admin/upskill-learners' },
         { icon: Settings, label: 'API Configuration', path: '/admin/api-config' },
         { icon: Mail, label: 'Email Configuration', path: '/admin/email-config' },
         { icon: Youtube, label: 'Video Storage', path: '/admin/video-storage' },

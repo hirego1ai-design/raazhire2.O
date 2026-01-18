@@ -41,7 +41,7 @@ const CandidateInterviews: React.FC = () => {
     useEffect(() => {
         const fetchInterviews = async () => {
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/interviews/candidate`, {
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/interviews/candidate`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
 

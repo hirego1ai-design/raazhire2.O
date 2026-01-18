@@ -6,6 +6,7 @@ import {
     DollarSign
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import AdminButton3D from '../../components/AdminButton3D';
 
 interface CreditBundle {
     id: string;
@@ -222,9 +223,14 @@ const CreditSystemControl: React.FC = () => {
                 {activeTab === 'pricing' && (
                     <motion.div key="pricing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                         <div className="flex justify-end">
-                            <button onClick={() => setEditingBundle({ id: '', credits: 0, priceINR: 0, priceUSD: 0, priceAED: 0, priceEUR: 0, priceAUD: 0, isActive: true })} className="btn-3d btn-primary px-4 py-2 flex items-center gap-2 text-sm">
-                                <Plus size={16} /> Add Credit Bundle
-                            </button>
+                            <AdminButton3D
+                                onClick={() => setEditingBundle({ id: '', credits: 0, priceINR: 0, priceUSD: 0, priceAED: 0, priceEUR: 0, priceAUD: 0, isActive: true })}
+                                variant="success"
+                                size="md"
+                                icon={<Plus size={18} />}
+                            >
+                                Add Credit Bundle
+                            </AdminButton3D>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {bundles.map(bundle => (
@@ -258,9 +264,14 @@ const CreditSystemControl: React.FC = () => {
                 {activeTab === 'jobtypes' && (
                     <motion.div key="jobtypes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                         <div className="flex justify-end">
-                            <button onClick={() => setEditingJobType({ id: '', name: '', creditsRequired: 0, description: '', isActive: true })} className="btn-3d btn-primary px-4 py-2 flex items-center gap-2 text-sm">
-                                <Plus size={16} /> Add Job Type
-                            </button>
+                            <AdminButton3D
+                                onClick={() => setEditingJobType({ id: '', name: '', creditsRequired: 0, description: '', isActive: true })}
+                                variant="info"
+                                size="md"
+                                icon={<Plus size={18} />}
+                            >
+                                Add Job Type
+                            </AdminButton3D>
                         </div>
                         <div className="rounded-xl glass border border-white/10 overflow-hidden">
                             <table className="w-full text-left">

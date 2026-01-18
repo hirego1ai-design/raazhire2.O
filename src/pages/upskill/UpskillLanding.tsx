@@ -30,6 +30,7 @@ interface PremiumButtonProps {
     onClick?: () => void;
     icon?: React.ReactNode;
     size?: 'md' | 'lg' | 'xl';
+    className?: string;
 }
 
 const PremiumButton: React.FC<PremiumButtonProps> = ({
@@ -37,7 +38,8 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
     variant = 'indigo',
     onClick,
     icon,
-    size = 'md'
+    size = 'md',
+    className = ''
 }) => {
     const variants = {
         indigo: 'bg-gradient-indigo text-white shadow-glow-indigo hover:shadow-glow-indigo',
@@ -64,6 +66,7 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
                 flex items-center gap-2 justify-center
                 ${variants[variant]}
                 ${sizes[size]}
+                ${className}
             `}
         >
             {children}
@@ -245,7 +248,7 @@ const UpskillLanding: React.FC = () => {
                             className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-pill shadow-soft-md mb-8"
                         >
                             <Sparkles className="w-5 h-5 text-electric-indigo-500" />
-                            <span className="text-sm font-semibold text-gray-700">AI-Powered Upskilling Platform</span>
+                            <span className="text-sm font-semibold text-gray-700">Powered by HireGo AI</span>
                         </motion.div>
 
                         {/* Headline */}
@@ -256,7 +259,7 @@ const UpskillLanding: React.FC = () => {
                             className="text-5xl md:text-7xl font-extrabold text-gray-900 mb-6 leading-tight"
                         >
                             Build Skills. Get Hired.{' '}
-                            <span className="bg-gradient-rainbow bg-clip-text text-transparent">
+                            <span className="bg-gradient-rainbow bg-clip-text text-transparent drop-shadow-sm font-black">
                                 Automatically.
                             </span>
                         </motion.h1>
@@ -290,6 +293,7 @@ const UpskillLanding: React.FC = () => {
                                 variant="outline"
                                 size="xl"
                                 onClick={() => navigate('/upskill/courses')}
+                                className="!border-electric-indigo-600 !text-electric-indigo-600 hover:!bg-electric-indigo-50"
                                 icon={<Play className="w-6 h-6" />}
                             >
                                 Explore Skills
@@ -410,7 +414,7 @@ const UpskillLanding: React.FC = () => {
                             viewport={{ once: true }}
                             className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4"
                         >
-                            Powered by AI
+                            Powered by HireGo AI
                         </motion.h2>
                         <motion.p
                             initial={{ opacity: 0, y: 20 }}
@@ -452,16 +456,17 @@ const UpskillLanding: React.FC = () => {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                     >
-                        <h2 className="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
+                        <h2 className="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight drop-shadow-lg">
                             Upskill Once. Get Hired Globally.
                         </h2>
-                        <p className="text-xl text-white/90 mb-10 max-w-2xl mx-auto">
+                        <p className="text-xl text-white mb-10 max-w-2xl mx-auto font-medium drop-shadow-md">
                             Join thousands of professionals transforming their careers through AI-powered learning
                         </p>
                         <PremiumButton
-                            variant="outline"
+                            variant="indigo"
                             size="xl"
                             onClick={() => navigate('/upskill/courses')}
+                            className="!bg-white !text-electric-indigo-600 hover:!bg-gray-50 shadow-xl"
                             icon={<Zap className="w-6 h-6" />}
                         >
                             Begin Your Journey

@@ -37,7 +37,7 @@ export default function Navbar() {
     }, []);
 
     const isHomePage = location.pathname === '/';
-    const isSkillsPage = location.pathname === '/skill-development';
+    const isSkillsPage = location.pathname === '/upskill' || location.pathname.startsWith('/upskill/');
 
     return (
         <motion.nav
@@ -67,8 +67,8 @@ export default function Navbar() {
                         <button
                             onClick={() => navigate('/')}
                             className={`px-4 py-2 rounded-full font-medium transition-all flex items-center gap-2 ${isHomePage
-                                    ? 'bg-gradient-to-r from-neon-cyan/10 to-neon-purple/10 text-gray-900 border border-neon-cyan/30'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                ? 'bg-gradient-to-r from-neon-cyan/10 to-neon-purple/10 text-gray-900 border border-neon-cyan/30'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                 }`}
                         >
                             <Building2 className="w-4 h-4" />
@@ -77,10 +77,10 @@ export default function Navbar() {
 
                         {/* For Candidates / Skills */}
                         <button
-                            onClick={() => navigate('/skill-development')}
+                            onClick={() => navigate('/upskill')}
                             className={`px-4 py-2 rounded-full font-medium transition-all flex items-center gap-2 ${isSkillsPage
-                                    ? 'bg-gradient-to-r from-neon-green/10 to-emerald-500/10 text-gray-900 border border-neon-green/30'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                ? 'bg-gradient-to-r from-neon-green/10 to-emerald-500/10 text-gray-900 border border-neon-green/30'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                 }`}
                         >
                             <GraduationCap className="w-4 h-4" />
@@ -142,8 +142,8 @@ export default function Navbar() {
                         <button
                             onClick={() => { navigate('/'); setIsOpen(false); }}
                             className={`w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${isHomePage
-                                    ? 'bg-gradient-to-r from-neon-cyan/10 to-neon-purple/10 text-gray-900'
-                                    : 'text-gray-600 hover:bg-gray-50'
+                                ? 'bg-gradient-to-r from-neon-cyan/10 to-neon-purple/10 text-gray-900'
+                                : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
                             <Building2 className="w-5 h-5" />
@@ -151,10 +151,10 @@ export default function Navbar() {
                         </button>
 
                         <button
-                            onClick={() => { navigate('/skill-development'); setIsOpen(false); }}
+                            onClick={() => { navigate('/upskill'); setIsOpen(false); }}
                             className={`w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${isSkillsPage
-                                    ? 'bg-gradient-to-r from-neon-green/10 to-emerald-500/10 text-gray-900'
-                                    : 'text-gray-600 hover:bg-gray-50'
+                                ? 'bg-gradient-to-r from-neon-green/10 to-emerald-500/10 text-gray-900'
+                                : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
                             <GraduationCap className="w-5 h-5" />

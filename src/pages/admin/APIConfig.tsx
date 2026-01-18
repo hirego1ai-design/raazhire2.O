@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Save, Key, RefreshCw, AlertTriangle, Eye, EyeOff, CheckCircle, XCircle, Loader, Database } from 'lucide-react';
 import { endpoints } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
+import AdminButton3D from '../../components/AdminButton3D';
 
 interface AIProvider {
     id: string;
@@ -39,8 +40,7 @@ const APIConfig: React.FC = () => {
         setIsLoading(true);
         try {
             const headers = await getAuthHeaders();
-            const apiBaseUrl = endpoints.test.split('/api/test')[0];
-            const response = await fetch(`${apiBaseUrl}/api/admin/api-keys`, {
+            const response = await fetch(endpoints.admin.apiKeys, {
                 headers: { ...headers }
             });
             if (response.ok) {
@@ -86,8 +86,7 @@ const APIConfig: React.FC = () => {
 
         try {
             const headers = await getAuthHeaders();
-            const apiBaseUrl = endpoints.test.split('/api/test')[0];
-            const response = await fetch(`${apiBaseUrl}/api/admin/test-api-key`, {
+            const response = await fetch(endpoints.admin.testApiKey, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -123,31 +122,37 @@ const APIConfig: React.FC = () => {
         setIsSaving(true);
         try {
             const headers = await getAuthHeaders();
-            const apiBaseUrl = endpoints.test.split('/api/test')[0];
-            
+
+            // Get providers with keys
+            const providersWithKeys = providers.filter(p => p.apiKey);
+
+            if (providersWithKeys.length === 0) {
+                alert('Please enter at least one API key before saving.');
+                setIsSaving(false);
+                return;
+            }
+
             // Save each provider's key to backend
-            const savePromises = providers
-                .filter(p => p.apiKey) // Only save if key is provided
-                .map(async p => {
-                    const response = await fetch(`${apiBaseUrl}/api/admin/api-keys`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...headers
-                        },
-                        body: JSON.stringify({
-                            provider: p.id,
-                            api_key: p.apiKey.trim()
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const error = await response.json();
-                        throw new Error(`Failed to save ${p.name}: ${error.error || 'Unknown error'}`);
-                    }
-                    
-                    return response.json();
+            const savePromises = providersWithKeys.map(async p => {
+                const response = await fetch(endpoints.admin.apiKeys, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...headers
+                    },
+                    body: JSON.stringify({
+                        provider: p.id,
+                        api_key: p.apiKey.trim()
+                    })
                 });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(`Failed to save ${p.name}: ${error.error || 'Unknown error'}`);
+                }
+
+                return response.json();
+            });
 
             await Promise.all(savePromises);
             alert('✅ API Credentials saved successfully to secure backend storage!');
@@ -189,14 +194,15 @@ const APIConfig: React.FC = () => {
                         Manage API keys securely stored in encrypted database
                     </p>
                 </div>
-                <button
+                <AdminButton3D
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="btn-3d btn-primary px-6 py-2 flex items-center gap-2 disabled:opacity-50"
+                    variant="success"
+                    size="md"
+                    icon={isSaving ? <Loader className="animate-spin" size={18} /> : <Save size={18} />}
                 >
-                    {isSaving ? <Loader className="animate-spin" size={18} /> : <Save size={18} />}
                     {isSaving ? 'Saving...' : 'Save Credentials'}
-                </button>
+                </AdminButton3D>
             </motion.div>
 
             {/* API Keys List */}
@@ -259,14 +265,15 @@ const APIConfig: React.FC = () => {
                                     <div className="text-xs text-gray-500">Latency</div>
                                     <div className="font-mono text-neon-cyan">{provider.latency}</div>
                                 </div>
-                                <button
+                                <AdminButton3D
                                     onClick={() => testConnection(provider.id)}
                                     disabled={provider.status === 'testing' || !provider.apiKey}
-                                    className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-neon-cyan transition-colors disabled:opacity-50"
-                                    title="Test Connection"
+                                    variant="info"
+                                    size="sm"
+                                    icon={<RefreshCw size={16} className={provider.status === 'testing' ? 'animate-spin' : ''} />}
                                 >
-                                    <RefreshCw size={20} className={provider.status === 'testing' ? 'animate-spin' : ''} />
-                                </button>
+                                    Test
+                                </AdminButton3D>
                             </div>
                         </div>
                     </motion.div>

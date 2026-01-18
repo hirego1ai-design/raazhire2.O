@@ -53,7 +53,7 @@ const AIControl: React.FC = () => {
     React.useEffect(() => {
         const fetchConfig = async () => {
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/ai-config`, {
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/ai-config`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
                 const data = await response.json();
@@ -71,7 +71,7 @@ const AIControl: React.FC = () => {
 
     const saveConfig = async (newModel: AIModel) => {
         try {
-            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/ai-config`, {
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/ai-config`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

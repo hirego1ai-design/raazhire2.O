@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, Briefcase, Server, Activity, Cpu, DollarSign, Wallet, TrendingUp } from 'lucide-react';
+import { Users, Briefcase, Server, Activity, Cpu, DollarSign, Wallet, TrendingUp, RefreshCw, Download, Settings } from 'lucide-react';
 import '../../styles/premium-dark-theme.css';
+import AdminButton3D from '../../components/AdminButton3D';
 
 import { supabase } from '../../lib/supabase';
 
@@ -14,6 +15,14 @@ const AdminDashboard: React.FC = () => {
     ]);
     const [logs, setLogs] = React.useState<any[]>([]);
     const [aiStatus, setAiStatus] = React.useState<any[]>([]);
+    const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        // Simulate refresh
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setIsRefreshing(false);
+    };
 
     React.useEffect(() => {
         const fetchAdminData = async () => {
@@ -61,10 +70,34 @@ const AdminDashboard: React.FC = () => {
     return (
         <div className="space-y-8 bg-black/90 p-6 rounded-2xl glass">
             {/* Header */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex justify-between items-center">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-white">System Overview</h1>
                     <p className="text-gray-400">Key metrics and AI service health.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <AdminButton3D
+                        variant="outline"
+                        size="sm"
+                        icon={<RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />}
+                        onClick={handleRefresh}
+                    >
+                        Refresh
+                    </AdminButton3D>
+                    <AdminButton3D
+                        variant="info"
+                        size="sm"
+                        icon={<Download className="w-4 h-4" />}
+                    >
+                        Export Report
+                    </AdminButton3D>
+                    <AdminButton3D
+                        variant="primary"
+                        size="sm"
+                        icon={<Settings className="w-4 h-4" />}
+                    >
+                        Configure
+                    </AdminButton3D>
                 </div>
             </motion.div>
 

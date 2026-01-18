@@ -1,8 +1,7 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
-import SkillDevelopment from './pages/SkillDevelopment';
 import UpskillLanding from './pages/upskill/UpskillLanding';
 import CourseList from './pages/upskill/CourseList';
 import CourseDetail from './pages/upskill/CourseDetail';
@@ -51,107 +50,135 @@ import JobPricingControl from './pages/admin/JobPricingControl';
 import CreditSystemControl from './pages/admin/CreditSystemControl';
 import InterviewManagement from './pages/admin/InterviewManagement';
 import VideoStorageConfig from './pages/admin/VideoStorageConfig';
+import UpskillCourseManagement from './pages/admin/UpskillCourseManagement';
+import UpskillLearnerProgress from './pages/admin/UpskillLearnerProgress';
 import CandidateRankings from './pages/employer/CandidateRankings';
 import PerformanceAnalytics from './pages/admin/PerformanceAnalytics';
 import MyJobs from './pages/employer/MyJobs';
 import JobDetail from './pages/employer/JobDetail';
 
 import GeneralPage from './pages/GeneralPage';
+import PricingPage from './pages/Pricing';
+import EnterprisePage from './pages/Enterprise';
+import CompanyPage from './pages/Company';
+import AboutPage from './pages/About';
+import CareersPage from './pages/Careers';
+import BlogPage from './pages/Blog';
+import TermsPage from './pages/Terms';
+import PrivacyPage from './pages/Privacy';
 
 function App() {
   const [showLogin, setShowLogin] = React.useState(false);
 
   return (
     <Router>
-      <div className="min-h-screen bg-space-dark text-white font-outfit">
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/skill-development" element={<SkillDevelopment />} />
-
-          {/* Upskill Portal Routes */}
-          <Route path="/upskill" element={<UpskillLanding />} />
-          <Route path="/upskill/courses" element={<CourseList />} />
-          <Route path="/upskill/course/:id" element={<CourseDetail />} />
-          <Route path="/upskill/course/:courseId/lesson/:lessonId" element={<Lesson />} />
-          <Route path="/upskill/assessment/:id" element={<Assessment />} />
-          <Route path="/upskill/dashboard" element={<SkillDashboard />} />
-          <Route path="/upskill/certificate/:id" element={<Certificate />} />
-          <Route path="/upskill/jobs" element={<JobConnection />} />
-
-          {/* Public Pages */}
-          <Route path="/post-job-public" element={<GeneralPage title="Post a Job" subtitle="Start your hiring journey with HireGo AI." />} />
-          <Route path="/ai-features" element={<GeneralPage title="AI Features" subtitle="Explore our cutting-edge autonomous agents." />} />
-          <Route path="/pricing" element={<GeneralPage title="Pricing" subtitle="Flexible plans for teams of all sizes." />} />
-          <Route path="/enterprise" element={<GeneralPage title="Enterprise" subtitle="Scalable solutions for global organizations." />} />
-          <Route path="/find-jobs" element={<GeneralPage title="Find Jobs" subtitle="Discover your next career opportunity." />} />
-          <Route path="/certifications" element={<GeneralPage title="Certifications" subtitle="Validate your skills with our AI assessments." />} />
-          <Route path="/career-resources" element={<GeneralPage title="Career Resources" subtitle="Guides, tips, and tools for your career growth." />} />
-
-          <Route path="/landing-old" element={<Landing />} />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/register/candidate" element={<CandidateRegister />} />
-          <Route path="/register/employer" element={<EmployerRegister />} />
-          <Route path="/create-account" element={<CreateAccount />} />
-          {/* Candidate Routes */}
-          <Route path="/candidate" element={<DashboardLayout />}>
-            <Route path="dashboard" element={<CandidateDashboard />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="video-resume" element={<VideoResume />} />
-            <Route path="assessments" element={<Assessments />} />
-            <Route path="jobs" element={<Jobs />} />
-            <Route path="gamification" element={<GamificationDashboard />} />
-            <Route path="interviews" element={<CandidateInterviews />} />
-            <Route path="interview/:id" element={<InterviewPage />} />
-            <Route path="live-assessment/:jobId" element={<LiveAssessment />} />
-            <Route path="assessment-result/:jobId" element={<AssessmentResult />} />
-          </Route>
-
-          {/* Employer Routes */}
-          <Route path="/employer" element={<EmployerLayout />}>
-            <Route path="dashboard" element={<EmployerDashboard />} />
-            <Route path="jobs" element={<MyJobs />} />
-            <Route path="job/:jobId" element={<JobDetail />} />
-            <Route path="post-job" element={<JobPostingForm />} />
-            <Route path="candidates" element={<Candidates />} />
-            <Route path="candidate/:id" element={<CandidateProfileView />} />
-            <Route path="interviews" element={<Interviews />} />
-            <Route path="interview-schedule/:id" element={<InterviewSchedule />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="make-agreement" element={<MakeAgreement />} />
-            <Route path="rankings/:jobId" element={<CandidateRankings />} />
-          </Route>
-
-          {/* Admin Routes */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="api-config" element={<APIConfig />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="email-config" element={<EmailConfig />} />
-            <Route path="ai-control" element={<AIControl />} />
-            <Route path="proctoring" element={<ProctoringConfig />} />
-            <Route path="payment-config" element={<PaymentConfig />} />
-            <Route path="job-pricing" element={<JobPricingControl />} />
-            <Route path="credit-system" element={<CreditSystemControl />} />
-            <Route path="interviews" element={<InterviewManagement />} />
-            <Route path="logs" element={<SystemLogs />} />
-            <Route path="video-storage" element={<VideoStorageConfig />} />
-            <Route path="analytics" element={<PerformanceAnalytics />} />
-          </Route>
-        </Routes>
-        {showLogin && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowLogin(false)}
-          >
-            <div onClick={(e) => e.stopPropagation()}>
-              <LoginCard onClose={() => setShowLogin(false)} />
-            </div>
-          </div>
-        )}
-      </div>
+      <AppContent showLogin={showLogin} setShowLogin={setShowLogin} />
     </Router>
+  );
+}
+
+function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLogin: (v: boolean) => void }) {
+  const location = window.location.pathname;
+  const hideNavbar = location.startsWith('/admin') || location.startsWith('/employer') || location.startsWith('/candidate');
+
+  return (
+    <div className="min-h-screen bg-space-dark text-white font-outfit">
+      {!hideNavbar && <Navbar />}
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/skill-development" element={<Navigate to="/upskill" replace />} />
+
+        {/* Upskill Portal Routes */}
+        <Route path="/upskill" element={<UpskillLanding />} />
+        <Route path="/upskill/courses" element={<CourseList />} />
+        <Route path="/upskill/course/:id" element={<CourseDetail />} />
+        <Route path="/upskill/course/:courseId/lesson/:lessonId" element={<Lesson />} />
+        <Route path="/upskill/assessment/:id" element={<Assessment />} />
+        <Route path="/upskill/dashboard" element={<SkillDashboard />} />
+        <Route path="/upskill/certificate/:id" element={<Certificate />} />
+        <Route path="/upskill/jobs" element={<JobConnection />} />
+
+        {/* Public Pages */}
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/enterprise" element={<EnterprisePage />} />
+        <Route path="/company" element={<CompanyPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/careers" element={<CareersPage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+
+        <Route path="/post-job-public" element={<GeneralPage title="Post a Job" subtitle="Start your hiring journey with HireGo AI." />} />
+        <Route path="/ai-features" element={<GeneralPage title="AI Features" subtitle="Explore our cutting-edge autonomous agents." />} />
+        <Route path="/find-jobs" element={<GeneralPage title="Find Jobs" subtitle="Discover your next career opportunity." />} />
+        <Route path="/certifications" element={<GeneralPage title="Certifications" subtitle="Validate your skills with our AI assessments." />} />
+        <Route path="/career-resources" element={<GeneralPage title="Career Resources" subtitle="Guides, tips, and tools for your career growth." />} />
+
+        <Route path="/landing-old" element={<Landing />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/register/candidate" element={<CandidateRegister />} />
+        <Route path="/register/employer" element={<EmployerRegister />} />
+        <Route path="/create-account" element={<CreateAccount />} />
+        {/* Candidate Routes */}
+        <Route path="/candidate" element={<DashboardLayout />}>
+          <Route path="dashboard" element={<CandidateDashboard />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="video-resume" element={<VideoResume />} />
+          <Route path="assessments" element={<Assessments />} />
+          <Route path="jobs" element={<Jobs />} />
+          <Route path="gamification" element={<GamificationDashboard />} />
+          <Route path="interviews" element={<CandidateInterviews />} />
+          <Route path="interview/:id" element={<InterviewPage />} />
+          <Route path="live-assessment/:jobId" element={<LiveAssessment />} />
+          <Route path="assessment-result/:jobId" element={<AssessmentResult />} />
+        </Route>
+
+        {/* Employer Routes */}
+        <Route path="/employer" element={<EmployerLayout />}>
+          <Route path="dashboard" element={<EmployerDashboard />} />
+          <Route path="jobs" element={<MyJobs />} />
+          <Route path="job/:jobId" element={<JobDetail />} />
+          <Route path="post-job" element={<JobPostingForm />} />
+          <Route path="candidates" element={<Candidates />} />
+          <Route path="candidate/:id" element={<CandidateProfileView />} />
+          <Route path="interviews" element={<Interviews />} />
+          <Route path="interview-schedule/:id" element={<InterviewSchedule />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="make-agreement" element={<MakeAgreement />} />
+          <Route path="rankings/:jobId" element={<CandidateRankings />} />
+        </Route>
+
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="api-config" element={<APIConfig />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="email-config" element={<EmailConfig />} />
+          <Route path="ai-control" element={<AIControl />} />
+          <Route path="proctoring" element={<ProctoringConfig />} />
+          <Route path="payment-config" element={<PaymentConfig />} />
+          <Route path="job-pricing" element={<JobPricingControl />} />
+          <Route path="credit-system" element={<CreditSystemControl />} />
+          <Route path="interviews" element={<InterviewManagement />} />
+          <Route path="logs" element={<SystemLogs />} />
+          <Route path="video-storage" element={<VideoStorageConfig />} />
+          <Route path="analytics" element={<PerformanceAnalytics />} />
+          <Route path="upskill-courses" element={<UpskillCourseManagement />} />
+          <Route path="upskill-learners" element={<UpskillLearnerProgress />} />
+        </Route>
+      </Routes>
+      {showLogin && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowLogin(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <LoginCard onClose={() => setShowLogin(false)} />
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
