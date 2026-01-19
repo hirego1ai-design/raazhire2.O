@@ -16,6 +16,25 @@ import express from 'express';
 
 export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decrypt, readLocalDb, writeLocalDb) {
 
+    // ==================== ADMIN AUTH ====================
+    app.post('/api/admin/login', (req, res) => {
+        const { email, password } = req.body;
+        console.log('Login attempt:', email, password); // Debug log
+
+        const cleanEmail = email ? email.trim() : '';
+        const cleanPass = password ? password.trim() : '';
+
+        // Simple hardcoded check for demo purposes
+        if (cleanEmail === 'admin@hirego.com' && cleanPass === 'admin123') {
+            return res.json({
+                success: true,
+                token: 'mock-admin-token-secure-123',
+                user: { name: 'Super Admin', email: cleanEmail, role: 'admin' }
+            });
+        }
+        res.status(401).json({ error: 'Invalid credentials' });
+    });
+
     // ==================== DASHBOARD STATISTICS ====================
 
     /**

@@ -5,6 +5,23 @@ import Button3D from '../components/Button3D';
 import { MapPin, ArrowRight } from 'lucide-react';
 
 const CareersPage = () => {
+    const [dbContent, setDbContent] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        fetch('http://localhost:3000/api/pages/careers')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.page && data.page.content) {
+                    setDbContent(data.page.content);
+                }
+            })
+            .catch(err => console.error(err));
+    }, []);
+
+    if (dbContent) {
+        return <div className="min-h-screen bg-soft-white font-outfit pt-20" dangerouslySetInnerHTML={{ __html: dbContent }} />;
+    }
+
     const jobs = [
         { title: "Senior AI Engineer", department: "Engineering", location: "Remote", type: "Full-time" },
         { title: "Product Designer", department: "Design", location: "New York, NY", type: "Full-time" },

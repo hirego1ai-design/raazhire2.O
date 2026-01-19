@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import UpskillLanding from './pages/upskill/UpskillLanding';
@@ -62,10 +62,15 @@ import PricingPage from './pages/Pricing';
 import EnterprisePage from './pages/Enterprise';
 import CompanyPage from './pages/Company';
 import AboutPage from './pages/About';
+import Footer from './components/Footer';
 import CareersPage from './pages/Careers';
 import BlogPage from './pages/Blog';
 import TermsPage from './pages/Terms';
 import PrivacyPage from './pages/Privacy';
+
+import ContactPage from './pages/Contact';
+import PageEditor from './pages/admin/PageEditor';
+import AdminLogin from './pages/admin/AdminLogin';
 
 function App() {
   const [showLogin, setShowLogin] = React.useState(false);
@@ -78,8 +83,8 @@ function App() {
 }
 
 function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLogin: (v: boolean) => void }) {
-  const location = window.location.pathname;
-  const hideNavbar = location.startsWith('/admin') || location.startsWith('/employer') || location.startsWith('/candidate');
+  const location = useLocation();
+  const hideNavbar = location.pathname.startsWith('/admin') || location.pathname.startsWith('/employer') || location.pathname.startsWith('/candidate');
 
   return (
     <div className="min-h-screen bg-space-dark text-white font-outfit">
@@ -107,6 +112,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/contact" element={<ContactPage />} />
 
         <Route path="/post-job-public" element={<GeneralPage title="Post a Job" subtitle="Start your hiring journey with HireGo AI." />} />
         <Route path="/ai-features" element={<GeneralPage title="AI Features" subtitle="Explore our cutting-edge autonomous agents." />} />
@@ -150,6 +156,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
         </Route>
 
         {/* Admin Routes */}
+        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="api-config" element={<APIConfig />} />
@@ -163,11 +170,14 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
           <Route path="interviews" element={<InterviewManagement />} />
           <Route path="logs" element={<SystemLogs />} />
           <Route path="video-storage" element={<VideoStorageConfig />} />
+
           <Route path="analytics" element={<PerformanceAnalytics />} />
+          <Route path="pages" element={<PageEditor />} />
           <Route path="upskill-courses" element={<UpskillCourseManagement />} />
           <Route path="upskill-learners" element={<UpskillLearnerProgress />} />
         </Route>
       </Routes>
+      <Footer />
       {showLogin && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"

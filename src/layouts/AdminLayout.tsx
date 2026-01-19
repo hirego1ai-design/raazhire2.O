@@ -17,15 +17,21 @@ import {
     Video,
     Youtube,
     BookOpen,
-    GraduationCap
+    GraduationCap,
+    FileText
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
     const [isSidebarOpen, setSidebarOpen] = React.useState(true);
     const navigate = useNavigate();
 
-    // Force dark background for admin pages
+    // Force dark background for admin pages & Check Auth
     React.useEffect(() => {
+        const token = localStorage.getItem('admin_token');
+        if (!token) {
+            navigate('/admin/login');
+        }
+
         document.body.style.background = '#0a0a0f';
         document.body.style.color = '#ffffff';
 
@@ -34,16 +40,19 @@ const AdminLayout: React.FC = () => {
             document.body.style.background = '';
             document.body.style.color = '';
         };
-    }, []);
+    }, [navigate]);
 
     const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
     const handleLogout = () => {
-        navigate('/');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+        navigate('/admin/login');
     };
 
     const navItems = [
         { icon: LayoutDashboard, label: 'Overview', path: '/admin/dashboard' },
+        { icon: FileText, label: 'Page Management', path: '/admin/pages' },
         { icon: Bot, label: 'AI System Control', path: '/admin/ai-control' },
         { icon: Eye, label: 'Proctoring & Security', path: '/admin/proctoring' },
         { icon: Video, label: 'Interview Management', path: '/admin/interviews' },

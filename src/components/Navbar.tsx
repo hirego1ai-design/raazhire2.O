@@ -51,7 +51,7 @@ export default function Navbar() {
                     {/* Logo */}
                     <motion.div
                         whileHover={{ scale: 1.02 }}
-                        className="flex items-center gap-2 cursor-pointer"
+                        className="flex items-center gap-3 cursor-pointer"
                         onClick={() => navigate('/')}
                     >
                         <img
@@ -59,35 +59,43 @@ export default function Navbar() {
                             alt="HireGo AI"
                             className="h-14 w-auto object-contain"
                         />
+                        {isSkillsPage && (
+                            <div className="hidden lg:flex flex-col">
+                                <span className="text-lg font-bold text-gray-900 leading-none tracking-tight">HireGo AI</span>
+                                <span className="text-xs font-semibold text-electric-indigo-600 uppercase tracking-widest">Upskill</span>
+                            </div>
+                        )}
                     </motion.div>
 
-                    {/* Desktop Menu */}
-                    <div className="hidden md:flex items-center gap-2">
-                        {/* For Employers - Highlighted on home */}
+                    {/* Desktop Menu - Center */}
+                    <div className="hidden md:flex items-center">
+                        {/* For Candidates / Skills - Center Stage */}
                         <button
-                            onClick={() => navigate('/')}
-                            className={`px-4 py-2 rounded-full font-medium transition-all flex items-center gap-2 ${isHomePage
-                                ? 'bg-gradient-to-r from-neon-cyan/10 to-neon-purple/10 text-gray-900 border border-neon-cyan/30'
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                            onClick={() => navigate('/upskill')}
+                            className={`px-5 py-2.5 rounded-full font-medium transition-all flex items-center gap-2 ${isSkillsPage
+                                ? 'bg-gray-100 text-gray-900 ring-1 ring-gray-200'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                 }`}
                         >
-                            <Building2 className="w-4 h-4" />
+                            <GraduationCap className="w-5 h-5 text-electric-indigo-600" />
+                            <span>Skills & Jobs</span>
+                        </button>
+                    </div>
+
+                    {/* Right Actions */}
+                    <div className="hidden md:flex items-center gap-3">
+                        {/* For Employers - Moved to Right */}
+                        <button
+                            onClick={() => navigate('/')} // Assuming '/' is the main employer/platform landing or strict employer page
+                            className={`text-sm font-semibold transition-colors ${isHomePage
+                                ? 'text-gray-900'
+                                : 'text-gray-500 hover:text-gray-900'
+                                }`}
+                        >
                             For Employers
                         </button>
 
-                        {/* For Candidates / Skills */}
-                        <button
-                            onClick={() => navigate('/upskill')}
-                            className={`px-4 py-2 rounded-full font-medium transition-all flex items-center gap-2 ${isSkillsPage
-                                ? 'bg-gradient-to-r from-neon-green/10 to-emerald-500/10 text-gray-900 border border-neon-green/30'
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                }`}
-                        >
-                            <GraduationCap className="w-4 h-4" />
-                            Skills & Jobs
-                        </button>
-
-                        <div className="w-px h-6 bg-gray-200 mx-2" />
+                        <div className="w-px h-5 bg-gray-300 mx-1" />
 
                         <button
                             onClick={toggleTheme}

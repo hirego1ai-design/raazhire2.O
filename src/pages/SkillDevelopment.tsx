@@ -884,57 +884,7 @@ const SkillDevelopment: React.FC = () => {
             {/* ============================================ */}
             {/* FOOTER */}
             {/* ============================================ */}
-            <footer className="py-16 bg-gray-50 border-t border-gray-200">
-                <div className="container mx-auto max-w-7xl px-4">
-                    <div className="grid md:grid-cols-4 gap-12">
-                        {/* Logo & Description */}
-                        <div className="md:col-span-2">
-                            <div className="flex items-center gap-3 mb-4">
-                                <img
-                                    src="/hirego-logo.png"
-                                    alt="HireGo Skills"
-                                    className="h-20 w-auto object-contain"
-                                />
-                            </div>
-                            <p className="text-gray-600 max-w-md">
-                                India's leading AI-powered skill development platform. Learn industry-relevant skills and get hired faster.
-                            </p>
-                        </div>
 
-                        {/* Links */}
-                        <div>
-                            <h4 className="font-bold text-gray-900 mb-4">Programs</h4>
-                            <ul className="space-y-3">
-                                <li><a href="#" className="text-gray-600 hover:text-neon-green transition-colors">Full Stack Development</a></li>
-                                <li><a href="#" className="text-gray-600 hover:text-neon-green transition-colors">Data Science</a></li>
-                                <li><a href="#" className="text-gray-600 hover:text-neon-green transition-colors">Cloud Computing</a></li>
-                                <li><a href="#" className="text-gray-600 hover:text-neon-green transition-colors">Digital Marketing</a></li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="font-bold text-gray-900 mb-4">Resources</h4>
-                            <ul className="space-y-3">
-                                <li><a href="#" className="text-gray-600 hover:text-neon-green transition-colors">Career Guidance</a></li>
-                                <li><a href="#" className="text-gray-600 hover:text-neon-green transition-colors">Success Stories</a></li>
-                                <li><a href="#" className="text-gray-600 hover:text-neon-green transition-colors">Blog</a></li>
-                                <li><a href="#" className="text-gray-600 hover:text-neon-green transition-colors">Contact</a></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div className="mt-12 pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <p className="text-gray-500">© 2026 HireGo Skills. All rights reserved.</p>
-                        <button
-                            onClick={() => navigate('/')}
-                            className="flex items-center gap-2 text-gray-500 hover:text-neon-cyan transition-colors cursor-pointer"
-                        >
-                            <Rocket className="w-4 h-4" />
-                            <span>Visit HireGo AI Hiring Platform</span>
-                        </button>
-                    </div>
-                </div>
-            </footer>
         </div>
     );
 };

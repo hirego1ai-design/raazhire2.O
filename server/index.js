@@ -11,6 +11,7 @@ import Razorpay from 'razorpay';
 import { setupAIRoutes } from './routes/ai_routes.js';
 import { setupAdminRoutes } from './routes/admin_routes.js';
 import { setupPortalRoutes } from './routes/portal_routes.js';
+import { setupPageRoutes } from './routes/page_routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -23,7 +24,7 @@ const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.static(join(__dirname, 'public')));
 
 // Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -792,6 +793,9 @@ setupAdminRoutes(app, supabase, authenticateUser, encrypt, decrypt, readLocalDb,
 
 // Setup Portal Routes
 setupPortalRoutes(app, supabase, authenticateUser);
+
+// Setup Page Routes
+setupPageRoutes(app, supabase, authenticateUser, readLocalDb, writeLocalDb);
 
 // Setup Upskill Routes
 import upskillRoutes from './routes/upskill_routes.js';
