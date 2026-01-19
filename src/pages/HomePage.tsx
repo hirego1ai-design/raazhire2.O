@@ -296,7 +296,8 @@ const StatItemCard: React.FC<StatProps> = ({ value, label, context, icon: Icon, 
         cyan: { gradient: 'from-blue-500 via-cyan-400 to-teal-500' },
         purple: { gradient: 'from-purple-600 via-violet-500 to-fuchsia-600' },
         green: { gradient: 'from-emerald-500 via-green-400 to-teal-500' },
-        pink: { gradient: 'from-rose-500 via-pink-500 to-orange-500' }
+        pink: { gradient: 'from-rose-500 via-pink-500 to-orange-500' },
+        india: { gradient: 'from-indigo-600 via-blue-500 to-cyan-600' }
     };
 
     return (
