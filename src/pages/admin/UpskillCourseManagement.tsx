@@ -57,7 +57,7 @@ const UpskillCourseManagement: React.FC = () => {
                 setIsLoading(false);
                 return;
             }
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabase!.auth.getSession();
             const token = session?.access_token;
 
             const response = await fetch(endpoints.admin.upskill.courses, {
@@ -101,7 +101,7 @@ const UpskillCourseManagement: React.FC = () => {
                 alert('Authentication not configured');
                 return;
             }
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabase!.auth.getSession();
             const token = session?.access_token;
 
             const response = await fetch(`${endpoints.admin.upskill.courses}/${id}`, {
@@ -132,7 +132,7 @@ const UpskillCourseManagement: React.FC = () => {
 
             const newStatus = course.status === 'Published' ? 'Draft' : 'Published';
 
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabase!.auth.getSession();
             const token = session?.access_token;
 
             const response = await fetch(`${endpoints.admin.upskill.courses}/${id}/status`, {
@@ -204,7 +204,7 @@ const UpskillCourseManagement: React.FC = () => {
                     alert('Authentication not configured');
                     return;
                 }
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session } } = await supabase!.auth.getSession();
                 const token = session?.access_token;
 
                 const payload = { ...formData, lessons: course ? course.lessons : 0 }; // Preserve or init lessons

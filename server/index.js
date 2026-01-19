@@ -797,13 +797,18 @@ setupPortalRoutes(app, supabase, authenticateUser);
 import upskillRoutes from './routes/upskill_routes.js';
 app.use('/api/upskill', upskillRoutes);
 
-// Start server
-app.listen(port, () => {
-    console.log(`✅ Server running on http://localhost:${port}`);
-    if (!supabase) {
-        console.warn('⚠️  Warning: Supabase credentials not found in .env');
-    }
-    if (ENCRYPTION_KEY === 'default-encryption-key-change-in-production') {
-        console.warn('⚠️  Warning: Using default encryption key. Set ENCRYPTION_KEY in .env for production!');
-    }
-});
+// Start server only if not in Vercel serverless environment
+if (!process.env.VERCEL) {
+    app.listen(port, () => {
+        console.log(`✅ Server running on http://localhost:${port}`);
+        if (!supabase) {
+            console.warn('⚠️  Warning: Supabase credentials not found in .env');
+        }
+        if (ENCRYPTION_KEY === 'default-encryption-key-change-in-production') {
+            console.warn('⚠️  Warning: Using default encryption key. Set ENCRYPTION_KEY in .env for production!');
+        }
+    });
+}
+
+// Export for Vercel serverless
+export default app;
