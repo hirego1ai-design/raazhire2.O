@@ -52,11 +52,6 @@ const UpskillCourseManagement: React.FC = () => {
     const fetchCourses = async () => {
         setIsLoading(true);
         try {
-            if (!supabase) {
-                console.warn('Supabase not configured');
-                setIsLoading(false);
-                return;
-            }
             const { data: { session } } = await supabase!.auth.getSession();
             const token = session?.access_token;
 
@@ -97,10 +92,6 @@ const UpskillCourseManagement: React.FC = () => {
         if (!window.confirm('Are you sure you want to delete this course?')) return;
 
         try {
-            if (!supabase) {
-                alert('Authentication not configured');
-                return;
-            }
             const { data: { session } } = await supabase!.auth.getSession();
             const token = session?.access_token;
 
@@ -123,10 +114,7 @@ const UpskillCourseManagement: React.FC = () => {
 
     const handleToggleStatus = async (id: string) => {
         try {
-            if (!supabase) {
-                alert('Authentication not configured');
-                return;
-            }
+
             const course = courses.find(c => c.id === id);
             if (!course) return;
 
@@ -200,10 +188,6 @@ const UpskillCourseManagement: React.FC = () => {
 
         const handleSave = async () => {
             try {
-                if (!supabase) {
-                    alert('Authentication not configured');
-                    return;
-                }
                 const { data: { session } } = await supabase!.auth.getSession();
                 const token = session?.access_token;
 
