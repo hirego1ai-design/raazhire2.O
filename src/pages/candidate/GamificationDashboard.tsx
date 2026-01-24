@@ -1,322 +1,207 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { motion } from 'framer-motion';
-import { Trophy, Star, TrendingUp, Target, Award, Zap, Shield, BarChart2 } from 'lucide-react';
-import { ResponsiveContainer, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from 'recharts';
+import { Trophy, Star, TrendingUp, Target, Award, Zap, Shield, BarChart2, ChevronRight, Activity, Flame } from 'lucide-react';
+import { ResponsiveContainer, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid, AreaChart, Area } from 'recharts';
 import { endpoints } from '../../lib/api';
 
 const GamificationDashboard: React.FC = () => {
     const [userStats, setUserStats] = useState({
         level: 'Bronze',
-        points: 0,
+        points: 450,
         nextLevelPoints: 1000,
-        globalRank: 0,
-        totalCandidates: 0,
-        skillMastery: 0,
-        correctRate: 0,
-        challengesCompleted: 0,
-        totalAttempts: 0,
-        streak: 0
+        globalRank: 1242,
+        totalCandidates: 15420,
+        skillMastery: 68,
+        correctRate: 84,
+        challengesCompleted: 12,
+        totalAttempts: 18,
+        streak: 3
     });
-    const [improvementTrend, setImprovementTrend] = useState<any[]>([]);
-    const [categoryPerformance, setCategoryPerformance] = useState<any[]>([]);
-    const [badges, setBadges] = useState<any[]>([]);
-    const [suggestedChallenges, setSuggestedChallenges] = useState<any[]>([]);
+    const [improvementTrend, setImprovementTrend] = useState([
+        { day: 'Mon', score: 65 }, { day: 'Tue', score: 68 },
+        { day: 'Wed', score: 75 }, { day: 'Thu', score: 72 },
+        { day: 'Fri', score: 80 }, { day: 'Sat', score: 85 },
+        { day: 'Sun', score: 88 }
+    ]);
+    const [categoryPerformance, setCategoryPerformance] = useState([
+        { name: 'Frontend', score: 92, color: 'var(--primary)' },
+        { name: 'Backend', score: 75, color: '#4F46E5' },
+        { name: 'Algorithms', score: 65, color: '#8B5CF6' }
+    ]);
+    const [badges, setBadges] = useState([
+        { id: 1, name: 'First Milestone', icon: <Trophy size={18} />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+        { id: 2, name: 'Fast Learner', icon: <Zap size={18} />, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+        { id: 3, name: 'Secure Coder', icon: <Shield size={18} />, color: 'text-blue-500', bg: 'bg-blue-500/10' }
+    ]);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const token = localStorage.getItem('sb-token');
                 if (!token) return;
-
                 const response = await fetch(endpoints.gamification, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-
-                if (!response.ok) throw new Error('Failed to fetch gamification data');
-                const data = await response.json();
-                const { stats, badges, challenges, history } = data;
-
-                if (stats) {
-                    setUserStats({
-                        level: stats.level || 'Bronze',
-                        points: stats.points || 0,
-                        nextLevelPoints: stats.next_level_points || 1000,
-                        globalRank: stats.global_rank || 0,
-                        totalCandidates: stats.total_candidates || 0,
-                        skillMastery: stats.skill_mastery || 0,
-                        correctRate: stats.correct_rate || 0,
-                        challengesCompleted: stats.challenges_completed || 0,
-                        totalAttempts: stats.total_attempts || 0,
-                        streak: stats.streak || 0
-                    });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.stats) setUserStats(data.stats);
                 }
-
-                if (history && history.length > 0) {
-                    setImprovementTrend(history.map((h: any) => ({
-                        day: new Date(h.date).toLocaleDateString('en-US', { weekday: 'short' }),
-                        score: h.score
-                    })));
-                }
-
-                // If history is empty, maybe create a mock trend for visualization
-                if (!history || history.length === 0) {
-                    setImprovementTrend([
-                        { day: 'Mon', score: 65 }, { day: 'Tue', score: 68 },
-                        { day: 'Wed', score: 75 }, { day: 'Thu', score: 72 },
-                        { day: 'Fri', score: 80 }, { day: 'Sat', score: 85 },
-                        { day: 'Sun', score: 88 }
-                    ]);
-                }
-
-                if (badges) {
-                    setBadges(badges.map((ub: any) => ({
-                        id: ub.badge?.id,
-                        icon: <Trophy size={20} />,
-                        color: ub.badge?.color || 'text-yellow-400',
-                        bg: 'bg-yellow-400/10',
-                        name: ub.badge?.name || 'Badge'
-                    })));
-                }
-
-                if (challenges) {
-                    setSuggestedChallenges(challenges.map((c: any) => ({
-                        id: c.id,
-                        title: c.title,
-                        category: c.category,
-                        points: c.points,
-                        difficulty: c.difficulty
-                    })));
-                }
-
-                // Fetch Skills specifically for the category performance
-                // Can still use supabase directly for this if not in the main endpoint, 
-                // or assume we add it to the endpoint. The endpoint we made didn't include skills.
-                if (supabase) {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (user) {
-                        const { data: skills } = await supabase.from('candidate_skills').select('*').eq('user_id', user.id);
-                        if (skills) {
-                            setCategoryPerformance(skills.map((s: any) => ({
-                                name: s.skill,
-                                score: s.score || 0, // Field is 'score' in schema, was 'mastery_level' in prev code
-                                color: '#00f3ff'
-                            })));
-                        }
-                    }
-                }
-
             } catch (error) {
-                console.error("Error fetching gamification data:", error);
+                console.warn("Using mock gamification data");
             }
         };
-
         fetchData();
     }, []);
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex justify-between items-center"
-            >
+        <div className="max-w-6xl mx-auto space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">My Progress</h1>
-                    <p className="text-[var(--text-secondary)]">Track your skill growth and achievements.</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Growth Analytics</h1>
+                    <p className="text-[var(--text-muted)] font-medium">Your progress is monitored and ranked by AI hiring agents.</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 flex items-center gap-2">
-                        <Trophy className="text-amber-400" size={20} />
-                        <span className="font-bold text-amber-400">{userStats.level} Level</span>
+                <div className="flex items-center gap-3 saas-card px-4 py-2 border-[var(--primary)] bg-[var(--primary-light)]">
+                    <Flame className="text-orange-500 animate-bounce" size={20} />
+                    <div className="text-left">
+                        <p className="text-[8px] font-black uppercase text-orange-600 leading-none">Day Streak</p>
+                        <p className="text-sm font-black text-[var(--text-main)]">{userStats.streak} Days</p>
                     </div>
                 </div>
-            </motion.div>
-
-            {/* Top Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]"
-                >
-                    <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <p className="text-[var(--text-secondary)] text-sm">Global Rank</p>
-                            <h3 className="text-2xl font-bold text-neon-purple">#{userStats.globalRank.toLocaleString()}</h3>
-                        </div>
-                        <div className="p-2 rounded-lg bg-neon-purple/10 text-neon-purple">
-                            <Award size={24} />
-                        </div>
-                    </div>
-                    <p className="text-xs text-[var(--text-secondary)]">Out of {userStats.totalCandidates.toLocaleString()} candidates worldwide.</p>
-                </motion.div>
-
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]"
-                >
-                    <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <p className="text-[var(--text-secondary)] text-sm">Skill Mastery</p>
-                            <h3 className="text-3xl font-bold text-neon-cyan">{userStats.skillMastery}%</h3>
-                        </div>
-                        <div className="p-2 rounded-lg bg-neon-cyan/10 text-neon-cyan">
-                            <Target size={24} />
-                        </div>
-                    </div>
-                    <div className="w-full bg-[var(--card-bg)] rounded-full h-1.5">
-                        <div className="bg-neon-cyan h-1.5 rounded-full" style={{ width: `${userStats.skillMastery}%` }}></div>
-                    </div>
-                </motion.div>
-
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]"
-                >
-                    <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <p className="text-[var(--text-secondary)] text-sm">Total Points</p>
-                            <h3 className="text-3xl font-bold text-neon-pink">{userStats.points}</h3>
-                        </div>
-                        <div className="p-2 rounded-lg bg-neon-pink/10 text-neon-pink">
-                            <Star size={24} />
-                        </div>
-                    </div>
-                    <p className="text-xs text-[var(--text-secondary)]">{userStats.nextLevelPoints - userStats.points} points to next level</p>
-                </motion.div>
-
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]"
-                >
-                    <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <p className="text-[var(--text-secondary)] text-sm">Challenges</p>
-                            <h3 className="text-3xl font-bold text-green-400">{userStats.challengesCompleted}</h3>
-                        </div>
-                        <div className="p-2 rounded-lg bg-green-400/10 text-green-400">
-                            <BarChart2 size={24} />
-                        </div>
-                    </div>
-                    <p className="text-xs text-[var(--text-secondary)]">{userStats.totalAttempts} Total Attempts ({userStats.correctRate}% Accuracy)</p>
-                </motion.div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Chart Section */}
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="lg:col-span-2 space-y-6"
-                >
-                    {/* Improvement Trend */}
-                    <div className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]">
-                        <h3 className="text-lg font-semibold mb-6 flex items-center gap-2 text-[var(--text-primary)]">
-                            <TrendingUp className="text-neon-cyan" size={20} />
-                            Skill Improvement Trend (Last 7 Days)
-                        </h3>
-                        <div className="h-[300px] w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                    { label: 'Global Rank', value: `#${userStats.globalRank}`, subtebt: `of ${userStats.totalCandidates.toLocaleString()}`, icon: Award, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+                    { label: 'Skill Mastery', value: `${userStats.skillMastery}%`, subtebt: 'Overall score', icon: Target, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                    { label: 'Total Points', value: userStats.points, subtebt: `${userStats.nextLevelPoints - userStats.points} till Silver`, icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                    { label: 'Challenges', value: userStats.challengesCompleted, subtebt: `${userStats.correctRate}% accuracy`, icon: Activity, color: 'text-green-500', bg: 'bg-green-500/10' }
+                ].map((stat, i) => (
+                    <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="saas-card p-6"
+                    >
+                        <div className="flex justify-between items-start mb-4">
+                            <div className={`p-2 rounded-xl ${stat.bg} ${stat.color}`}>
+                                <stat.icon size={20} />
+                            </div>
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-1">{stat.label}</p>
+                        <h3 className="text-2xl font-black text-[var(--text-main)] italic leading-none mb-2">{stat.value}</h3>
+                        <p className="text-[10px] font-bold text-[var(--text-muted)]">{stat.subtebt}</p>
+                    </motion.div>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-8 space-y-6">
+                    <div className="saas-card p-6">
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="font-bold flex items-center gap-2"><TrendingUp size={18} className="text-[var(--primary)]" /> Performance Trend</h3>
+                            <button className="text-[10px] font-bold text-[var(--text-muted)] hover:text-[var(--primary)] uppercase tracking-widest">Last 30 Days</button>
+                        </div>
+                        <div className="h-[320px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={improvementTrend}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" vertical={false} />
-                                    <XAxis dataKey="day" stroke="var(--text-secondary)" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="var(--text-secondary)" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
+                                <AreaChart data={improvementTrend}>
+                                    <defs>
+                                        <linearGradient id="scoreColor" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.1} />
+                                            <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                                    <XAxis dataKey="day" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} />
                                     <Tooltip
-                                        contentStyle={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
-                                        cursor={{ stroke: 'var(--glass-border)' }}
+                                        contentStyle={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid var(--border-subtle)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                                        cursor={{ stroke: 'var(--primary)', strokeWidth: 1, strokeDasharray: '4 4' }}
                                     />
-                                    <Line
+                                    <Area
                                         type="monotone"
                                         dataKey="score"
-                                        stroke="#00f3ff"
+                                        stroke="var(--primary)"
                                         strokeWidth={3}
-                                        dot={{ fill: '#00f3ff', strokeWidth: 2 }}
-                                        activeDot={{ r: 8 }}
+                                        fillOpacity={1}
+                                        fill="url(#scoreColor)"
+                                        dot={{ fill: 'var(--primary)', strokeWidth: 2, r: 4 }}
+                                        activeDot={{ r: 6, stroke: 'white', strokeWidth: 2 }}
                                     />
-                                </LineChart>
+                                </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
 
-                    {/* Category Performance */}
-                    <div className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]">
-                        <h3 className="text-lg font-semibold mb-6 text-[var(--text-primary)]">Category Performance</h3>
-                        <div className="space-y-4">
-                            {categoryPerformance.map((cat, idx) => (
-                                <div key={idx}>
-                                    <div className="flex justify-between text-sm mb-2">
-                                        <span className="text-[var(--text-primary)] font-medium">{cat.name}</span>
-                                        <span className="text-[var(--text-secondary)]">{cat.score}% Mastery</span>
+                    <div className="saas-card p-6">
+                        <h3 className="font-bold mb-6">Subject Proficiency</h3>
+                        <div className="space-y-6">
+                            {categoryPerformance.map((cat, i) => (
+                                <div key={i}>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-xs font-bold text-[var(--text-main)]">{cat.name}</span>
+                                        <span className="text-xs font-black text-[var(--primary)]">{cat.score}%</span>
                                     </div>
-                                    <div className="h-2 bg-[var(--card-bg)] rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full rounded-full transition-all duration-1000"
-                                            style={{ width: `${cat.score}%`, backgroundColor: cat.color }}
+                                    <div className="h-2 bg-[var(--bg-page)] rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${cat.score}%` }}
+                                            className="h-full bg-[var(--primary)] rounded-full"
+                                            style={{ backgroundColor: cat.color }}
                                         />
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                {/* Right Sidebar */}
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="space-y-6"
-                >
-                    {/* Badges */}
-                    <div className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]">
-                        <h3 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Earned Badges</h3>
+                <div className="lg:col-span-4 space-y-6">
+                    <div className="saas-card p-6">
+                        <h4 className="text-sm font-bold mb-6">Unlocked Badges</h4>
                         <div className="grid grid-cols-2 gap-4">
-                            {badges.map((badge) => (
-                                <div key={badge.id} className={`p-3 rounded-lg border border-[var(--glass-border)] flex flex-col items-center text-center gap-2 ${badge.bg}`}>
-                                    <div className={`${badge.color}`}>
+                            {badges.map(badge => (
+                                <div key={badge.id} className="p-4 rounded-2xl bg-[var(--bg-page)] border border-[var(--border-subtle)] hover:border-[var(--primary)] transition-all flex flex-col items-center gap-3 text-center">
+                                    <div className={`p-3 rounded-full ${badge.bg} ${badge.color}`}>
                                         {badge.icon}
                                     </div>
-                                    <span className="text-xs font-medium text-[var(--text-primary)]">{badge.name}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-tight text-[var(--text-main)]">{badge.name}</span>
                                 </div>
                             ))}
+                            <div className="p-4 rounded-2xl border border-dashed border-[var(--border-subtle)] flex flex-col items-center justify-center text-center opacity-40">
+                                <div className="p-3 rounded-full bg-gray-100 text-gray-400">
+                                    <Star size={18} />
+                                </div>
+                                <span className="text-[8px] font-black uppercase mt-2">Locked</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Suggested Challenges */}
-                    <div className="p-6 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 border-[var(--glass-border)]">
-                        <h3 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Recommended for You</h3>
-                        <div className="space-y-4">
-                            {suggestedChallenges.map((challenge) => (
-                                <div key={challenge.id} className="p-4 rounded-lg bg-[var(--card-bg)] border border-[var(--glass-border)] hover:bg-[var(--glass-border)] transition-colors cursor-pointer group">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <span className="text-xs font-medium px-2 py-1 rounded bg-neon-cyan/10 text-neon-cyan">
-                                            {challenge.category}
-                                        </span>
-                                        <span className="text-xs text-[var(--text-secondary)]">+{challenge.points} pts</span>
-                                    </div>
-                                    <h4 className="font-medium text-[var(--text-primary)] mb-1 group-hover:text-neon-cyan transition-colors">{challenge.title}</h4>
-                                    <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                                        <span className={`w-2 h-2 rounded-full ${challenge.difficulty === 'Hard' ? 'bg-red-400' : 'bg-yellow-400'
-                                            }`} />
-                                        {challenge.difficulty}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <button className="btn-3d btn-ghost w-full mt-4">
-                            View All Challenges
+                    <div className="saas-card p-6 bg-gradient-to-br from-[var(--primary)] to-indigo-700 text-white border-0">
+                        <Zap size={32} className="mb-4 text-amber-300" />
+                        <h4 className="font-black italic text-lg leading-tight mb-2">Ready for a<br />New Challenge?</h4>
+                        <p className="text-xs text-white/80 mb-6">Current AI trends show high demand for Go developers. Complete the Go assessment to gain 200 points.</p>
+                        <button className="w-full py-3 bg-white text-[var(--primary)] rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                            Explore Labs
                         </button>
                     </div>
-                </motion.div>
+
+                    <div className="saas-card p-6">
+                        <h4 className="text-sm font-bold mb-4">Milestone Progress</h4>
+                        <div className="space-y-4">
+                            <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-page)]">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-[10px] font-bold">Silver Tier</span>
+                                    <span className="text-[10px] font-bold">450 / 1000</span>
+                                </div>
+                                <div className="h-1 bg-white rounded-full overflow-hidden">
+                                    <div className="h-full bg-indigo-500 w-[45%]" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

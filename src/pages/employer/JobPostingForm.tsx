@@ -570,16 +570,16 @@ export default function JobPostingForm() {
                                 />
                                 {/* Autocomplete Dropdown */}
                                 {showJobTitleDropdown && jobTitleSuggestions.length > 0 && (
-                                    <div className="absolute z-50 w-full mt-1 bg-[#1a1f3a] border border-neon-cyan/30 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                    <div className="absolute z-50 w-full mt-1 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl shadow-2xl max-h-60 overflow-y-auto">
                                         {jobTitleSuggestions.map((title, index) => (
                                             <button
                                                 key={index}
                                                 type="button"
                                                 onClick={() => selectJobTitle(title)}
-                                                className="w-full text-left px-4 py-2.5 hover:bg-neon-cyan/10 text-white border-b border-white/5 last:border-b-0 transition-colors"
+                                                className="w-full text-left px-4 py-3 hover:bg-indigo-600/10 text-[var(--text-main)] border-b border-[var(--border-subtle)] last:border-b-0 transition-colors font-bold text-xs"
                                             >
-                                                <div className="flex items-center gap-2">
-                                                    <Briefcase size={14} className="text-neon-cyan" />
+                                                <div className="flex items-center gap-3">
+                                                    <Briefcase size={14} className="text-indigo-600" />
                                                     <span>{title}</span>
                                                 </div>
                                             </button>
@@ -588,18 +588,18 @@ export default function JobPostingForm() {
                                 )}
                                 {/* Add New Job Title Button */}
                                 {showAddJobTitle && (
-                                    <div className="absolute z-50 w-full mt-1 bg-[#1a1f3a] border border-neon-purple/30 rounded-lg shadow-lg p-4">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm text-gray-300">Job title not found. Add "{form.jobTitle}"?</span>
+                                    <div className="absolute z-50 w-full mt-1 bg-[var(--bg-surface)] border border-indigo-600/30 rounded-xl shadow-2xl p-5">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">New Title detected. Add "{form.jobTitle}"?</span>
                                             <button
                                                 type="button"
                                                 onMouseDown={(e) => {
                                                     e.preventDefault();
                                                     handleAddNewJobTitle();
                                                 }}
-                                                className="flex items-center gap-2 px-4 py-2 bg-neon-purple hover:bg-neon-purple/80 text-white rounded-lg transition-colors font-semibold"
+                                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-widest shadow-lg shadow-indigo-600/20"
                                             >
-                                                <Plus size={16} /> Add
+                                                <Plus size={14} /> Add Title
                                             </button>
                                         </div>
                                     </div>
@@ -659,56 +659,40 @@ export default function JobPostingForm() {
                             <InputGroup label="Openings" type="number" min="1" name="openings" value={form.openings} onChange={handleChange} />
                         </div>
 
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-end">
-                                <label className="block text-sm font-semibold text-white">Job Description</label>
-                                <button
-                                    type="button"
-                                    onClick={handleAiGenerate}
-                                    disabled={isLoadingSkills}
-                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isLoadingSkills ? (
-                                        <>
-                                            <Loader className="animate-spin" size={16} /> Generating...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sparkles size={16} /> AI Generate JD
-                                        </>
-                                    )}
-                                </button>
-                            </div>
+                        <div className="flex justify-between items-end">
+                            <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">Job Description</label>
+                            <button
+                                type="button"
+                                onClick={handleAiGenerate}
+                                disabled={isLoadingSkills}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-600/20 transition-all transform hover:-translate-y-0.5 disabled:opacity-50"
+                            >
+                                {isLoadingSkills ? (
+                                    <Loader className="animate-spin" size={14} />
+                                ) : (
+                                    <Sparkles size={14} />
+                                )}
+                                {isLoadingSkills ? 'Generating...' : 'AI Generate JD'}
+                            </button>
+                        </div>
 
-                            {/* Rich Text Editor with 3D Effect */}
-                            <div className="relative group">
-                                {/* 3D Shadow layers */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/20 to-neon-purple/20 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                                <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/10 to-neon-purple/10 rounded-2xl translate-x-1 translate-y-1"></div>
-
-                                {/* Main Editor Container */}
-                                <div className="relative bg-gradient-to-br from-[#1a1f3a] via-[#0f172a] to-[#1e293b] rounded-2xl overflow-hidden border-2 border-neon-cyan/30 shadow-[0_8px_30px_rgb(0,243,255,0.12),0_0_0_1px_rgb(188,19,254,0.1)] hover:shadow-[0_12px_40px_rgb(0,243,255,0.2),0_0_0_1px_rgb(188,19,254,0.15)] transition-all duration-300">
-                                    {/* Neon glow effect on top */}
-                                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-neon-cyan to-transparent opacity-60"></div>
-
-                                    {/* Editor wrapper with neon inner background */}
-                                    <div className="p-2 bg-gradient-to-br from-neon-cyan/5 via-transparent to-neon-purple/5">
-                                        <div className="rich-text-editor-wrapper bg-[#0a0e1f]/80 rounded-xl backdrop-blur-sm">
-                                            <ReactQuill
-                                                theme="snow"
-                                                value={form.jobDescription}
-                                                onChange={(content) => setForm(s => ({ ...s, jobDescription: content }))}
-                                                modules={quillModules}
-                                                formats={quillFormats}
-                                                placeholder="Start typing or click 'AI Generate JD' to create a professional job description..."
-                                                className="job-description-editor"
-                                                style={{ height: '500px' }}
-                                            />
-                                        </div>
+                        {/* Rich Text Editor - SaaS Style */}
+                        <div className="relative">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-[22px] blur opacity-50" />
+                            <div className="relative bg-[var(--bg-surface)] rounded-2xl overflow-hidden border border-[var(--border-subtle)] shadow-sm focus-within:border-indigo-600/50 transition-all">
+                                <div className="p-1">
+                                    <div className="rich-text-editor-wrapper bg-[var(--bg-page)]/50 rounded-xl">
+                                        <ReactQuill
+                                            theme="snow"
+                                            value={form.jobDescription}
+                                            onChange={(content) => setForm(s => ({ ...s, jobDescription: content }))}
+                                            modules={quillModules}
+                                            formats={quillFormats}
+                                            placeholder="Start typing or click 'AI Generate JD' to create a professional job description..."
+                                            className="job-description-editor"
+                                            style={{ height: '400px' }}
+                                        />
                                     </div>
-
-                                    {/* Bottom neon glow */}
-                                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-neon-purple to-transparent opacity-60"></div>
                                 </div>
                             </div>
                         </div>
@@ -718,31 +702,27 @@ export default function JobPostingForm() {
                 return (
                     <div className="space-y-6">
                         {/* Selected Skills - Drop Zone */}
-                        <div
-                            className="space-y-3 p-4 bg-[#0f172a] border-2 border-dashed border-gray-700 rounded-xl min-h-[120px] max-h-[180px] overflow-y-auto"
-                            onDrop={handleDrop}
-                            onDragOver={handleDragOver}
-                        >
-                            <label className="block text-sm font-bold text-gray-300 flex items-center gap-2 sticky top-0 bg-[#0f172a] pb-2">
-                                <Sparkles size={16} className="text-neon-cyan" />
-                                Required Skills (Drag & Drop or Click)
+                        <div className="space-y-3 p-6 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl min-h-[140px]">
+                            <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-2">
+                                <Sparkles size={14} className="text-indigo-600" />
+                                Required Skills
                             </label>
                             <div className="flex flex-wrap gap-2">
                                 {form.skills.length === 0 ? (
-                                    <p className="text-gray-500 text-sm py-2">Drag skills here or click on suggested skills below</p>
+                                    <p className="text-[var(--text-muted)] text-xs py-4 font-medium italic">Drop skills here or select from suggestions below...</p>
                                 ) : (
                                     form.skills.map((skill) => (
                                         <div
                                             key={skill}
-                                            className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-neon-cyan/20 to-neon-purple/20 border border-neon-cyan/50 text-white text-sm font-medium flex items-center gap-2 group hover:scale-105 transition-transform"
+                                            className="px-4 py-2 rounded-xl bg-[var(--bg-page)] border border-indigo-600/20 text-[var(--text-main)] text-xs font-bold flex items-center gap-3 group hover:border-indigo-600/40 transition-all"
                                         >
                                             <span>{skill}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => removeSkill(skill)}
-                                                className="opacity-70 hover:opacity-100 hover:text-red-400 transition-colors"
+                                                className="text-[var(--text-muted)] hover:text-red-500 transition-colors"
                                             >
-                                                <X size={12} />
+                                                <X size={14} />
                                             </button>
                                         </div>
                                     ))
@@ -752,26 +732,24 @@ export default function JobPostingForm() {
 
                         {/* AI-Suggested Skills */}
                         {isLoadingSkills && (
-                            <div className="flex items-center justify-center gap-2 py-4">
-                                <Loader className="animate-spin text-neon-cyan" size={20} />
-                                <span className="text-gray-400">AI is generating skills for {form.jobTitle}...</span>
+                            <div className="flex items-center justify-center gap-3 py-6 bg-indigo-500/5 rounded-2xl border border-indigo-500/10 border-dashed">
+                                <Loader className="animate-spin text-indigo-600" size={18} />
+                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">AI Generating intelligence for {form.jobTitle}...</span>
                             </div>
                         )}
 
                         {aiGeneratedSkills.length > 0 && (
-                            <div className="space-y-3 p-4 bg-green-500/5 border border-green-500/20 rounded-xl">
-                                <p className="text-sm font-medium text-green-400 flex items-center gap-2">
-                                    <Sparkles size={14} className="animate-pulse" /> AI-Powered Suggestions for {form.jobTitle}:
+                            <div className="space-y-4 p-5 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl">
+                                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                                    <Sparkles size={12} className="animate-pulse" /> AI-Augmented Skills
                                 </p>
                                 <div className="flex flex-wrap gap-2">
                                     {aiGeneratedSkills.map((skill) => (
                                         <button
                                             key={skill}
                                             type="button"
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, skill)}
                                             onClick={() => addSkill(skill)}
-                                            className="px-3 py-2 text-sm font-medium rounded-lg bg-green-500/10 border border-green-500/30 text-green-300 hover:bg-green-500/20 hover:border-green-500/50 transition-all cursor-move hover:scale-105 flex items-center gap-1"
+                                            className="px-3 py-2 text-xs font-bold rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2"
                                         >
                                             <Plus size={12} /> {skill}
                                         </button>
@@ -815,32 +793,28 @@ export default function JobPostingForm() {
                         </div>
 
                         {/* Education Requirements */}
-                        <div className="space-y-4 p-4 bg-[var(--bg-secondary)] border border-[var(--glass-border)] rounded-xl">
-                            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                <GraduationCap size={18} className="text-neon-cyan" /> Education Requirements
+                        <div className="space-y-6 p-6 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl">
+                            <h3 className="text-xs font-black text-[var(--text-main)] uppercase tracking-widest flex items-center gap-3">
+                                <GraduationCap size={16} className="text-indigo-600" /> Education Framework
                             </h3>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <SearchableMultiSelect
-                                    label="Education Level (Select multiple)"
-                                    placeholder="e.g., B.Tech, MBA, Ph.D..."
+                                    label="Education Level"
+                                    placeholder="Select qualifications..."
                                     options={educationLevels}
                                     selected={form.educationLevel}
                                     onChange={(val) => handleMultiSelectChange('educationLevel', val)}
                                 />
 
                                 <SearchableMultiSelect
-                                    label="Field of Study (Select multiple)"
-                                    placeholder="e.g., Computer Science, Marketing..."
+                                    label="Specialization"
+                                    placeholder="Select major fields..."
                                     options={fieldsOfStudy}
                                     selected={form.fieldOfStudy}
                                     onChange={(val) => handleMultiSelectChange('fieldOfStudy', val)}
                                 />
                             </div>
-
-                            <p className="text-xs text-gray-400 italic">
-                                💡 Tip: Select multiple education levels and fields to broaden your candidate pool
-                            </p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <InputGroup label="Working Hours" name="workingHours" value={form.workingHours} onChange={handleChange} placeholder="e.g. 9 AM - 6 PM" />
@@ -856,13 +830,13 @@ export default function JobPostingForm() {
             case 4:
                 return (
                     <div className="space-y-6">
-                        <div className="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--glass-border)] shadow-inner">
-                            <h3 className="font-semibold mb-4 flex items-center gap-2 text-[var(--text-primary)]">
-                                <Globe size={18} /> Interview Settings
+                        <div className="p-6 rounded-2xl bg-indigo-600/5 border border-indigo-600/10">
+                            <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                <Globe size={16} /> Automation Settings
                             </h3>
                             <div className="space-y-4">
-                                <Toggle label="Automatic Interview Scheduling" checked={form.autoSchedule} onChange={() => setForm(s => ({ ...s, autoSchedule: !s.autoSchedule }))} />
-                                <Toggle label="Enable Virtual Interviews" checked={form.enableVirtualInterview} onChange={() => setForm(s => ({ ...s, enableVirtualInterview: !s.enableVirtualInterview }))} />
+                                <Toggle label="Predictive Interview Scheduling" checked={form.autoSchedule} onChange={() => setForm(s => ({ ...s, autoSchedule: !s.autoSchedule }))} />
+                                <Toggle label="Virtual Assessment Hub" checked={form.enableVirtualInterview} onChange={() => setForm(s => ({ ...s, enableVirtualInterview: !s.enableVirtualInterview }))} />
                             </div>
                         </div>
 
@@ -883,197 +857,134 @@ export default function JobPostingForm() {
                 );
             case 5:
                 return (
-                    <div className="space-y-6">
-                        <div className="text-center mb-6">
-                            <h2 className="text-3xl font-bold text-white mb-2">Review Your Job Posting</h2>
-                            <p className="text-gray-400">Please review all details before selecting a plan</p>
+                    <div className="space-y-8">
+                        <div className="text-center mb-10">
+                            <h2 className="text-3xl font-black text-[var(--text-main)] uppercase tracking-[0.2em] mb-2">Final Review</h2>
+                            <p className="text-[var(--text-muted)] font-medium">Verify all intelligence before deployment.</p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Job Basics */}
-                            <div className="p-6 rounded-xl glass border border-neon-cyan/30">
-                                <h3 className="text-lg font-bold text-neon-cyan mb-4 flex items-center gap-2">
-                                    <Briefcase size={18} /> Job Basics
+                            <div className="p-6 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-indigo-600/30 transition-all">
+                                <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-3">
+                                    <Briefcase size={14} /> Core Metadata
                                 </h3>
-                                <div className="space-y-3 text-sm">
-                                    <div><span className="text-gray-400">Title:</span> <span className="text-white font-medium">{form.jobTitle || 'Not specified'}</span></div>
-                                    <div><span className="text-gray-400">Company:</span> <span className="text-white font-medium">{form.company || 'Not specified'}</span></div>
-                                    <div><span className="text-gray-400">Location:</span> <span className="text-white font-medium">{form.city}, {form.state}, {form.country}</span></div>
-                                    <div><span className="text-gray-400">Work Mode:</span> <span className="text-white font-medium capitalize">{form.remoteType}</span></div>
-                                    <div><span className="text-gray-400">Job Type:</span> <span className="text-white font-medium capitalize">{form.jobType.replace('_', ' ')}</span></div>
+                                <div className="space-y-4 text-xs">
+                                    <div className="flex justify-between border-b border-[var(--border-subtle)]/50 pb-2"><span className="text-[var(--text-muted)] uppercase tracking-wider font-bold">Role</span> <span className="text-[var(--text-main)] font-black">{form.jobTitle || 'N/A'}</span></div>
+                                    <div className="flex justify-between border-b border-[var(--border-subtle)]/50 pb-2"><span className="text-[var(--text-muted)] uppercase tracking-wider font-bold">Company</span> <span className="text-[var(--text-main)] font-black">{form.company || 'N/A'}</span></div>
+                                    <div className="flex justify-between border-b border-[var(--border-subtle)]/50 pb-2"><span className="text-[var(--text-muted)] uppercase tracking-wider font-bold">Region</span> <span className="text-[var(--text-main)] font-black">{form.city}, {form.country}</span></div>
+                                    <div className="flex justify-between border-b border-[var(--border-subtle)]/50 pb-2"><span className="text-[var(--text-muted)] uppercase tracking-wider font-bold">Work mode</span> <span className="text-[var(--text-main)] font-black capitalize">{form.remoteType}</span></div>
                                 </div>
                             </div>
 
                             {/* Salary & Experience */}
-                            <div className="p-6 rounded-xl glass border border-neon-purple/30">
-                                <h3 className="text-lg font-bold text-neon-purple mb-4 flex items-center gap-2">
-                                    <DollarSign size={18} /> Compensation & Experience
+                            <div className="p-6 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-indigo-600/30 transition-all">
+                                <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-3">
+                                    <DollarSign size={14} /> Compensation Map
                                 </h3>
-                                <div className="space-y-3 text-sm">
-                                    <div><span className="text-gray-400">Salary Range:</span> <span className="text-white font-medium">{form.currency} {form.salaryMin} - {form.salaryMax}</span></div>
-                                    <div><span className="text-gray-400">Experience:</span> <span className="text-white font-medium">{form.experience || 'Not specified'}</span></div>
-                                    <div><span className="text-gray-400">Openings:</span> <span className="text-white font-medium">{form.openings}</span></div>
-                                    <div><span className="text-gray-400">Working Hours:</span> <span className="text-white font-medium">{form.workingHours || 'Not specified'}</span></div>
-                                    <div><span className="text-gray-400">Shift:</span> <span className="text-white font-medium capitalize">{form.shiftType || 'Not specified'}</span></div>
-                                </div>
-                            </div>
-
-                            {/* Skills */}
-                            <div className="p-6 rounded-xl glass border border-green-500/30">
-                                <h3 className="text-lg font-bold text-green-400 mb-4 flex items-center gap-2">
-                                    <Sparkles size={18} /> Required Skills
-                                </h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {form.skills.length > 0 ? (
-                                        form.skills.map(skill => (
-                                            <span key={skill} className="px-3 py-1 bg-green-500/20 border border-green-500/40 text-green-300 rounded-lg text-sm">
-                                                {skill}
-                                            </span>
-                                        ))
-                                    ) : (
-                                        <p className="text-gray-500 text-sm">No skills specified</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Education */}
-                            <div className="p-6 rounded-xl glass border border-blue-500/30">
-                                <h3 className="text-lg font-bold text-blue-400 mb-4 flex items-center gap-2">
-                                    <GraduationCap size={18} /> Education Requirements
-                                </h3>
-                                <div className="space-y-3 text-sm">
-                                    <div>
-                                        <span className="text-gray-400">Level:</span>
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {form.educationLevel.length > 0 ? (
-                                                form.educationLevel.map(edu => (
-                                                    <span key={edu} className="px-2 py-1 bg-blue-500/20 border border-blue-500/40 text-blue-300 rounded text-xs">
-                                                        {edu}
-                                                    </span>
-                                                ))
-                                            ) : (
-                                                <span className="text-gray-500">Not specified</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-400">Field of Study:</span>
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {form.fieldOfStudy.length > 0 ? (
-                                                form.fieldOfStudy.map(field => (
-                                                    <span key={field} className="px-2 py-1 bg-blue-500/20 border border-blue-500/40 text-blue-300 rounded text-xs">
-                                                        {field}
-                                                    </span>
-                                                ))
-                                            ) : (
-                                                <span className="text-gray-500">Not specified</span>
-                                            )}
-                                        </div>
-                                    </div>
+                                <div className="space-y-4 text-xs">
+                                    <div className="flex justify-between border-b border-[var(--border-subtle)]/50 pb-2"><span className="text-[var(--text-muted)] uppercase tracking-wider font-bold">Budget Range</span> <span className="text-emerald-500 font-black">{form.currency} {form.salaryMin} - {form.salaryMax}</span></div>
+                                    <div className="flex justify-between border-b border-[var(--border-subtle)]/50 pb-2"><span className="text-[var(--text-muted)] uppercase tracking-wider font-bold">Seniority</span> <span className="text-[var(--text-main)] font-black capitalize">{form.experience}</span></div>
+                                    <div className="flex justify-between border-b border-[var(--border-subtle)]/50 pb-2"><span className="text-[var(--text-muted)] uppercase tracking-wider font-bold">Headcount</span> <span className="text-[var(--text-main)] font-black">{form.openings}</span></div>
+                                    <div className="flex justify-between border-b border-[var(--border-subtle)]/50 pb-2"><span className="text-[var(--text-muted)] uppercase tracking-wider font-bold">Shift</span> <span className="text-[var(--text-main)] font-black capitalize">{form.shiftType}</span></div>
                                 </div>
                             </div>
 
                             {/* Job Description Preview */}
-                            <div className="md:col-span-2 p-6 rounded-xl glass border border-white/20">
-                                <h3 className="text-lg font-bold text-white mb-4">Job Description</h3>
+                            <div className="md:col-span-2 p-8 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+                                <h3 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-6">Briefing Document</h3>
                                 <div
-                                    className="prose prose-invert max-w-none text-sm bg-black/20 p-4 rounded-lg max-h-[300px] overflow-y-auto"
+                                    className="prose prose-invert max-w-none text-sm text-[var(--text-muted)] bg-[var(--bg-page)]/50 p-6 rounded-xl border border-[var(--border-subtle)]/50 max-h-[300px] overflow-y-auto"
                                     dangerouslySetInnerHTML={{ __html: form.jobDescription || '<p class="text-gray-500">No job description provided</p>' }}
                                 />
                             </div>
 
                             {/* Interview Settings */}
-                            <div className="md:col-span-2 p-6 rounded-xl glass border border-yellow-500/30">
-                                <h3 className="text-lg font-bold text-yellow-400 mb-4 flex items-center gap-2">
-                                    <Calendar size={18} /> Interview Settings
+                            <div className="md:col-span-2 p-6 rounded-2xl bg-indigo-600/5 border border-indigo-600/10">
+                                <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-6 flex items-center gap-3">
+                                    <Calendar size={14} /> Automation Summary
                                 </h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                    <div><span className="text-gray-400">Auto Schedule:</span> <span className="text-white font-medium">{form.autoSchedule ? 'Yes' : 'No'}</span></div>
-                                    <div><span className="text-gray-400">Virtual Interviews:</span> <span className="text-white font-medium">{form.enableVirtualInterview ? 'Yes' : 'No'}</span></div>
-                                    <div><span className="text-gray-400">Timezone:</span> <span className="text-white font-medium">{form.timezone}</span></div>
-                                    <div><span className="text-gray-400">Recruiter:</span> <span className="text-white font-medium">{form.recruiterName || 'Not specified'}</span></div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-[10px] font-black uppercase tracking-widest">
+                                    <div><p className="text-[var(--text-muted)] mb-1">Predictive</p><p className={form.autoSchedule ? "text-emerald-500" : "text-red-500"}>{form.autoSchedule ? 'Active' : 'Offline'}</p></div>
+                                    <div><p className="text-[var(--text-muted)] mb-1">Virtual Hub</p><p className={form.enableVirtualInterview ? "text-emerald-500" : "text-red-500"}>{form.enableVirtualInterview ? 'Active' : 'Offline'}</p></div>
+                                    <div><p className="text-[var(--text-muted)] mb-1">Timezone</p><p className="text-[var(--text-main)]">{form.timezone.split('/')[1] || form.timezone}</p></div>
+                                    <div><p className="text-[var(--text-muted)] mb-1">Recruiter</p><p className="text-[var(--text-main)]">{form.recruiterName || 'AI'}</p></div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex justify-between items-center gap-8 mt-10">
-                            {/* Left Side - Back Button */}
+                        {/* Navigation Actions for Review Step */}
+                        <div className="flex justify-between items-center gap-8 mt-12 pt-8 border-t border-[var(--border-subtle)]">
                             <button
                                 type="button"
                                 onClick={prevStep}
-                                className="flex items-center gap-2 px-8 py-4 rounded-full font-bold text-white bg-gradient-to-r from-gray-600 via-gray-700 to-gray-800 hover:from-gray-700 hover:via-gray-800 hover:to-gray-900 shadow-[0_8px_20px_rgba(75,85,99,0.4)] hover:shadow-[0_12px_30px_rgba(75,85,99,0.6)] transform hover:-translate-y-1 transition-all duration-300"
+                                className="flex items-center gap-2 px-8 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-main)] bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-indigo-600/30 transition-all"
                             >
-                                <ChevronLeft size={20} /> Back
+                                <ChevronLeft size={18} /> Back
                             </button>
 
-                            {/* Center - Edit Button */}
-                            <button
-                                type="button"
-                                onClick={() => setCurrentStep(1)}
-                                className="flex items-center gap-2 px-8 py-4 rounded-full font-bold text-white bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 shadow-[0_8px_20px_rgba(249,115,22,0.4)] hover:shadow-[0_12px_30px_rgba(249,115,22,0.6)] transform hover:-translate-y-1 transition-all duration-300"
-                            >
-                                Edit Details
-                            </button>
+                            <div className="flex gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentStep(1)}
+                                    className="flex items-center gap-2 px-8 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-[var(--text-main)] bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-amber-500 transition-all"
+                                >
+                                    Modify Draft
+                                </button>
 
-                            {/* Right Side - Continue Button */}
-                            <button
-                                type="button"
-                                onClick={nextStep}
-                                className="flex items-center gap-2 px-8 py-4 rounded-full font-bold text-white bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 shadow-[0_8px_20px_rgba(168,85,247,0.4)] hover:shadow-[0_12px_30px_rgba(168,85,247,0.6)] transform hover:-translate-y-1 transition-all duration-300"
-                            >
-                                Continue to Plans <ChevronRight size={20} />
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={nextStep}
+                                    className="flex items-center gap-3 px-10 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/20 transform hover:-translate-y-0.5 transition-all group"
+                                >
+                                    Verify & Select Plan <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 );
             case 6:
                 return (
-                    <div className="space-y-8">
-                        <div className="text-center mb-6">
-                            <h2 className="text-2xl font-bold text-white">Select a Plan</h2>
-                            <p className="text-gray-400">Choose the best plan to boost your hiring process.</p>
+                    <div className="space-y-10">
+                        <div className="text-center">
+                            <h2 className="text-3xl font-black text-[var(--text-main)] uppercase tracking-[0.2em] mb-3">Deployment Tier</h2>
+                            <p className="text-[var(--text-muted)] font-medium">Select a transmission plan for your job posting.</p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {/* Pay Per Hire - First and Recommended */}
                             <div
                                 onClick={() => setSelectedPlan("pay-per-hire")}
-                                className={`relative p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${selectedPlan === "pay-per-hire" ? 'border-purple-500 bg-purple-500/10 shadow-xl scale-105' : 'border-purple-700 bg-[#0f172a] hover:border-purple-500 hover:shadow-md'}`}
+                                className={`relative p-8 rounded-3xl border-2 cursor-pointer transition-all duration-500 group ${selectedPlan === "pay-per-hire"
+                                    ? 'bg-indigo-600/10 border-indigo-600 shadow-2xl shadow-indigo-600/10 -translate-y-2'
+                                    : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] hover:border-indigo-600/50 hover:-translate-y-1'}`}
                             >
                                 {/* Recommended Badge */}
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full shadow-lg">
-                                    ⭐ RECOMMENDED
+                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-5 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg z-20">
+                                    ⭐ Recommended System
                                 </div>
 
                                 {selectedPlan === "pay-per-hire" && (
-                                    <div className="absolute -top-3 -right-3 bg-purple-500 text-white p-1 rounded-full shadow-md">
-                                        <CheckCircle size={20} />
+                                    <div className="absolute -top-3 -right-3 bg-indigo-600 text-white p-1.5 rounded-full shadow-lg z-20">
+                                        <CheckCircle size={24} />
                                     </div>
                                 )}
 
-                                <div className="flex flex-col justify-center items-center text-center mt-4">
-                                    <Award className="text-purple-500 mb-3" size={32} />
-                                    <h3 className="font-bold text-lg text-white">Pay-Per-Hire</h3>
-                                    <p className="text-sm text-purple-400 font-semibold mt-2">For Large Scale & Flexible Hiring</p>
-                                    <p className="text-sm text-gray-400 mt-2">We handle hiring end-to-end and charge per successful placement.</p>
+                                <div className="flex flex-col items-center text-center">
+                                    <div className={`w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 mb-6 group-hover:scale-110 transition-transform`}>
+                                        <Award size={32} />
+                                    </div>
+                                    <h3 className="font-black text-xl text-[var(--text-main)] uppercase tracking-widest mb-2">Pay-Per-Hire</h3>
+                                    <p className="text-[10px] text-indigo-400 font-black uppercase tracking-tighter mb-4">Enterprise Scaling</p>
+                                    <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed mb-8">Full-spectrum recruitment management with zero upfront overhead.</p>
 
-                                    <div className="mt-4 space-y-2 text-left w-full">
-                                        <div className="flex items-start gap-2 text-xs text-gray-300">
-                                            <CheckCircle size={14} className="text-purple-400 mt-0.5 flex-shrink-0" />
-                                            <span>Pay only for successful hires</span>
-                                        </div>
-                                        <div className="flex items-start gap-2 text-xs text-gray-300">
-                                            <CheckCircle size={14} className="text-purple-400 mt-0.5 flex-shrink-0" />
-                                            <span>Complete recruitment management</span>
-                                        </div>
-                                        <div className="flex items-start gap-2 text-xs text-gray-300">
-                                            <CheckCircle size={14} className="text-purple-400 mt-0.5 flex-shrink-0" />
-                                            <span>Ideal for bulk & ongoing hiring</span>
-                                        </div>
-                                        <div className="flex items-start gap-2 text-xs text-gray-300">
-                                            <CheckCircle size={14} className="text-purple-400 mt-0.5 flex-shrink-0" />
-                                            <span>Zero upfront cost</span>
-                                        </div>
+                                    <div className="space-y-3 w-full border-t border-[var(--border-subtle)] pt-6 text-left">
+                                        {["Pay on success only", "Full recruitment lifecycle", "Bulk hiring efficiency", "Zero upfront cost"].map((f, i) => (
+                                            <div key={i} className="flex items-center gap-3 text-[10px] font-bold text-[var(--text-main)]">
+                                                <CheckCircle size={14} className="text-emerald-500 shrink-0" />
+                                                <span className="uppercase tracking-wider">{f}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -1083,38 +994,45 @@ export default function JobPostingForm() {
                                 <div
                                     key={plan.id}
                                     onClick={() => setSelectedPlan(plan.id)}
-                                    className={`relative p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${selectedPlan === plan.id ? 'border-green-500 bg-green-500/10 shadow-xl scale-105' : 'border-gray-700 bg-[#0f172a] hover:border-gray-500 hover:shadow-md'}`}
+                                    className={`relative p-8 rounded-3xl border-2 cursor-pointer transition-all duration-500 group ${selectedPlan === plan.id
+                                        ? 'bg-emerald-500/10 border-emerald-500 shadow-2xl shadow-emerald-500/10 -translate-y-2'
+                                        : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] hover:border-emerald-500/50 hover:-translate-y-1'}`}
                                 >
                                     {selectedPlan === plan.id && (
-                                        <div className="absolute -top-3 -right-3 bg-green-500 text-white p-1 rounded-full shadow-md">
-                                            <CheckCircle size={20} />
+                                        <div className="absolute -top-3 -right-3 bg-emerald-500 text-white p-1.5 rounded-full shadow-lg z-20">
+                                            <CheckCircle size={24} />
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-start mb-4">
+                                    <div className="flex justify-between items-start mb-6">
                                         <div>
-                                            <h3 className="font-bold text-lg text-white">{plan.name}</h3>
-                                            <p className="text-sm text-gray-400">{plan.duration}</p>
+                                            <h3 className="font-black text-lg text-[var(--text-main)] uppercase tracking-widest">{plan.name}</h3>
+                                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{plan.duration}</p>
                                         </div>
-                                        <span className="text-xl font-bold text-green-400">{plan.price}</span>
+                                        <span className="text-2xl font-black text-emerald-500">{plan.price}</span>
                                     </div>
-                                    <ul className="space-y-2">
+                                    <div className="space-y-3 border-t border-[var(--border-subtle)] pt-6">
                                         {plan.features.map((feature, idx) => (
-                                            <li key={idx} className="text-sm text-gray-400 flex items-center gap-2">
-                                                <CheckCircle size={14} className="text-green-500" /> {feature}
-                                            </li>
+                                            <div key={idx} className="flex items-center gap-3 text-[10px] font-bold text-[var(--text-main)]">
+                                                <CheckCircle size={14} className="text-emerald-500 shrink-0" />
+                                                <span className="uppercase tracking-wider">{feature}</span>
+                                            </div>
                                         ))}
-                                    </ul>
+                                    </div>
                                 </div>
                             ))}
 
                             {/* Custom Plan */}
                             <div
                                 onClick={() => setSelectedPlan("custom")}
-                                className={`p-6 rounded-2xl border-2 cursor-pointer transition-all duration-300 flex flex-col justify-center items-center text-center ${selectedPlan === "custom" ? 'border-blue-500 bg-blue-500/10 shadow-xl scale-105' : 'border-gray-700 bg-[#0f172a] hover:border-gray-500 hover:shadow-md'}`}
+                                className={`relative p-8 rounded-3xl border-2 border-dashed cursor-pointer transition-all duration-500 flex flex-col justify-center items-center text-center ${selectedPlan === "custom"
+                                    ? 'bg-amber-500/10 border-amber-500 shadow-2xl shadow-amber-500/10 -translate-y-2'
+                                    : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] hover:border-amber-500/50 hover:-translate-y-1'}`}
                             >
-                                <Star className="text-blue-500 mb-3" size={32} />
-                                <h3 className="font-bold text-lg text-white">Custom Plan</h3>
-                                <p className="text-sm text-gray-400 mt-2">Our sales team will contact you for a personalized plan.</p>
+                                <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 mb-6 animate-pulse">
+                                    <Star size={32} />
+                                </div>
+                                <h3 className="font-black text-lg text-[var(--text-main)] uppercase tracking-widest mb-2">Custom</h3>
+                                <p className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-widest leading-relaxed">Personalized architecture for complex hiring needs.</p>
                             </div>
                         </div>
                     </div>
@@ -1125,164 +1043,159 @@ export default function JobPostingForm() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#334155] p-4 md:p-8 flex justify-center items-start font-sans pt-4">
-            <div className="w-full max-w-7xl">
-                {/* Stepper - Compact & Centered */}
-                <div className="flex justify-center items-center mb-10 relative max-w-4xl mx-auto px-4">
-                    {/* Background Line */}
-                    <div className="absolute left-0 top-1/2 w-full h-1 bg-gray-800 -z-10 rounded-full"></div>
+        <div className="space-y-12 max-w-5xl mx-auto py-8">
+            {/* Stepper */}
+            <div className="relative">
+                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-[var(--border-subtle)] -translate-y-1/2" />
+                <div
+                    className="absolute top-1/2 left-0 h-0.5 bg-indigo-600 transition-all duration-500 -translate-y-1/2 shadow-[0_0_15px_rgba(79,70,229,0.3)]"
+                    style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+                />
 
-                    {/* Active Progress Line */}
-                    <div
-                        className="absolute left-0 top-1/2 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-500 ease-out -z-10 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                        style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-                    ></div>
+                <div className="relative flex justify-between">
+                    {steps.map((step) => {
+                        const isActive = currentStep >= step.id;
+                        const isCurrent = currentStep === step.id;
 
-                    <div className="flex justify-between w-full">
-                        {steps.map((step) => {
-                            const isActive = currentStep >= step.id;
-                            return (
-                                <div
-                                    key={step.id}
-                                    className="flex flex-col items-center gap-3 cursor-pointer relative group"
-                                    onClick={() => setCurrentStep(step.id)}
-                                >
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isActive
-                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 border-transparent text-white shadow-[0_0_20px_rgba(124,58,237,0.6)] scale-110'
-                                        : 'bg-[#1e293b] border-gray-700 text-gray-500 group-hover:border-gray-500 group-hover:text-gray-300'
-                                        }`}>
-                                        <step.icon size={20} className={isActive ? 'drop-shadow-md' : ''} />
-                                    </div>
-                                    <span className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${isActive ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]' : 'text-gray-600'
-                                        }`}>
-                                        {step.title}
-                                    </span>
+                        return (
+                            <div
+                                key={step.id}
+                                className="flex flex-col items-center gap-3 cursor-pointer group"
+                                onClick={() => isActive && setCurrentStep(step.id)}
+                            >
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 z-10 ${isCurrent
+                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-600/30 scale-110'
+                                    : isActive
+                                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/10'
+                                        : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-muted)]'
+                                    }`}>
+                                    {isActive && !isCurrent ? <CheckCircle size={20} /> : <step.icon size={20} />}
                                 </div>
-                            );
-                        })}
-                    </div>
+                                <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${isCurrent ? 'text-indigo-600' : 'text-[var(--text-muted)]'}`}>
+                                    {step.title}
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
+            </div>
 
-                {/* Main Card - Expanded & Centered */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="bg-[#1e293b]/80 backdrop-blur-xl border border-gray-700 rounded-3xl shadow-2xl p-6 md:p-10 min-h-[700px] w-full relative overflow-hidden"
-                >
-                    {/* Draft Indicator & Save Button */}
-                    <div className="absolute top-6 right-6 flex items-center gap-3">
-                        {lastSaved && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-full text-xs text-blue-400">
-                                <CheckCircle size={14} />
-                                <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
-                            </div>
-                        )}
-                        <button
-                            onClick={() => saveDraft(false)}
-                            disabled={isSavingDraft}
-                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold text-sm shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isSavingDraft ? (
-                                <>
-                                    <Loader size={16} className="animate-spin" />
-                                    Saving...
-                                </>
-                            ) : (
-                                <>
-                                    💾 Save as Draft
-                                </>
-                            )}
-                        </button>
-                    </div>
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={currentStep}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            {renderStep()}
-                        </motion.div>
-                    </AnimatePresence>
-
-                    {/* Footer Navigation - Only show for steps other than Review (step 5) */}
-                    {currentStep !== 5 && (
-                        <div className="flex flex-col items-center mt-12 pt-8 border-t border-gray-700">
-                            <div className="flex gap-6 w-full justify-center">
-                                <button
-                                    onClick={prevStep}
-                                    disabled={currentStep === 1}
-                                    className={`flex items-center gap-2 px-8 py-3 rounded-full font-semibold transition-all ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'hover:bg-gray-800 text-gray-400'}`}
-                                >
-                                    <ChevronLeft size={20} /> Back
-                                </button>
-
-                                {currentStep < 6 ? (
-                                    <button
-                                        onClick={nextStep}
-                                        className="btn-3d btn-primary flex items-center gap-2 px-10 py-3 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all bg-white text-black font-bold tracking-wide"
-                                    >
-                                        {currentStep === 5 ? 'Continue to Plans' : 'Next Step'} <ChevronRight size={20} />
-                                    </button>
-                                ) : (
-                                    <div className="flex flex-col items-center gap-3">
-                                        {!selectedPlan && (
-                                            <p className="text-yellow-400 text-sm font-semibold animate-pulse">⚠️ Please select a plan to continue</p>
-                                        )}
-                                        <button
-                                            onClick={async () => {
-                                                if (selectedPlan) {
-                                                    try {
-                                                        const response = await fetch(endpoints.jobs, {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'Content-Type': 'application/json',
-                                                                'Authorization': `Bearer ${localStorage.getItem('sb-token')}`
-                                                            },
-                                                            body: JSON.stringify({
-                                                                title: form.jobTitle,
-                                                                description: form.jobDescription,
-                                                                requirements: JSON.stringify(form.skills),
-                                                                skills: form.skills,
-                                                                location: `${form.city}, ${form.country}`,
-                                                                work_mode: form.remoteType === 'onsite' ? 'On-site' : form.remoteType.charAt(0).toUpperCase() + form.remoteType.slice(1),
-                                                                type: form.jobType.replace('_', '-').charAt(0).toUpperCase() + form.jobType.replace('_', '-').slice(1),
-                                                                salary_min: form.salaryMin,
-                                                                salary_max: form.salaryMax,
-                                                                job_type: selectedPlan
-                                                            })
-                                                        });
-
-                                                        if (response.ok) {
-                                                            clearDraft();
-                                                            setShowSuccessModal(true);
-                                                        } else {
-                                                            const errData = await response.json();
-                                                            alert(`Error: ${errData.error || 'Failed to post job'}`);
-                                                        }
-                                                    } catch (error) {
-                                                        console.error('Job submission error:', error);
-                                                        alert('Network error. Failed to post job.');
-                                                    }
-                                                }
-                                            }}
-                                            disabled={!selectedPlan}
-                                            className={`btn-3d flex items-center gap-2 px-10 py-3 rounded-full shadow-lg font-bold tracking-wide border-none transition-all ${selectedPlan
-                                                ? 'bg-green-600 hover:bg-green-700 text-white hover:shadow-xl transform hover:-translate-y-1 cursor-pointer'
-                                                : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
-                                                }`}
-                                        >
-                                            {selectedPlan ? 'Post Job & Proceed to Pay' : 'Select a Plan First'} <CheckCircle size={20} />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+            {/* Main Content Area */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="saas-card p-10 min-h-[600px] w-full relative"
+            >
+                {/* Draft Indicator & Save Button */}
+                <div className="absolute top-6 right-6 flex items-center gap-3">
+                    {lastSaved && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
+                            <CheckCircle size={12} />
+                            <span>Saved {lastSaved.toLocaleTimeString()}</span>
                         </div>
                     )}
-                </motion.div>
-            </div>
+                    <button
+                        onClick={() => saveDraft(false)}
+                        disabled={isSavingDraft}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-indigo-600 text-[var(--text-main)] font-black text-[10px] uppercase tracking-widest shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                    >
+                        {isSavingDraft ? (
+                            <Loader size={14} className="animate-spin text-indigo-600" />
+                        ) : (
+                            <div className="w-2 h-2 rounded-full bg-amber-500 group-hover:scale-125 transition-transform" />
+                        )}
+                        {isSavingDraft ? 'Saving...' : 'Save Draft'}
+                    </button>
+                </div>
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={currentStep}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        {renderStep()}
+                    </motion.div>
+                </AnimatePresence>
+
+                {/* Footer Navigation */}
+                {currentStep !== 5 && (
+                    <div className="flex items-center justify-between mt-12 pt-8 border-t border-[var(--border-subtle)]">
+                        <button
+                            onClick={prevStep}
+                            disabled={currentStep === 1}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)]'}`}
+                        >
+                            <ChevronLeft size={18} /> Back
+                        </button>
+
+                        <div className="flex items-center gap-4">
+                            {currentStep < 6 ? (
+                                <button
+                                    onClick={nextStep}
+                                    className="flex items-center gap-3 px-10 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/20 transform hover:-translate-y-0.5 transition-all group"
+                                >
+                                    {currentStep === 5 ? 'Continue to Plans' : 'Next Step'}
+                                    <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                </button>
+                            ) : (
+                                <div className="flex flex-col items-end gap-3">
+                                    {!selectedPlan && (
+                                        <p className="text-amber-500 text-[10px] font-black uppercase tracking-widest animate-pulse">⚠️ Select a plan to continue</p>
+                                    )}
+                                    <button
+                                        onClick={async () => {
+                                            if (selectedPlan) {
+                                                try {
+                                                    const response = await fetch(endpoints.jobs, {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'Authorization': `Bearer ${localStorage.getItem('sb-token')}`
+                                                        },
+                                                        body: JSON.stringify({
+                                                            title: form.jobTitle,
+                                                            description: form.jobDescription,
+                                                            requirements: JSON.stringify(form.skills),
+                                                            skills: form.skills,
+                                                            location: `${form.city}, ${form.country}`,
+                                                            work_mode: form.remoteType === 'onsite' ? 'On-site' : form.remoteType.charAt(0).toUpperCase() + form.remoteType.slice(1),
+                                                            type: form.jobType.replace('_', '-').charAt(0).toUpperCase() + form.jobType.replace('_', '-').slice(1),
+                                                            salary_min: form.salaryMin,
+                                                            salary_max: form.salaryMax,
+                                                            job_type: selectedPlan
+                                                        })
+                                                    });
+
+                                                    if (response.ok) {
+                                                        clearDraft();
+                                                        setShowSuccessModal(true);
+                                                    } else {
+                                                        const errData = await response.json();
+                                                        alert(`Error: ${errData.error || 'Failed to post job'}`);
+                                                    }
+                                                } catch (error) {
+                                                    console.error('Job submission error:', error);
+                                                    alert('Network error. Failed to post job.');
+                                                }
+                                            }
+                                        }}
+                                        disabled={!selectedPlan}
+                                        className={`flex items-center gap-3 px-10 py-4 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-xl transition-all ${selectedPlan
+                                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 transform hover:-translate-y-0.5'
+                                            : 'bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-subtle)] cursor-not-allowed'
+                                            }`}
+                                    >
+                                        {selectedPlan ? 'Post Job & Proceed' : 'Select Plan'}
+                                        <CheckCircle size={18} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </motion.div>
 
             {/* Success Modal */}
             <AnimatePresence>
@@ -1291,103 +1204,62 @@ export default function JobPostingForm() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-                        onClick={() => setShowSuccessModal(false)}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4"
                     >
                         <motion.div
-                            initial={{ scale: 0.8, y: 50 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.8, y: 50 }}
-                            transition={{ type: "spring", duration: 0.5 }}
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="saas-card max-w-xl w-full p-12 text-center relative overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-gradient-to-br from-[#1a1f3a] via-[#0f172a] to-[#1e293b] rounded-3xl p-8 md:p-12 max-w-2xl w-full relative overflow-hidden border-2 border-neon-cyan/30 shadow-[0_20px_60px_rgba(0,243,255,0.3)]"
                         >
-                            {/* Animated Background Effects */}
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-neon-cyan via-neon-purple to-pink-500 animate-pulse"></div>
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-neon-purple to-neon-cyan animate-pulse"></div>
+                            {/* Decorative Background Element */}
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -z-10" />
 
-                            {/* Decorative circles */}
-                            <div className="absolute -top-20 -right-20 w-40 h-40 bg-neon-cyan/20 rounded-full blur-3xl"></div>
-                            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-neon-purple/20 rounded-full blur-3xl"></div>
-
-                            {/* Content */}
-                            <div className="relative z-10 text-center space-y-6">
-                                {/* Success Icon */}
+                            <div className="space-y-8">
                                 <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                                    className="mx-auto w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(34,197,94,0.5)]"
+                                    transition={{ type: "spring", damping: 12, stiffness: 200 }}
+                                    className="w-24 h-24 bg-emerald-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 rotate-12"
                                 >
-                                    <CheckCircle size={48} className="text-white" strokeWidth={3} />
+                                    <CheckCircle size={48} className="text-emerald-500 -rotate-12" />
                                 </motion.div>
 
-                                {/* Greeting */}
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3 }}
-                                >
-                                    <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-neon-cyan via-white to-neon-purple bg-clip-text text-transparent mb-2">
-                                        🎉 Congratulations!
+                                <div className="space-y-3">
+                                    <h2 className="text-3xl font-black text-[var(--text-main)] uppercase tracking-[0.2em]">
+                                        Job Posted
                                     </h2>
-                                    <p className="text-xl text-gray-300 font-semibold">
-                                        Your job posting is on its way!
+                                    <p className="text-[var(--text-muted)] font-medium leading-relaxed max-w-sm mx-auto">
+                                        Your job posting has been successfully received and is now under review.
                                     </p>
-                                </motion.div>
+                                </div>
 
-                                {/* Success Message */}
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.4 }}
-                                    className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 space-y-3"
-                                >
-                                    <p className="text-white text-lg leading-relaxed">
-                                        Thank you! Your job post has been <span className="text-neon-cyan font-bold">received</span> and is <span className="text-neon-purple font-bold">under review</span>.
-                                    </p>
-                                    <p className="text-gray-300">
-                                        This usually takes only a <span className="text-green-400 font-semibold">few minutes</span>. You'll be notified as soon as it is <span className="text-green-400 font-semibold">live</span>.
-                                    </p>
-                                </motion.div>
+                                <div className="grid grid-cols-2 gap-4 bg-[var(--bg-surface)] p-6 rounded-2xl border border-[var(--border-subtle)]">
+                                    <div className="text-left">
+                                        <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Status</p>
+                                        <p className="text-emerald-500 font-bold text-sm">Under Review</p>
+                                    </div>
+                                    <div className="text-left border-l border-[var(--border-subtle)] pl-4">
+                                        <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Plan</p>
+                                        <p className="text-[var(--text-main)] font-bold text-sm capitalize">{selectedPlan.replace('-', ' ')}</p>
+                                    </div>
+                                </div>
 
-                                {/* Plan Info */}
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.5 }}
-                                    className="flex items-center justify-center gap-2 text-sm text-gray-400"
-                                >
-                                    <Award size={16} className="text-neon-purple" />
-                                    <span>Selected Plan: <span className="text-white font-semibold capitalize">{selectedPlan.replace('-', ' ')}</span></span>
-                                </motion.div>
-
-                                {/* Action Buttons */}
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.6 }}
-                                    className="flex flex-col sm:flex-row gap-4 pt-4"
-                                >
+                                <div className="flex flex-col gap-3 pt-4">
                                     <button
-                                        onClick={() => {
-                                            setShowSuccessModal(false);
-                                            navigate('/employer/dashboard');
-                                        }}
-                                        className="flex-1 px-6 py-3 rounded-full bg-gradient-to-r from-neon-cyan to-blue-500 hover:from-neon-cyan/80 hover:to-blue-600 text-white font-bold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all"
+                                        onClick={() => navigate('/employer/dashboard')}
+                                        className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/20 transition-all hover:-translate-y-0.5"
                                     >
-                                        View Dashboard
+                                        Go to Dashboard
                                     </button>
                                     <button
-                                        onClick={() => {
-                                            setShowSuccessModal(false);
-                                            window.location.reload();
-                                        }}
-                                        className="flex-1 px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20 hover:border-white/40 transition-all"
+                                        onClick={() => window.location.reload()}
+                                        className="w-full py-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-indigo-600 text-[var(--text-main)] font-black text-[11px] uppercase tracking-[0.2em] transition-all"
                                     >
                                         Post Another Job
                                     </button>
-                                </motion.div>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -1401,12 +1273,12 @@ export default function JobPostingForm() {
 
 const InputGroup = ({ label, icon, small, ...props }: any) => (
     <div className="space-y-2">
-        <label className={`block font-bold text-gray-300 ${small ? 'text-xs' : 'text-sm'}`}>{label}</label>
+        <label className={`block font-black text-[var(--text-muted)] uppercase tracking-widest ${small ? 'text-[9px]' : 'text-[10px]'}`}>{label}</label>
         <div className="relative group">
-            {icon && <div className={`absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-white transition-colors ${small ? 'scale-90' : ''}`}>{icon}</div>}
+            {icon && <div className={`absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-indigo-600 transition-colors ${small ? 'scale-90' : ''}`}>{icon}</div>}
             <input
                 {...props}
-                className={`w-full rounded-xl bg-[#0f172a] border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-white focus:border-transparent transition-all outline-none shadow-inner group-hover:shadow-md ${icon ? 'pl-11' : 'pl-4'} ${small ? 'h-10 text-sm' : 'h-12'}`}
+                className={`w-full rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-main)] placeholder-[var(--text-muted)]/50 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/5 transition-all outline-none font-bold ${icon ? 'pl-11' : 'pl-4'} ${small ? 'h-10 text-xs' : 'h-12 text-sm'}`}
             />
         </div>
     </div>
@@ -1414,19 +1286,19 @@ const InputGroup = ({ label, icon, small, ...props }: any) => (
 
 const SelectGroup = ({ label, options, ...props }: any) => (
     <div className="space-y-2">
-        <label className="block text-sm font-bold text-gray-300">{label}</label>
+        <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">{label}</label>
         <div className="relative group">
             <select
                 {...props}
-                className="w-full h-12 rounded-xl bg-[#0f172a] border border-gray-700 text-white focus:ring-2 focus:ring-white focus:border-transparent transition-all outline-none shadow-inner group-hover:shadow-md appearance-none pl-4 pr-10 cursor-pointer"
+                className="w-full h-12 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-main)] focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/5 transition-all outline-none appearance-none pl-4 pr-10 cursor-pointer font-bold text-sm"
             >
                 {options.map((opt: any) => (
-                    <option key={opt.value} value={opt.value} className="bg-[#0f172a] text-white py-2">
+                    <option key={opt.value} value={opt.value} className="bg-[var(--bg-surface)] text-[var(--text-main)] font-medium">
                         {opt.label}
                     </option>
                 ))}
             </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 group-focus-within:text-white">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-muted)] group-focus-within:text-indigo-600">
                 <ChevronRight size={16} className="rotate-90" />
             </div>
         </div>
@@ -1434,13 +1306,13 @@ const SelectGroup = ({ label, options, ...props }: any) => (
 );
 
 const Toggle = ({ label, checked, onChange }: any) => (
-    <div className="flex items-center justify-between p-4 rounded-xl bg-[#0f172a] border border-gray-700 h-16 shadow-inner hover:shadow-md transition-shadow">
-        <span className="font-bold text-gray-300">{label}</span>
+    <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] h-16 transition-all hover:border-indigo-600/30 group">
+        <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">{label}</span>
         <button
             onClick={onChange}
-            className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${checked ? 'bg-green-500' : 'bg-gray-600'}`}
+            className={`w-11 h-6 rounded-full p-1 transition-all duration-300 ${checked ? 'bg-indigo-600 shadow-lg shadow-indigo-600/20' : 'bg-[var(--bg-page)]'}`}
         >
-            <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ${checked ? 'translate-x-6' : 'translate-x-0'}`} />
+            <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
         </button>
     </div>
 );

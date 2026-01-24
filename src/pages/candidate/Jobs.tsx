@@ -1,38 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, User } from 'lucide-react';
-import DashboardJobCard from '../../components/DashboardJobCard';
+import { useNavigate } from 'react-router-dom';
+import {
+    Search,
+    Filter,
+    MapPin,
+    Briefcase,
+    Clock,
+    DollarSign,
+    CheckCircle2,
+    MoreVertical,
+    Star,
+    ChevronDown,
+    LayoutGrid,
+    List,
+    Plus
+} from 'lucide-react';
 import { endpoints } from '../../lib/api';
 
 const Jobs: React.FC = () => {
-    const [activeTab, setActiveTab] = useState('Find Jobs');
     const [jobs, setJobs] = useState<any[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
 
-    React.useEffect(() => {
+    useEffect(() => {
         const fetchJobs = async () => {
             try {
                 const response = await fetch(endpoints.jobs);
                 if (!response.ok) throw new Error('Failed to fetch jobs');
                 const data = await response.json();
                 if (data.jobs && data.jobs.length > 0) {
-                    // Map backend data to frontend format
-                    const formattedJobs = data.jobs.map((job: any) => ({
-                        jobId: job.id,
-                        title: job.title,
-                        location: job.location,
-                        salary: job.salary_min && job.salary_max ? `${job.salary_min} - ${job.salary_max}` : 'Not disclosed',
-                        payCycle: 'Yearly',
-                        workMode: job.work_mode,
-                        jobType: job.type,
-                        matchPercentage: Math.floor(Math.random() * 20) + 80, // Mock for now
-                        colorTheme: 'blue',
-                        logo: job.title.charAt(0)
-                    }));
-                    setJobs(formattedJobs);
+                    setJobs(data.jobs.map((j: any) => ({
+                        id: j.id,
+                        title: j.title,
+                        company: "TechCorp Global",
+                        location: j.location,
+                        type: j.type || "Full-time",
+                        salary: j.salary_min && j.salary_max ? `$${(j.salary_min / 1000).toFixed(0)}k - $${(j.salary_max / 1000).toFixed(0)}k` : "Negotiable",
+                        isPPH: Math.random() > 0.5, // Mocking PPH status
+                        posted: "2d ago",
+                        logo: "https://images.unsplash.com/photo-15499231-f129b911e442?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80"
+                    })));
                 } else {
-                    // Fallback to mock data if no jobs in DB
+                    // Mock data
                     const mockJobs = [
-                        { jobId: 1, title: 'Senior Frontend Developer', location: 'Bangalore, India', salary: '$80,000 - $120,000', payCycle: 'Yearly', workMode: 'Remote', jobType: 'Full-time', matchPercentage: 95, colorTheme: 'blue' as const, logo: 'T' }
+                        { id: 1, title: 'Senior Frontend Engineer', company: 'Linear', location: 'Remote', type: 'Full-time', salary: '$120k - $160k', isPPH: true, posted: '1d ago', logo: 'https://images.unsplash.com/photo-1614680376593-902f74cc0d41?ixlib=rb-1.2.1' },
+                        { id: 2, title: 'Product Designer', company: 'Airbnb', location: 'San Francisco', type: 'Contract', salary: '$90k - $130k', isPPH: false, posted: '3h ago', logo: 'https://images.unsplash.com/photo-1585238341267-1cfec2046a55?ixlib=rb-1.2.1' },
+                        { id: 3, title: 'Backend Developer (Go)', company: 'Vercel', location: 'Europe (Remote)', type: 'Full-time', salary: '$140k - $180k', isPPH: true, posted: '5d ago', logo: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?ixlib=rb-1.2.1' },
                     ];
                     setJobs(mockJobs);
                 }
@@ -40,99 +53,145 @@ const Jobs: React.FC = () => {
                 console.error('Error fetching jobs:', error);
             }
         };
-
         fetchJobs();
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#050511] text-white p-4 md:p-8 font-outfit relative overflow-hidden">
-            {/* Background Gradients */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 blur-[120px] rounded-full" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20 blur-[120px] rounded-full" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            {/* Left Column: Filters */}
+            <div className="lg:col-span-3 space-y-6 lg:sticky lg:top-24">
+                <div className="saas-card p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-bold flex items-center gap-2"><Filter size={18} /> Filters</h3>
+                        <button className="text-xs text-[var(--primary)] font-bold">Clear All</button>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3 block">Employment Type</label>
+                            <div className="space-y-2">
+                                {["Full-time", "Contract", "Freelance", "Internship"].map(type => (
+                                    <label key={type} className="flex items-center gap-3 cursor-pointer group">
+                                        <div className="w-4 h-4 rounded border border-[var(--border-subtle)] group-hover:border-[var(--primary)] transition-colors flex items-center justify-center">
+                                            <div className="w-2 h-2 rounded-sm bg-[var(--primary)] scale-0 group-hover:scale-100 transition-transform"></div>
+                                        </div>
+                                        <span className="text-sm text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition-colors">{type}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3 block">Salary Range</label>
+                            <input type="range" className="w-full accent-[var(--primary)]" />
+                            <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-2">
+                                <span>$50k</span>
+                                <span>$200k+</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-3 block">Model</label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                                <div className="w-10 h-5 bg-[var(--border-subtle)] rounded-full relative transition-colors group-hover:bg-[var(--primary-light)]">
+                                    <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform"></div>
+                                </div>
+                                <span className="text-sm font-bold text-[var(--primary)]">PPH Roles Only</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div className="max-w-7xl mx-auto relative z-10 space-y-8">
-                {/* Top Navigation Bar */}
-                <motion.div
-                    initial={{ y: -20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    className="glass rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4"
-                >
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-cyan to-blue-600 flex items-center justify-center font-bold text-white">
-                            H
+            {/* Center Column: Job List */}
+            <div className="lg:col-span-6 space-y-6">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-2">
+                    <h2 className="text-xl font-bold">Recommended for you</h2>
+                    <div className="flex items-center gap-2 p-1 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl">
+                        <button className="p-2 bg-[var(--bg-page)] rounded-lg text-[var(--primary)]"><List size={18} /></button>
+                        <button className="p-2 text-[var(--text-muted)] hover:text-[var(--text-main)]"><LayoutGrid size={18} /></button>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {jobs.map(job => (
+                        <div key={job.id} className="saas-card p-5 group hover:border-[var(--primary)] transition-all">
+                            <div className="flex items-start gap-4">
+                                <img src={job.logo} alt={job.company} className="w-12 h-12 rounded-xl object-cover border border-[var(--border-subtle)]" />
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-bold text-[var(--text-main)] group-hover:text-[var(--primary)] transition-colors truncate">{job.title}</h3>
+                                            <p className="text-sm font-medium text-[var(--text-muted)]">{job.company}</p>
+                                        </div>
+                                        <button className="text-[var(--text-muted)] hover:text-[var(--text-main)]"><MoreVertical size={18} /></button>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-4 mt-4">
+                                        <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                                            <MapPin size={14} /> {job.location}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                                            <Briefcase size={14} /> {job.type}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                                            <DollarSign size={14} /> {job.salary}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                                            <Clock size={14} /> {job.posted}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-[var(--border-subtle)]">
+                                        <div>
+                                            {job.isPPH && (
+                                                <span className="pph-badge text-[10px] flex items-center gap-1" title="Employer pays per hire, free for candidates">
+                                                    <CheckCircle2 size={10} /> PPH Role
+                                                </span>
+                                            )}
+                                        </div>
+                                        <button className="btn-saas-primary text-xs px-6">Apply Now</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <span className="text-xl font-bold tracking-wide">HireGo AI</span>
-                    </div>
-
-                    <div className="flex-1 max-w-md w-full relative">
-                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            className="w-full bg-white/5 border border-white/10 rounded-full py-2.5 pl-12 pr-4 text-sm focus:outline-none focus:border-neon-cyan/50 transition-colors"
-                        />
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors">
-                            <User size={20} className="text-gray-300" />
-                        </button>
-                    </div>
-                </motion.div>
-
-                {/* Secondary Nav & Filter */}
-                <motion.div
-                    initial={{ y: -20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="flex flex-col md:flex-row justify-between items-center gap-4"
-                >
-                    <div className="flex p-1 bg-white/5 rounded-xl border border-white/10">
-                        {['Home', 'Find Jobs', 'Messages'].map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${activeTab === tab
-                                    ? 'bg-gradient-to-r from-neon-purple/20 to-neon-cyan/20 text-white shadow-lg border border-white/10'
-                                    : 'text-gray-400 hover:text-white'
-                                    }`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="relative group">
-                        <button className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-neon-cyan/30 transition-all">
-                            <span className="text-sm font-medium">Filter</span>
-                            <Filter size={16} className="text-gray-400" />
-                        </button>
-
-                        {/* Dropdown Preview (Visual only as per image) */}
-                        <div className="absolute right-0 top-full mt-2 w-48 bg-[#0a0e27]/95 backdrop-blur-xl border border-white/10 rounded-xl p-2 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto z-50">
-                            <div className="p-2 hover:bg-white/5 rounded-lg cursor-pointer text-sm text-gray-300">Matters</div>
-                            <div className="p-2 hover:bg-white/5 rounded-lg cursor-pointer text-sm text-gray-300">Job Location</div>
-                            <div className="p-2 hover:bg-white/5 rounded-lg cursor-pointer text-sm text-gray-300">Remote Only</div>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Job Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {jobs.map((job, index) => (
-                        <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 + 0.2 }}
-                        >
-                            <DashboardJobCard {...job} />
-                        </motion.div>
                     ))}
                 </div>
             </div>
+
+            {/* Right Column: Recommended / Spotlight */}
+            <div className="lg:col-span-3 space-y-6 lg:sticky lg:top-24">
+                <div className="saas-card p-6 border-indigo-500/20 bg-gradient-to-br from-indigo-500/5 to-transparent">
+                    <h4 className="text-sm font-bold mb-4 flex items-center gap-2">
+                        <Star size={16} className="text-yellow-500 fill-yellow-500" /> Hiring Spotlight
+                    </h4>
+                    <div className="space-y-4">
+                        <div className="p-4 bg-[var(--bg-surface)] rounded-xl border border-[var(--border-subtle)] hover:translate-y-[-2px] transition-transform cursor-pointer">
+                            <div className="text-[var(--primary)] text-[10px] font-black uppercase mb-2">Featured Partner</div>
+                            <h5 className="text-sm font-bold mb-1">Stripe</h5>
+                            <p className="text-xs text-[var(--text-muted)] mb-3">Building the economic infrastructure of the internet.</p>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold">12 Open Roles</span>
+                                <button className="text-[var(--primary)] text-[10px] font-black uppercase">View Jobs</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="saas-card p-6">
+                    <h4 className="text-sm font-bold mb-4">Quick Links</h4>
+                    <div className="space-y-2">
+                        {["Saved Jobs", "Salary Insights", "Resume Builder", "Interview Prep"].map(link => (
+                            <button key={link} className="w-full text-left p-2 rounded-lg text-sm text-[var(--text-muted)] hover:bg-[var(--bg-page)] hover:text-[var(--primary)] transition-all flex items-center justify-between group">
+                                {link}
+                                <Plus size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
         </div>
     );
 };

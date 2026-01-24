@@ -79,7 +79,10 @@ export default {
                     500: '#10B981',
                     600: '#059669',
                     700: '#047857',
-                }
+                },
+                'space-dark': '#0a0a0f',
+                'space-blue': '#12141c',
+                'space-card': '#1a1d26',
             },
             fontFamily: {
                 'outfit': ['Outfit', 'sans-serif'],

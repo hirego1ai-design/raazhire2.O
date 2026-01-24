@@ -20,6 +20,7 @@ import {
     GraduationCap,
     FileText
 } from 'lucide-react';
+import '../styles/premium-dark-theme.css';
 
 const AdminLayout: React.FC = () => {
     const [isSidebarOpen, setSidebarOpen] = React.useState(true);
@@ -69,7 +70,7 @@ const AdminLayout: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-space-dark flex text-white font-outfit">
+        <div className="min-h-screen bg-space-dark flex text-white font-outfit premium-dark">
             {/* Sidebar */}
             <aside
                 className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-space-blue border-r border-white/10 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-20'

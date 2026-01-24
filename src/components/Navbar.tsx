@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Building2, GraduationCap, Menu, X, Sun, Moon } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -7,14 +7,6 @@ export default function Navbar() {
     const navigate = useNavigate();
     const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
-    const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
-    useEffect(() => {
-        document.documentElement.setAttribute('data-theme', theme);
-    }, [theme]);
-    const toggleTheme = () => {
-        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-    };
 
     const [isVisible, setIsVisible] = useState(true);
     const lastScrollY = useRef(0);
@@ -59,78 +51,67 @@ export default function Navbar() {
                             alt="HireGo AI"
                             className="h-14 w-auto object-contain"
                         />
-                        {isSkillsPage && (
-                            <div className="hidden lg:flex flex-col">
-                                <span className="text-lg font-bold text-gray-900 leading-none tracking-tight">HireGo AI</span>
-                                <span className="text-xs font-semibold text-electric-indigo-600 uppercase tracking-widest">Upskill</span>
-                            </div>
-                        )}
                     </motion.div>
 
-                    {/* Desktop Menu - Center */}
-                    <div className="hidden md:flex items-center">
-                        {/* For Candidates / Skills - Center Stage */}
-                        <button
-                            onClick={() => navigate('/upskill')}
-                            className={`px-5 py-2.5 rounded-full font-medium transition-all flex items-center gap-2 ${isSkillsPage
-                                ? 'bg-gray-100 text-gray-900 ring-1 ring-gray-200'
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                }`}
-                        >
-                            <GraduationCap className="w-5 h-5 text-electric-indigo-600" />
-                            <span>Skills & Jobs</span>
-                        </button>
-                    </div>
+                    {/* Desktop Menu - Integrated Right Actions */}
+                    <div className="hidden md:flex items-center gap-6">
+                        {/* Navigation Links */}
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => navigate('/upskill')}
+                                className={`text-sm font-semibold transition-colors ${isSkillsPage
+                                    ? 'text-electric-indigo-600'
+                                    : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                            >
+                                Skills
+                            </button>
 
-                    {/* Right Actions */}
-                    <div className="hidden md:flex items-center gap-3">
-                        {/* For Employers - Moved to Right */}
-                        <button
-                            onClick={() => navigate('/')} // Assuming '/' is the main employer/platform landing or strict employer page
-                            className={`text-sm font-semibold transition-colors ${isHomePage
-                                ? 'text-gray-900'
-                                : 'text-gray-500 hover:text-gray-900'
-                                }`}
-                        >
-                            For Employers
-                        </button>
+                            <button
+                                onClick={() => navigate('/jobs')}
+                                className={`text-sm font-semibold transition-colors ${location.pathname.startsWith('/jobs')
+                                    ? 'text-electric-indigo-600'
+                                    : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                            >
+                                Jobs
+                            </button>
 
-                        <div className="w-px h-5 bg-gray-300 mx-1" />
+                            <button
+                                onClick={() => navigate('/')}
+                                className={`text-sm font-semibold transition-colors ${isHomePage
+                                    ? 'text-gray-900'
+                                    : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                            >
+                                For Employers
+                            </button>
+                        </div>
 
-                        <button
-                            onClick={toggleTheme}
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
-                        >
-                            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                        </button>
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-3 pl-2 border-l border-gray-200">
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => navigate('/signin')}
+                                className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full font-medium hover:shadow-lg transition-all"
+                            >
+                                Sign In
+                            </motion.button>
 
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => navigate('/signin')}
-                            className="px-5 py-2 text-gray-700 border border-gray-300 rounded-full hover:bg-gray-50 transition-all font-medium"
-                        >
-                            Sign In
-                        </motion.button>
-
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => navigate('/signup?type=employer')}
-                            className="px-5 py-2 bg-gradient-to-r from-neon-cyan to-neon-purple text-white rounded-full font-semibold shadow-lg shadow-neon-cyan/20 hover:shadow-neon-cyan/40 transition-all"
-                        >
-                            Start Hiring Free
-                        </motion.button>
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => navigate('/signup?type=employer')}
+                                className="px-5 py-2 bg-gradient-to-r from-neon-cyan to-neon-purple text-white rounded-full font-semibold shadow-lg shadow-neon-cyan/20 hover:shadow-neon-cyan/40 transition-all"
+                            >
+                                Sign Up
+                            </motion.button>
+                        </div>
                     </div>
 
                     {/* Mobile Menu Button */}
                     <div className="md:hidden flex items-center gap-3">
-                        <button
-                            onClick={toggleTheme}
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
-                        >
-                            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                        </button>
                         <button
                             onClick={() => setIsOpen(!isOpen)}
                             className="text-gray-700 p-2"
@@ -148,25 +129,33 @@ export default function Navbar() {
                         className="md:hidden mt-4 space-y-3 pb-4 border-t border-gray-100 pt-4"
                     >
                         <button
-                            onClick={() => { navigate('/'); setIsOpen(false); }}
-                            className={`w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${isHomePage
-                                ? 'bg-gradient-to-r from-neon-cyan/10 to-neon-purple/10 text-gray-900'
+                            onClick={() => { navigate('/upskill'); setIsOpen(false); }}
+                            className={`w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${isSkillsPage
+                                ? 'bg-gray-50 text-electric-indigo-600'
                                 : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
-                            <Building2 className="w-5 h-5" />
-                            For Employers
+                            Skills
                         </button>
 
                         <button
-                            onClick={() => { navigate('/upskill'); setIsOpen(false); }}
-                            className={`w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${isSkillsPage
-                                ? 'bg-gradient-to-r from-neon-green/10 to-emerald-500/10 text-gray-900'
+                            onClick={() => { navigate('/jobs'); setIsOpen(false); }}
+                            className={`w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${location.pathname.startsWith('/jobs')
+                                ? 'bg-gray-50 text-electric-indigo-600'
                                 : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
-                            <GraduationCap className="w-5 h-5" />
-                            Skills & Jobs
+                            Jobs
+                        </button>
+
+                        <button
+                            onClick={() => { navigate('/'); setIsOpen(false); }}
+                            className={`w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${isHomePage
+                                ? 'bg-gray-50 text-gray-900'
+                                : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                        >
+                            For Employers
                         </button>
 
                         <div className="border-t border-gray-100 pt-3 space-y-3">
@@ -180,7 +169,7 @@ export default function Navbar() {
                                 onClick={() => { navigate('/signup?type=employer'); setIsOpen(false); }}
                                 className="w-full px-5 py-3 bg-gradient-to-r from-neon-cyan to-neon-purple text-white rounded-full font-semibold"
                             >
-                                Start Hiring Free
+                                Sign Up
                             </button>
                         </div>
                     </motion.div>

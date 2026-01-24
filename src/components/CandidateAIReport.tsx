@@ -2,9 +2,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
     Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
-    BarChart, Bar, XAxis, YAxis, Tooltip, Cell
+    Tooltip
 } from 'recharts';
-import { Brain, Zap, MessageSquare, Award, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Brain, Zap, MessageSquare, Award, CheckCircle, Target, Activity } from 'lucide-react';
 
 interface AIReportProps {
     data: {
@@ -37,113 +37,134 @@ const CandidateAIReport: React.FC<AIReportProps> = ({ data }) => {
         { subject: 'Screening', A: data.layer1?.score || 0, fullMark: 100 },
         { subject: 'Technical', A: data.layer2?.score || 0, fullMark: 100 },
         { subject: 'Behavioral', A: data.layer3?.score || 0, fullMark: 100 },
-        { subject: 'Communication', A: data.layer3?.score || 0, fullMark: 100 }, // Proxy
-        { subject: 'Knowledge', A: data.layer2?.score || 0, fullMark: 100 },   // Proxy
+        { subject: 'Communication', A: data.layer3?.score || 0, fullMark: 100 },
+        { subject: 'Knowledge', A: data.layer2?.score || 0, fullMark: 100 },
     ];
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             {/* Header Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Overall Score Card */}
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="col-span-1 p-6 rounded-2xl bg-gradient-to-br from-gray-900 to-black border border-neon-cyan/30 relative overflow-hidden"
+                    className="saas-card p-6 relative overflow-hidden flex flex-col justify-center items-center text-center border-2 border-[var(--primary)]"
                 >
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Brain size={100} className="text-neon-cyan" />
+                    <div className="absolute -top-4 -right-4 p-4 opacity-5">
+                        <Brain size={120} className="text-[var(--primary)]" />
                     </div>
-                    <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">AI Composite Score</h3>
-                    <div className="flex items-end gap-2">
-                        <span className="text-6xl font-bold text-white">{data.finalScore}</span>
-                        <span className="text-xl text-gray-500 mb-2">/100</span>
+                    <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-2">Overall Match Score</p>
+                    <div className="relative">
+                        <span className="text-6xl font-black text-[var(--primary)]">{data.finalScore}</span>
+                        <span className="text-sm font-bold text-[var(--text-muted)] absolute -right-8 bottom-2">/100</span>
                     </div>
-                    <div className="mt-4 flex items-center gap-2">
-                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${data.finalScore > 80 ? 'bg-green-500/20 text-green-400' :
-                                data.finalScore > 60 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'
-                            }`}>
-                            {data.rank}
-                        </div>
-                        <span className="text-xs text-gray-400">Rank among candidates</span>
+                    <div className={`mt-4 px-4 py-1.5 rounded-full text-xs font-bold ${data.finalScore > 80 ? 'bg-green-500/10 text-green-600' :
+                        data.finalScore > 60 ? 'bg-yellow-500/10 text-yellow-600' : 'bg-red-500/10 text-red-600'
+                        }`}>
+                        {data.rank} Rank
                     </div>
                 </motion.div>
 
                 {/* Radar Chart */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="col-span-1 md:col-span-2 p-4 rounded-2xl bg-white/5 border border-white/10 h-[250px]"
+                    className="col-span-1 md:col-span-2 saas-card p-6 h-[280px]"
                 >
-                    <h3 className="text-gray-400 text-sm font-medium mb-2">Candidate DNA Analysis</h3>
-                    <ResponsiveContainer width="100%" height="100%">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Target size={18} className="text-[var(--primary)]" />
+                        <h3 className="font-bold text-sm">Competency DNA</h3>
+                    </div>
+                    <ResponsiveContainer width="100%" height="80%">
                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                            <PolarGrid stroke="#374151" />
-                            <PolarAngleAxis dataKey="subject" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
-                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                            <PolarGrid stroke="var(--border-subtle)" />
+                            <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }} />
+                            <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
                             <Radar
-                                name="Candidate"
+                                name="Score"
                                 dataKey="A"
-                                stroke="#06b6d4"
-                                strokeWidth={2}
-                                fill="#06b6d4"
-                                fillOpacity={0.3}
+                                stroke="var(--primary)"
+                                strokeWidth={3}
+                                fill="var(--primary)"
+                                fillOpacity={0.15}
                             />
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', color: '#F3F4F6' }}
-                                itemStyle={{ color: '#06b6d4' }}
+                                contentStyle={{
+                                    backgroundColor: 'var(--bg-surface)',
+                                    borderColor: 'var(--border-subtle)',
+                                    borderRadius: '12px',
+                                    fontSize: '12px'
+                                }}
                             />
                         </RadarChart>
                     </ResponsiveContainer>
                 </motion.div>
             </div>
 
+            {/* AI Summary Card */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="saas-card p-6 bg-[var(--primary-light)] border-[var(--primary)]/20"
+            >
+                <div className="flex items-center gap-2 mb-3">
+                    <Activity size={18} className="text-[var(--primary)]" />
+                    <h3 className="text-sm font-black uppercase tracking-widest text-[var(--text-main)]">AI Executive Insight</h3>
+                </div>
+                <p className="text-sm text-[var(--text-main)] leading-relaxed italic pr-4">
+                    "{data.summary}"
+                </p>
+            </motion.div>
+
             {/* Detailed Breakdown */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Technical Analysis */}
                 <motion.div
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="p-6 rounded-xl bg-white/5 border border-white/10"
+                    className="saas-card p-6"
                 >
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-lg bg-neon-purple/20 text-neon-purple">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600">
                             <Zap size={20} />
                         </div>
-                        <h3 className="text-lg font-bold text-white">Technical Proficiency</h3>
+                        <div>
+                            <h3 className="text-sm font-bold">Technical Proficiency</h3>
+                            <p className="text-[10px] text-[var(--text-muted)] font-medium">Domain & Knowledge Mapping</p>
+                        </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         <div>
-                            <div className="flex justify-between text-sm mb-1">
-                                <span className="text-gray-400">Domain Knowledge</span>
-                                <span className="text-neon-purple font-medium">{data.layer2?.domainKnowledge}</span>
+                            <div className="flex justify-between text-xs font-bold mb-2">
+                                <span className="text-[var(--text-muted)]">Domain Mastery</span>
+                                <span className="text-blue-600">{data.layer2?.domainKnowledge}</span>
                             </div>
-                            <div className="w-full bg-gray-700 rounded-full h-2">
-                                <div
-                                    className="bg-neon-purple h-2 rounded-full"
-                                    style={{ width: `${data.layer2?.score}%` }}
+                            <div className="w-full bg-[var(--bg-page)] rounded-full h-2 overflow-hidden">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${data.layer2?.score}%` }}
+                                    className="bg-blue-500 h-2 rounded-full"
                                 />
                             </div>
                         </div>
 
-                        <div className="bg-black/20 p-3 rounded-lg">
-                            <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Detected Keywords</h4>
-                            <div className="flex flex-wrap gap-2">
+                        <div>
+                            <h4 className="text-[10px] font-black text-[var(--text-muted)] uppercase mb-3">Detected Keywords</h4>
+                            <div className="flex flex-wrap gap-1.5 font-bold">
                                 {data.layer2?.detectedTerms?.map((term, i) => (
-                                    <span key={i} className="px-2 py-1 rounded text-xs bg-neon-purple/10 text-neon-purple border border-neon-purple/20">
+                                    <span key={i} className="px-2.5 py-1 rounded-lg text-[10px] bg-[var(--bg-page)] text-[var(--text-main)] border border-[var(--border-subtle)]">
                                         {term}
                                     </span>
                                 ))}
                             </div>
                         </div>
 
-                        <ul className="space-y-2">
+                        <ul className="space-y-2.5">
                             {data.layer2?.details?.map((detail, i) => (
-                                <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
-                                    <CheckCircle size={14} className="mt-1 text-green-400 shrink-0" />
+                                <li key={i} className="flex items-start gap-2.5 text-xs text-[var(--text-main)] font-medium">
+                                    <CheckCircle size={14} className="mt-0.5 text-green-500 shrink-0" />
                                     {detail}
                                 </li>
                             ))}
@@ -153,44 +174,46 @@ const CandidateAIReport: React.FC<AIReportProps> = ({ data }) => {
 
                 {/* Behavioral Analysis */}
                 <motion.div
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="p-6 rounded-xl bg-white/5 border border-white/10"
+                    className="saas-card p-6"
                 >
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-lg bg-neon-pink/20 text-neon-pink">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600">
                             <MessageSquare size={20} />
                         </div>
-                        <h3 className="text-lg font-bold text-white">Behavioral & Soft Skills</h3>
+                        <div>
+                            <h3 className="text-sm font-bold">Behavioral Analysis</h3>
+                            <p className="text-[10px] text-[var(--text-muted)] font-medium">Soft Skill & Emotional Tone</p>
+                        </div>
                     </div>
 
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center p-3 rounded-lg bg-black/20 border border-white/5">
-                            <span className="text-sm text-gray-400">Emotional Tone</span>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${data.layer3?.emotionalTone === 'Positive' ? 'bg-green-500/20 text-green-400' :
-                                    data.layer3?.emotionalTone === 'Negative' ? 'bg-red-500/20 text-red-400' :
-                                        'bg-blue-500/20 text-blue-400'
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center p-3 rounded-xl bg-[var(--bg-page)] border border-[var(--border-subtle)]">
+                            <span className="text-xs font-bold text-[var(--text-muted)]">Emotional Aura</span>
+                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${data.layer3?.emotionalTone === 'Positive' ? 'bg-green-500/10 text-green-600' :
+                                data.layer3?.emotionalTone === 'Negative' ? 'bg-red-500/10 text-red-600' :
+                                    'bg-indigo-500/10 text-indigo-600'
                                 }`}>
                                 {data.layer3?.emotionalTone}
                             </span>
                         </div>
 
-                        <div className="bg-black/20 p-3 rounded-lg">
-                            <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Personality Traits</h4>
-                            <div className="flex flex-wrap gap-2">
+                        <div>
+                            <h4 className="text-[10px] font-black text-[var(--text-muted)] uppercase mb-3">Personality Traits</h4>
+                            <div className="flex flex-wrap gap-1.5 font-bold">
                                 {data.layer3?.traits?.map((trait, i) => (
-                                    <span key={i} className="px-2 py-1 rounded text-xs bg-neon-pink/10 text-neon-pink border border-neon-pink/20">
+                                    <span key={i} className="px-2.5 py-1 rounded-lg text-[10px] bg-[var(--bg-page)] text-[var(--text-main)] border border-[var(--border-subtle)]">
                                         {trait}
                                     </span>
                                 ))}
                             </div>
                         </div>
 
-                        <ul className="space-y-2">
+                        <ul className="space-y-2.5">
                             {data.layer3?.details?.map((detail, i) => (
-                                <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
-                                    <Award size={14} className="mt-1 text-yellow-400 shrink-0" />
+                                <li key={i} className="flex items-start gap-2.5 text-xs text-[var(--text-main)] font-medium">
+                                    <Award size={14} className="mt-0.5 text-orange-500 shrink-0" />
                                     {detail}
                                 </li>
                             ))}
@@ -198,19 +221,6 @@ const CandidateAIReport: React.FC<AIReportProps> = ({ data }) => {
                     </div>
                 </motion.div>
             </div>
-
-            {/* AI Summary */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="p-6 rounded-xl bg-gradient-to-r from-neon-cyan/5 to-neon-purple/5 border border-white/10"
-            >
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Executive Summary</h3>
-                <p className="text-gray-200 leading-relaxed">
-                    {data.summary}
-                </p>
-            </motion.div>
         </div>
     );
 };

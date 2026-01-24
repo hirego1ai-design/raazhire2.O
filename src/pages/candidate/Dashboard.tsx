@@ -1,8 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, MapPin, Briefcase, ArrowRight } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, MapPin, Briefcase, ArrowRight, Users, ChevronRight } from 'lucide-react';
 import { endpoints, API_BASE_URL } from '../../lib/api';
-import '../../styles/premium-dark-theme.css';
 import InterviewCard from '../../components/InterviewCard';
 
 interface Interview {
@@ -40,7 +39,7 @@ const CandidateDashboard: React.FC = () => {
                 const appsData = await appsResponse.json();
 
                 // Fetch interviews
-                const interviewsResponse = await fetch(`${API_BASE_URL}/api/interviews`, {
+                const interviewsResponse = await fetch(`${API_BASE_URL}/api/interviews/candidate`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
                 const interviewsData = await interviewsResponse.json();
@@ -105,7 +104,7 @@ const CandidateDashboard: React.FC = () => {
     }, []);
 
     return (
-        <div className="space-y-8 bg-black/90 p-6 rounded-2xl border border-white/10 backdrop-blur-xl">
+        <div className="space-y-8 bg-space-dark p-6 rounded-2xl border border-white/10 backdrop-blur-xl">
             {/* Welcome Section */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}

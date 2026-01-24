@@ -50,15 +50,15 @@ export default function SearchableMultiSelect({
     }, []);
 
     return (
-        <div className="space-y-3" ref={containerRef}>
-            <label className="block font-bold text-gray-300 text-sm">{label}</label>
+        <div className="space-y-4" ref={containerRef}>
+            <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">{label}</label>
 
             <div className="relative group">
                 <div
-                    className="min-h-[3.5rem] w-full rounded-xl bg-[#0f172a] border border-gray-700 p-2.5 flex flex-wrap gap-2 focus-within:ring-2 focus-within:ring-blue-500 transition-all shadow-inner items-center"
+                    className="min-h-[3.5rem] w-full rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 flex flex-wrap gap-2 focus-within:border-indigo-600 focus-within:ring-4 focus-within:ring-indigo-600/5 transition-all shadow-sm items-center cursor-text"
                     onClick={() => setIsOpen(true)}
                 >
-                    <Search className="text-gray-500 ml-1" size={18} />
+                    <Search className="text-[var(--text-muted)] ml-2" size={16} />
 
                     {/* Selected Tags */}
                     <AnimatePresence mode="popLayout">
@@ -69,14 +69,14 @@ export default function SearchableMultiSelect({
                                 initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.8, opacity: 0 }}
-                                className="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 font-medium"
+                                className="bg-indigo-600/10 text-indigo-600 border border-indigo-600/20 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 font-bold"
                             >
                                 {item}
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleRemove(item); }}
-                                    className="hover:text-white bg-blue-500/20 rounded-full p-0.5 transition-colors"
+                                    className="hover:text-red-500 transition-colors"
                                 >
-                                    <X size={12} />
+                                    <X size={14} />
                                 </button>
                             </motion.span>
                         ))}
@@ -89,7 +89,7 @@ export default function SearchableMultiSelect({
                         onChange={e => { setQuery(e.target.value); setIsOpen(true); }}
                         onFocus={() => setIsOpen(true)}
                         placeholder={selected.length === 0 ? placeholder : ""}
-                        className="bg-transparent outline-none text-white placeholder-gray-500 flex-1 min-w-[120px] h-8 text-sm ml-1"
+                        className="bg-transparent outline-none text-[var(--text-main)] placeholder-[var(--text-muted)]/50 flex-1 min-w-[150px] h-8 text-sm font-bold ml-2"
                     />
                 </div>
 
@@ -101,25 +101,25 @@ export default function SearchableMultiSelect({
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.98 }}
                             transition={{ duration: 0.2 }}
-                            className="absolute z-50 left-0 right-0 mt-2 bg-[#1e293b] border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto backdrop-blur-xl"
+                            className="absolute z-50 left-0 right-0 mt-2 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl shadow-2xl max-h-60 overflow-y-auto backdrop-blur-xl p-2"
                         >
                             {filteredOptions.length > 0 ? (
-                                <div className="p-2 space-y-1">
+                                <div className="space-y-1">
                                     {filteredOptions.map(option => (
                                         <button
                                             key={option}
                                             onClick={() => handleSelect(option)}
-                                            className="w-full text-left px-4 py-3 rounded-lg text-gray-300 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-between group"
+                                            className="w-full text-left px-4 py-3 rounded-xl text-[var(--text-main)] hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-between group font-bold text-xs uppercase tracking-wider"
                                         >
-                                            <span className="font-medium">{option}</span>
+                                            <span>{option}</span>
                                             <Plus size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </button>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="p-6 text-gray-500 text-center text-sm flex flex-col items-center gap-2">
-                                    <Search size={24} className="opacity-50" />
-                                    <span>No matches found for "{query}"</span>
+                                <div className="p-8 text-[var(--text-muted)] text-center text-xs flex flex-col items-center gap-3">
+                                    <Search size={24} className="opacity-20" />
+                                    <span className="font-bold uppercase tracking-widest">Digital Void: "{query}" Not Found</span>
                                 </div>
                             )}
                         </motion.div>
@@ -127,15 +127,15 @@ export default function SearchableMultiSelect({
                 </AnimatePresence>
             </div>
 
-            {/* Predefined Options (Chips) - "Pick & Drop Style" */}
-            <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Suggested Options</p>
+            {/* Quick Chips - SaaS Style */}
+            <div className="space-y-3">
+                <p className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] ml-1">Universal Suggestions</p>
                 <div className="flex flex-wrap gap-2">
-                    {options.filter(opt => !selected.includes(opt)).slice(0, 10).map(option => (
+                    {options.filter(opt => !selected.includes(opt)).slice(0, 8).map(option => (
                         <button
                             key={option}
                             onClick={() => handleSelect(option)}
-                            className="px-4 py-2 rounded-lg bg-[#1e293b] border border-gray-700 text-gray-400 text-sm hover:border-blue-500 hover:text-blue-400 hover:bg-blue-500/10 transition-all flex items-center gap-2"
+                            className="px-4 py-2 rounded-xl bg-[var(--bg-page)] border border-[var(--border-subtle)] text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest hover:border-indigo-600/50 hover:text-indigo-600 hover:bg-indigo-600/5 transition-all flex items-center gap-2"
                         >
                             <Plus size={12} /> {option}
                         </button>

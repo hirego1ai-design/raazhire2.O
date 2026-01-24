@@ -1046,3 +1046,80 @@ export const getInterviewsForEmployer = (employerId: string) =>
 
 export const getInterviewsForJob = (jobId: string) =>
     mockInterviews.filter(int => int.job_id === jobId);
+
+// AI Skill Matching: Calculate how well a candidate matches a job's required skills
+export const calculateSkillMatchScore = (candidateSkills: Array<{ skill: string; score: number }>, jobSkills: string[]): number => {
+    if (!jobSkills.length || !candidateSkills.length) return 0;
+
+    let matchedSkillsScore = 0;
+    let matchedCount = 0;
+
+    jobSkills.forEach(jobSkill => {
+        const candidateSkill = candidateSkills.find(
+            cs => cs.skill.toLowerCase().includes(jobSkill.toLowerCase()) ||
+                jobSkill.toLowerCase().includes(cs.skill.toLowerCase())
+        );
+        if (candidateSkill) {
+            matchedSkillsScore += candidateSkill.score;
+            matchedCount++;
+        }
+    });
+
+    // Return weighted match percentage
+    const skillCoverage = (matchedCount / jobSkills.length) * 100;
+    const avgSkillScore = matchedCount > 0 ? matchedSkillsScore / matchedCount : 0;
+
+    return Math.round((skillCoverage * 0.6) + (avgSkillScore * 0.4));
+};
+
+// Get AI-recommended candidates for a job (who haven't applied yet)
+export const getAIRecommendedCandidatesForJob = (jobId: string, limit: number = 10) => {
+    const job = getJobById(jobId);
+    if (!job) return [];
+
+    // Get candidates who already applied
+    const appliedCandidateIds = getApplicationsForJob(jobId).map(app => app.candidate_id);
+
+    // Score remaining candidates based on skill match
+    const scoredCandidates = mockCandidates
+        .filter(c => !appliedCandidateIds.includes(c.id))
+        .map(candidate => ({
+            ...candidate,
+            aiMatchScore: calculateSkillMatchScore(candidate.skills, job.skills),
+            recommendationType: 'ai_recommended' as const
+        }))
+        .filter(c => c.aiMatchScore >= 40) // Only recommend if at least 40% match
+        .sort((a, b) => b.aiMatchScore - a.aiMatchScore)
+        .slice(0, limit);
+
+    return scoredCandidates;
+};
+
+// Get top talent pool (all candidates sorted by points/rank)
+export const getTopTalentPool = (limit: number = 20) => {
+    return mockCandidates
+        .map(c => ({
+            ...c,
+            aiMatchScore: Math.round((c.points / 3500) * 100), // Normalize points to percentage
+            recommendationType: 'top_talent' as const
+        }))
+        .sort((a, b) => b.points - a.points)
+        .slice(0, limit);
+};
+
+// Combined: Get both applied candidates and AI recommendations for a job
+export const getTalentPoolForJob = (jobId: string) => {
+    const appliedCandidates = getCandidatesForJob(jobId).map(c => ({
+        ...c,
+        aiMatchScore: c.applicationScore || 0,
+        recommendationType: 'applied' as const
+    }));
+
+    const aiRecommended = getAIRecommendedCandidatesForJob(jobId, 8);
+
+    return {
+        applied: appliedCandidates,
+        aiRecommended: aiRecommended,
+        all: [...appliedCandidates, ...aiRecommended]
+    };
+};

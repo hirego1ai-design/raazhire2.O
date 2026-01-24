@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { AlertTriangle, Eye, Monitor, Maximize } from 'lucide-react';
+import { AlertTriangle, Eye, Monitor, Maximize, ShieldCheck, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ProctoringWrapperProps {
@@ -16,10 +16,10 @@ const ProctoringWrapper: React.FC<ProctoringWrapperProps> = ({ children, onViola
         setWarnings(prev => [...prev, message]);
         onViolation(message);
 
-        // Clear warning after 3 seconds
+        // Clear warning after 4 seconds
         setTimeout(() => {
             setWarnings(prev => prev.slice(1));
-        }, 3000);
+        }, 4000);
     }, [onViolation]);
 
     useEffect(() => {
@@ -27,33 +27,31 @@ const ProctoringWrapper: React.FC<ProctoringWrapperProps> = ({ children, onViola
 
         const handleVisibilityChange = () => {
             if (document.hidden) {
-                addWarning('Tab switch detected! Please stay on this tab.');
+                addWarning('Tab switch detected! Integrity score impacted.');
             }
         };
 
         const handleBlur = () => {
-            addWarning('Focus lost! Please click back on the assessment window.');
+            addWarning('Focus lost! Please stay within the secure assessment window.');
         };
 
         const handleFullScreenChange = () => {
             if (!document.fullscreenElement) {
                 setIsFullScreen(false);
-                addWarning('Full screen exited! Please return to full screen.');
+                addWarning('Full screen exited! Secure mode requires full screen.');
             } else {
                 setIsFullScreen(true);
             }
         };
 
-        // Prevent right click
         const handleContextMenu = (e: MouseEvent) => {
             e.preventDefault();
-            addWarning('Right click is disabled during assessment.');
+            addWarning('Right click interaction is restricted.');
         };
 
-        // Prevent copy/paste
         const handleCopyPaste = (e: ClipboardEvent) => {
             e.preventDefault();
-            addWarning('Copy/Paste is disabled.');
+            addWarning('Copy/Paste operations are blocked in secure mode.');
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -80,54 +78,74 @@ const ProctoringWrapper: React.FC<ProctoringWrapperProps> = ({ children, onViola
     };
 
     return (
-        <div className="relative min-h-screen bg-space-dark">
+        <div className="relative min-h-screen saas-layout transition-colors duration-500">
             {/* Proctoring Status Bar */}
             {isActive && (
-                <div className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-red-500/30 p-2 flex justify-between items-center px-6">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-red-400 animate-pulse">
-                            <div className="w-3 h-3 rounded-full bg-red-500" />
-                            <span className="font-bold text-sm uppercase tracking-wider">Proctoring Active</span>
+                <motion.div
+                    initial={{ y: -50 }}
+                    animate={{ y: 0 }}
+                    className="fixed top-0 left-0 right-0 z-[60] bg-[var(--bg-surface)] border-b border-red-500/20 px-6 py-3 flex justify-between items-center shadow-lg"
+                >
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2.5">
+                            <div className="relative">
+                                <ShieldCheck size={20} className="text-red-500" />
+                                <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20" />
+                            </div>
+                            <span className="font-black text-[10px] uppercase tracking-widest text-red-500">AI Proctoring Active</span>
                         </div>
-                        <div className="h-4 w-px bg-white/20" />
-                        <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <span className="flex items-center gap-1"><Eye size={14} /> Eye Tracking On</span>
-                            <span className="flex items-center gap-1"><Monitor size={14} /> Screen Monitored</span>
+
+                        <div className="h-4 w-px bg-[var(--border-subtle)]" />
+
+                        <div className="flex items-center gap-5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-tight">
+                            <span className="flex items-center gap-1.5"><Eye size={12} className="text-red-500/60" /> Eye Tracking</span>
+                            <span className="flex items-center gap-1.5"><Monitor size={12} className="text-red-500/60" /> Screen Recording</span>
+                            <span className="flex items-center gap-1.5"><Lock size={12} className="text-red-500/60" /> Secure Env</span>
                         </div>
                     </div>
 
                     {!isFullScreen && (
                         <button
                             onClick={requestFullScreen}
-                            className="flex items-center gap-2 px-3 py-1 rounded bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30 transition-colors"
+                            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-red-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-md shadow-red-500/20"
                         >
-                            <Maximize size={14} />
-                            Enable Full Screen
+                            <Maximize size={12} />
+                            Enforce Full Screen
                         </button>
                     )}
-                </div>
+                </motion.div>
             )}
 
             {/* Warning Toasts */}
-            <div className="fixed top-16 right-6 z-50 space-y-2">
+            <div className="fixed top-20 right-6 z-[70] space-y-3 max-w-sm pointer-events-none">
                 <AnimatePresence>
                     {warnings.map((warning, index) => (
                         <motion.div
                             key={index}
-                            initial={{ opacity: 0, x: 50 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 50 }}
-                            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/90 text-white shadow-lg backdrop-blur-sm"
+                            initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                            exit={{ opacity: 0, x: 50, scale: 0.9 }}
+                            className="flex items-center gap-4 px-5 py-4 rounded-xl bg-red-600 text-white shadow-2xl border border-red-400/30 backdrop-blur-md"
                         >
-                            <AlertTriangle size={20} />
-                            <span className="font-medium text-sm">{warning}</span>
+                            <div className="p-2 bg-white/10 rounded-lg">
+                                <AlertTriangle size={20} className="text-white" />
+                            </div>
+                            <div>
+                                <h4 className="text-[10px] font-black uppercase tracking-widest opacity-80 leading-none mb-1">Security Alert</h4>
+                                <span className="font-bold text-xs">{warning}</span>
+                            </div>
                         </motion.div>
                     ))}
                 </AnimatePresence>
             </div>
 
+            {/* Integrity Indicator Overlay (Subtle) */}
+            {isActive && (
+                <div className="fixed inset-0 pointer-events-none border-4 border-red-500/5 z-[55]" />
+            )}
+
             {/* Main Content */}
-            <div className={isActive ? 'pt-12' : ''}>
+            <div className={`${isActive ? 'pt-16' : ''} transition-all duration-300`}>
                 {children}
             </div>
         </div>
