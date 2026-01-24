@@ -18,7 +18,8 @@ import {
     Info,
     Rocket,
     Building2,
-    CheckCircle2
+    CheckCircle2,
+    User
 } from 'lucide-react';
 
 interface Post {
