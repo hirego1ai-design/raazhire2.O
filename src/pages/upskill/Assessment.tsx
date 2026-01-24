@@ -266,7 +266,7 @@ const Assessment: React.FC = () => {
                 formData.append('video', blob, 'assessment.webm');
                 formData.append('transcript', "Automatic skill assessment recording.");
 
-                const { data: { session } } = await supabase ? await supabase.auth.getSession() : { data: { session: null } };
+                const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
                 const headers: Record<string, string> = {};
                 if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
 
