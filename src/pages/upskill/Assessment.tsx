@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
+import Webcam from 'react-webcam';
+import { supabase } from '../../lib/supabase';
+import { endpoints } from '../../lib/api';
 import {
     Camera,
     Mic,
@@ -14,7 +17,8 @@ import {
     Monitor,
     Activity,
     Shield,
-    Eye
+    Eye,
+    Loader
 } from 'lucide-react';
 
 // ============================================
@@ -153,6 +157,11 @@ const Assessment: React.FC = () => {
         internet: 'checking' as 'ready' | 'checking' | 'error'
     });
 
+    const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+    const [isUploading, setIsUploading] = useState(false);
+    const webcamRef = React.useRef<Webcam>(null);
+    const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+
     useEffect(() => {
         // Simulate system checks
         setTimeout(() => {
@@ -215,19 +224,76 @@ const Assessment: React.FC = () => {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const handleAnswer = (answer: number) => {
-        if (currentQuestion < questions.length - 1) {
-            setCurrentQuestion(currentQuestion + 1);
-        } else {
-            setStage('complete');
-            navigate(`/upskill/dashboard`);
-        }
-    };
-
     const startAssessment = () => {
         const allReady = Object.values(systemChecks).every(status => status === 'ready');
         if (allReady) {
             setStage('assessment');
+            startRecording();
+        }
+    };
+
+    const startRecording = () => {
+        setRecordedChunks([]);
+        if (webcamRef.current && webcamRef.current.stream) {
+            mediaRecorderRef.current = new MediaRecorder(webcamRef.current.stream, {
+                mimeType: "video/webm"
+            });
+            mediaRecorderRef.current.addEventListener(
+                "dataavailable",
+                ({ data }) => {
+                    if (data.size > 0) {
+                        setRecordedChunks((prev) => prev.concat(data));
+                    }
+                }
+            );
+            mediaRecorderRef.current.start();
+        }
+    };
+
+    const stopAndUpload = async () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+            mediaRecorderRef.current.stop();
+        }
+
+        setIsUploading(true);
+
+        // Wait for chunks to be collected
+        setTimeout(async () => {
+            const blob = new Blob(recordedChunks, { type: "video/webm" });
+
+            try {
+                const formData = new FormData();
+                formData.append('video', blob, 'assessment.webm');
+                formData.append('transcript', "Automatic skill assessment recording.");
+
+                const { data: { session } } = await supabase ? await supabase.auth.getSession() : { data: { session: null } };
+                const headers: Record<string, string> = {};
+                if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
+
+                const response = await fetch(`${endpoints.test.replace('/test', '')}/video-resume/upload`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+
+                if (response.ok) {
+                    console.log('Assessment video uploaded successfully');
+                }
+            } catch (error) {
+                console.error('Failed to upload assessment video:', error);
+            } finally {
+                setIsUploading(false);
+                setStage('complete');
+                navigate(`/upskill/dashboard`);
+            }
+        }, 500);
+    };
+
+    const handleAnswer = (answer: number) => {
+        if (currentQuestion < questions.length - 1) {
+            setCurrentQuestion(currentQuestion + 1);
+        } else {
+            stopAndUpload();
         }
     };
 
@@ -330,9 +396,15 @@ const Assessment: React.FC = () => {
                         <div className="max-w-3xl mx-auto">
                             <div className="relative aspect-video bg-gray-900 rounded-video overflow-hidden shadow-premium-lg">
                                 <div className="absolute inset-0 bg-gradient-to-br from-electric-indigo-500/20 to-ai-cyan-500/20" />
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                                    <Camera className="w-16 h-16 mb-4 opacity-50" />
-                                    <p className="text-lg font-semibold opacity-75">Camera feed will appear here</p>
+                                <Webcam
+                                    audio={true}
+                                    ref={webcamRef}
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                    mirrored={true}
+                                />
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-white pointer-events-none">
+                                    {!systemChecks.camera && <Camera className="w-16 h-16 mb-4 opacity-50" />}
+                                    {!systemChecks.camera && <p className="text-lg font-semibold opacity-75">Camera feed will appear here</p>}
                                 </div>
                                 {/* Proctoring Indicators */}
                                 <div className="absolute top-4 right-4 flex gap-2">

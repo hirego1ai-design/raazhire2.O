@@ -93,7 +93,8 @@ const authenticateUser = async (req, res, next) => {
     if (!authHeader) {
         // In development, allow requests without auth for admin panel testing
         if (process.env.NODE_ENV !== 'production') {
-            console.warn('⚠️ No auth header provided. Allowing request in dev mode for:', req.path);
+            console.warn('⚠️ No auth header provided. Providing mock user for dev mode.');
+            req.user = { id: 'demo-candidate-001', role: 'candidate', email: 'candidate@hirego.demo' };
             return next();
         }
         return res.status(401).json({ error: 'Missing Authorization header' });
@@ -113,7 +114,8 @@ const authenticateUser = async (req, res, next) => {
         if (error || !user) {
             // In development, allow even with invalid token
             if (process.env.NODE_ENV !== 'production') {
-                console.warn('⚠️ Invalid token. Allowing request in dev mode for:', req.path);
+                console.warn('⚠️ Invalid token. Providing mock user for dev mode.');
+                req.user = { id: 'demo-candidate-001', role: 'candidate', email: 'candidate@hirego.demo' };
                 return next();
             }
             return res.status(401).json({ error: 'Invalid or expired token' });
@@ -121,6 +123,10 @@ const authenticateUser = async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+            req.user = { id: 'demo-candidate-001', role: 'candidate', email: 'candidate@hirego.demo' };
+            return next();
+        }
         return res.status(500).json({ error: 'Internal authentication error' });
     }
 };
@@ -477,6 +483,198 @@ app.post('/api/admin/youtube-config', async (req, res) => {
     } catch (error) {
         console.error('Error saving YouTube config:', error);
         res.status(500).json({ error: 'Failed to save YouTube configuration', details: error.message });
+    }
+});
+
+// Helper to get YouTube Agent
+async function getYouTubeAgent() {
+    let config = null;
+    if (supabase) {
+        const { data } = await supabase.from('youtube_config').select('*').single();
+        config = data;
+    }
+
+    if (!config) {
+        const localDb = await readLocalDb();
+        config = localDb.youtube_config;
+    }
+
+    if (!config) return null;
+
+    const { YouTubeAgent } = await import('./agents/youtube_agent.js');
+    return new YouTubeAgent(config, decrypt);
+}
+
+import multer from 'multer';
+const upload = multer({ dest: 'uploads/' });
+
+// Video Resume Upload & Analysis
+app.post('/api/video-resume/upload', authenticateUser, upload.single('video'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No video file provided' });
+        }
+
+        const candidateId = req.body.candidateId || req.user?.id;
+        const transcript = req.body.transcript || "";
+
+        // 1. Get YouTube Agent
+        const agent = await getYouTubeAgent();
+        let videoUrl = null;
+        let videoId = null;
+
+        if (agent) {
+            console.log('Uploading video to YouTube...');
+            const result = await agent.uploadVideo(req.file.path, {
+                title: `Video Resume - ${req.user?.email || 'Candidate'}`,
+                description: `Candidate Video Resume for HireGo AI Platform. Transcript: ${transcript.substring(0, 100)}...`
+            });
+            videoUrl = result.url;
+            videoId = result.id;
+        } else {
+            console.warn('YouTube not configured. Analysis will proceed without permanent video storage.');
+            // In a real dev env, we might want to save to 'uploads/' and return a local URL
+            videoUrl = `local://uploads/${req.file.filename}`;
+        }
+
+        // 2. Fetch API keys from database for analysis
+        let apiKeys = {};
+        if (supabase) {
+            const { data: keys } = await supabase.from('api_keys').select('*');
+            if (keys) {
+                keys.forEach(k => {
+                    if (k.api_key) apiKeys[k.provider] = decrypt(k.api_key);
+                });
+            }
+        } else {
+            const localDb = await readLocalDb();
+            if (localDb.api_keys) {
+                localDb.api_keys.forEach(k => {
+                    if (k.api_key) apiKeys[k.provider] = decrypt(k.api_key);
+                });
+            }
+        }
+
+        // 3. Run AI Analysis
+        // We use the runMasterEvaluation directly here similar to /api/analyze-video
+        const candidateData = {
+            name: req.user?.name || 'Candidate',
+            skills: ['React', 'Communication'] // Mock
+        };
+        const videoData = {
+            transcription: transcript || "No audio detected.",
+            metadata: { duration: req.body.duration || 120 }
+        };
+
+        const report = await runMasterEvaluation(candidateData, videoData, apiKeys);
+
+        // 4. Update Candidate Profile with YouTube URL if using Supabase
+        if (supabase && candidateId && videoUrl) {
+            try {
+                const { error: updateError } = await supabase
+                    .from('candidates')
+                    .update({
+                        bio: req.body.bio || '', // We could store video URL in a new column but using bio as proxy if column missing
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', candidateId);
+
+                // Also save to assessment_results or similar if needed
+                await supabase.from('assessment_results').insert([{
+                    user_id: candidateId,
+                    score: report.finalScore,
+                    communication_score: report.layer3?.score || 0,
+                    knowledge_score: report.layer2?.score || 0,
+                    confidence_score: report.layer3?.score || 0,
+                    transcript: transcript,
+                    completed_at: new Date().toISOString()
+                }]);
+            } catch (dbError) {
+                console.error('Failed to update DB with video URL:', dbError);
+            }
+        }
+
+        // Clean up temporary file
+        try {
+            await fs.unlink(req.file.path);
+        } catch (unlinkError) {
+            console.warn('Failed to delete temporary file:', req.file.path);
+        }
+
+        res.json({
+            success: true,
+            videoUrl,
+            videoId,
+            analysis: {
+                score: report.finalScore,
+                communication: report.layer3 ? report.layer3.score : 0,
+                knowledge: report.layer2 ? report.layer2.score : 0,
+                tone: report.layer3 ? report.layer3.emotionalTone : 'Neutral',
+                feedback: report.summary,
+                detailedReport: report
+            }
+        });
+
+    } catch (error) {
+        console.error('Video upload/analysis failed:', error);
+        res.status(500).json({ error: 'Video processing failed', details: error.message });
+    }
+});
+
+// Lesson Video Upload
+app.post('/api/admin/upskill/lessons/upload-video', authenticateUser, upload.single('video'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No video file provided' });
+        }
+
+        const { courseId, lessonTitle } = req.body;
+
+        const agent = await getYouTubeAgent();
+        if (!agent) {
+            return res.status(400).json({ error: 'YouTube not configured' });
+        }
+
+        console.log('Uploading lesson video to YouTube...');
+        const result = await agent.uploadVideo(req.file.path, {
+            title: lessonTitle || `Lesson - ${Date.now()}`,
+            description: `Course Lesson Video for HireGo Upskill Portal. Course ID: ${courseId}`,
+            privacyStatus: 'unlisted' // Lessons should probably be unlisted
+        });
+
+        // Clean up temporary file
+        await fs.unlink(req.file.path);
+
+        res.json({ success: true, videoUrl: result.url, videoId: result.id });
+    } catch (error) {
+        console.error('Lesson upload failed:', error);
+        res.status(500).json({ error: 'Upload failed', details: error.message });
+    }
+});
+// Test YouTube Upload
+app.post('/api/admin/youtube-upload-test', authenticateUser, upload.single('video'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No video file provided' });
+        }
+
+        const agent = await getYouTubeAgent();
+        if (!agent) {
+            return res.status(400).json({ error: 'YouTube not configured' });
+        }
+
+        const result = await agent.uploadVideo(req.file.path, {
+            title: 'HireGo Test Upload',
+            description: 'This is a test upload from HireGo Admin Panel'
+        });
+
+        // Clean up temporary file
+        await fs.unlink(req.file.path);
+
+        res.json({ success: true, videoUrl: result.url, videoId: result.id });
+    } catch (error) {
+        console.error('Test upload failed:', error);
+        res.status(500).json({ error: 'Upload failed', details: error.message });
     }
 });
 

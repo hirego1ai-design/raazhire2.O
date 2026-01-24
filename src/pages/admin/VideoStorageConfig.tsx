@@ -28,6 +28,8 @@ const VideoStorageConfig: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [channelTitle, setChannelTitle] = useState('');
     const [showAccessToken, setShowAccessToken] = useState(false);
+    const [isTestUploading, setIsTestUploading] = useState(false);
+    const [testVideoUrl, setTestVideoUrl] = useState('');
 
     // Load from backend on mount
     React.useEffect(() => {
@@ -173,6 +175,42 @@ const VideoStorageConfig: React.FC = () => {
             alert(`Failed to save configuration: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleTestUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsTestUploading(true);
+        setTestVideoUrl('');
+
+        try {
+            const headers = await getAuthHeaders();
+            const formData = new FormData();
+            formData.append('video', file);
+
+            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/youtube-upload-test`, {
+                method: 'POST',
+                headers: { ...headers },
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setTestVideoUrl(data.videoUrl);
+                alert(`✅ Test Upload Successful!\n\nVideo URL: ${data.videoUrl}`);
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.details || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Test upload failed:', error);
+            alert(`❌ Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setIsTestUploading(false);
+            // Reset input
+            if (e.target) e.target.value = '';
         }
     };
 
@@ -409,6 +447,34 @@ const VideoStorageConfig: React.FC = () => {
                         className="p-6 rounded-xl glass border border-white/10"
                     >
                         <h2 className="text-xl font-bold mb-6">Recent Activity</h2>
+
+                        {/* Test Upload Button */}
+                        <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+                            <h3 className="text-sm font-bold text-red-400 mb-2 flex items-center gap-2">
+                                <PlayCircle size={14} />
+                                Test Upload
+                            </h3>
+                            <p className="text-xs text-gray-400 mb-3">Upload a short mp4 to verify your credentials work for uploads.</p>
+                            <label className={`w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all ${isTestUploading ? 'bg-gray-600' : 'bg-red-600 hover:bg-red-700'} text-white text-sm font-bold shadow-lg`}>
+                                {isTestUploading ? <Loader className="animate-spin" size={16} /> : <Youtube size={16} />}
+                                {isTestUploading ? 'Uploading...' : 'Select & Upload Video'}
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="video/*"
+                                    onChange={handleTestUpload}
+                                    disabled={isTestUploading}
+                                />
+                            </label>
+                            {testVideoUrl && (
+                                <div className="mt-3 p-2 bg-black/40 rounded border border-white/5 truncate">
+                                    <a href={testVideoUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline flex items-center gap-1">
+                                        <ExternalLink size={10} /> View Uploaded Video
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="space-y-3">
                             {logs.length === 0 ? (
                                 <p className="text-sm text-gray-500 italic">No recent uploads recorded.</p>

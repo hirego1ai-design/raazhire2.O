@@ -19,6 +19,7 @@ import EmployerRegister from './pages/auth/EmployerRegister';
 import DashboardLayout from './layouts/DashboardLayout';
 import CreateAccount from './pages/auth/CreateAccount';
 import CandidateDashboard from './pages/candidate/Dashboard';
+import UniversalDashboard from './pages/UniversalDashboard';
 import Profile from './pages/candidate/Profile';
 import VideoResume from './pages/candidate/VideoResume';
 import Assessments from './pages/candidate/Assessments';
@@ -28,6 +29,10 @@ import CandidateInterviews from './pages/candidate/CandidateInterviews';
 import InterviewPage from './pages/candidate/Interview';
 import LiveAssessment from './pages/candidate/LiveAssessment';
 import AssessmentResult from './pages/candidate/AssessmentResult';
+import Applications from './pages/candidate/Applications';
+import Connections from './pages/candidate/Connections';
+import Messages from './pages/candidate/Messages';
+import CandidateSettings from './pages/candidate/Settings';
 import EmployerLayout from './layouts/EmployerLayout';
 import EmployerDashboard from './pages/employer/Dashboard';
 import JobPostingForm from './pages/employer/JobPostingForm';
@@ -57,6 +62,14 @@ import PerformanceAnalytics from './pages/admin/PerformanceAnalytics';
 import MyJobs from './pages/employer/MyJobs';
 import JobDetail from './pages/employer/JobDetail';
 
+import EducatorLayout from './layouts/EducatorLayout';
+import EducatorDashboard from './pages/educator/Dashboard';
+import EducatorCourseManagement from './pages/educator/CourseManagement';
+import EducatorLiveStream from './pages/educator/LiveStream';
+import EducatorComments from './pages/educator/Comments';
+import EducatorSettings from './pages/educator/Settings';
+import EducatorLogin from './pages/educator/Login';
+
 import GeneralPage from './pages/GeneralPage';
 import PricingPage from './pages/Pricing';
 import EnterprisePage from './pages/Enterprise';
@@ -84,10 +97,13 @@ function App() {
 
 function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLogin: (v: boolean) => void }) {
   const location = useLocation();
-  const hideNavbar = location.pathname.startsWith('/admin') || location.pathname.startsWith('/employer') || location.pathname.startsWith('/candidate');
+  const hideNavbar = location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/employer') ||
+    location.pathname.startsWith('/candidate') ||
+    location.pathname.startsWith('/educator');
 
   return (
-    <div className="min-h-screen bg-space-dark text-white font-outfit">
+    <div className="min-h-screen bg-white text-gray-900 font-outfit">
       {!hideNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -113,6 +129,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/jobs" element={<Jobs />} />
 
         <Route path="/post-job-public" element={<GeneralPage title="Post a Job" subtitle="Start your hiring journey with HireGo AI." />} />
         <Route path="/ai-features" element={<GeneralPage title="AI Features" subtitle="Explore our cutting-edge autonomous agents." />} />
@@ -122,17 +139,26 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
 
         <Route path="/landing-old" element={<Landing />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/educator-login" element={<EducatorLogin />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/register/candidate" element={<CandidateRegister />} />
         <Route path="/register/employer" element={<EmployerRegister />} />
         <Route path="/create-account" element={<CreateAccount />} />
         {/* Candidate Routes */}
         <Route path="/candidate" element={<DashboardLayout />}>
-          <Route path="dashboard" element={<CandidateDashboard />} />
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<UniversalDashboard />} />
+          <Route path="jobs" element={<Jobs />} />
+          <Route path="applications" element={<Applications />} />
+          <Route path="connections" element={<Connections />} />
+          <Route path="messages" element={<Messages />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="settings" element={<CandidateSettings />} />
+
+          {/* Internal/Legacy Routes */}
+          <Route path="overview" element={<CandidateDashboard />} />
           <Route path="video-resume" element={<VideoResume />} />
           <Route path="assessments" element={<Assessments />} />
-          <Route path="jobs" element={<Jobs />} />
           <Route path="gamification" element={<GamificationDashboard />} />
           <Route path="interviews" element={<CandidateInterviews />} />
           <Route path="interview/:id" element={<InterviewPage />} />
@@ -143,6 +169,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
         {/* Employer Routes */}
         <Route path="/employer" element={<EmployerLayout />}>
           <Route path="dashboard" element={<EmployerDashboard />} />
+          <Route path="overview" element={<UniversalDashboard />} />
           <Route path="jobs" element={<MyJobs />} />
           <Route path="job/:jobId" element={<JobDetail />} />
           <Route path="post-job" element={<JobPostingForm />} />
@@ -153,6 +180,16 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
           <Route path="settings" element={<Settings />} />
           <Route path="make-agreement" element={<MakeAgreement />} />
           <Route path="rankings/:jobId" element={<CandidateRankings />} />
+        </Route>
+
+        {/* Educator Routes */}
+        <Route path="/educator" element={<EducatorLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<EducatorDashboard />} />
+          <Route path="courses" element={<EducatorCourseManagement />} />
+          <Route path="live" element={<EducatorLiveStream />} />
+          <Route path="comments" element={<EducatorComments />} />
+          <Route path="settings" element={<EducatorSettings />} />
         </Route>
 
         {/* Admin Routes */}

@@ -4,7 +4,7 @@ import { Mail, Lock, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const SignUp = () => {
-    const [userType, setUserType] = useState<'candidate' | 'employer'>('candidate');
+    const [userType, setUserType] = useState<'candidate' | 'employer' | 'educator'>('candidate');
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -17,7 +17,10 @@ const SignUp = () => {
         e.preventDefault();
 
         // Navigate to the appropriate register page with form data
-        const targetRoute = userType === 'candidate' ? '/register/candidate' : '/register/employer';
+        let targetRoute = '/register/candidate';
+        if (userType === 'employer') targetRoute = '/register/employer';
+        if (userType === 'educator') targetRoute = '/register/educator'; // Placeholder or actual educator register
+
         navigate(targetRoute, {
             state: {
                 initialData: {
@@ -59,7 +62,7 @@ const SignUp = () => {
                             <button
                                 type="button"
                                 onClick={() => setUserType('candidate')}
-                                className={`px-6 py-2 rounded-md text-sm font-semibold transition-all ${userType === 'candidate' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
+                                className={`px-4 py-2 rounded-md text-xs font-semibold transition-all ${userType === 'candidate' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 Candidate
@@ -67,10 +70,18 @@ const SignUp = () => {
                             <button
                                 type="button"
                                 onClick={() => setUserType('employer')}
-                                className={`px-6 py-2 rounded-md text-sm font-semibold transition-all ${userType === 'employer' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
+                                className={`px-4 py-2 rounded-md text-xs font-semibold transition-all ${userType === 'employer' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 Employer
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setUserType('educator')}
+                                className={`px-4 py-2 rounded-md text-xs font-semibold transition-all ${userType === 'educator' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                Educator
                             </button>
                         </div>
                     </div>

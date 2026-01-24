@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 const SignIn = () => {
-    const [userType, setUserType] = useState<'candidate' | 'employer'>('candidate');
+    const [userType, setUserType] = useState<'candidate' | 'employer' | 'educator'>('candidate');
     const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
@@ -27,8 +27,10 @@ const SignIn = () => {
                 localStorage.setItem('sb-token', data.session.access_token);
                 if (userType === 'candidate') {
                     navigate('/candidate/dashboard');
-                } else {
+                } else if (userType === 'employer') {
                     navigate('/employer/dashboard');
+                } else {
+                    navigate('/educator/dashboard');
                 }
             }
         } catch (error: any) {
@@ -65,7 +67,7 @@ const SignIn = () => {
                             <button
                                 type="button"
                                 onClick={() => setUserType('candidate')}
-                                className={`px-6 py-2 rounded-md text-sm font-semibold transition-all ${userType === 'candidate' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
+                                className={`px-4 py-2 rounded-md text-xs font-semibold transition-all ${userType === 'candidate' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 Candidate
@@ -73,10 +75,18 @@ const SignIn = () => {
                             <button
                                 type="button"
                                 onClick={() => setUserType('employer')}
-                                className={`px-6 py-2 rounded-md text-sm font-semibold transition-all ${userType === 'employer' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
+                                className={`px-4 py-2 rounded-md text-xs font-semibold transition-all ${userType === 'employer' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 Employer
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setUserType('educator')}
+                                className={`px-4 py-2 rounded-md text-xs font-semibold transition-all ${userType === 'educator' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                Educator
                             </button>
                         </div>
                     </div>
@@ -144,6 +154,25 @@ const SignIn = () => {
                                 </svg>
                             </button>
                         </div>
+                    </div>
+
+                    {/* Developer Bypass Button */}
+                    <div className="mt-8 pt-6 border-t border-gray-100">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (userType === 'candidate') {
+                                    navigate('/candidate/dashboard');
+                                } else if (userType === 'employer') {
+                                    navigate('/employer/dashboard');
+                                } else {
+                                    navigate('/educator/dashboard');
+                                }
+                            }}
+                            className="w-full py-2 px-4 bg-gray-900 text-white text-[10px] font-black tracking-[0.2em] rounded-lg hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2"
+                        >
+                            <span className="opacity-50">⚡</span> DEVELOPER BYPASS <span className="opacity-50">⚡</span>
+                        </button>
                     </div>
                 </div>
 

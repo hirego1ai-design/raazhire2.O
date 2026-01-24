@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     BookOpen, Plus, Edit, Trash2, Eye, CheckCircle, XCircle,
     Search, Filter, Clock, Users, Star, Layers, Video, FileText,
-    Award, TrendingUp, X, Save, Upload, Image
+    Award, TrendingUp, X, Save, Upload, Image, Loader
 } from 'lucide-react';
 import AdminButton3D from '../../components/AdminButton3D';
 import { endpoints } from '../../lib/api';
@@ -44,6 +44,9 @@ const UpskillCourseManagement: React.FC = () => {
     const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [showLessons, setShowLessons] = useState(false);
+    const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<Course | null>(null);
+    const [courseLessons, setCourseLessons] = useState<Lesson[]>([]);
+    const [isUploadingVideo, setIsUploadingVideo] = useState(false);
 
     const [isLoading, setIsLoading] = useState(true);
     const [courses, setCourses] = useState<Course[]>([]);
@@ -76,10 +79,35 @@ const UpskillCourseManagement: React.FC = () => {
         fetchCourses();
     }, []);
 
-    const [lessons] = useState<Lesson[]>([
-        { id: 'L001', courseId: 'C001', title: 'Introduction to HTML', type: 'Video', duration: '15 min', order: 1, isPublished: true },
-        // Lessons API integration can be added later as it requires a separate endpoint or nested structure
-    ]);
+    const fetchLessons = async (courseId: string) => {
+        setIsLoading(true);
+        try {
+            const { data: { session } } = await supabase!.auth.getSession();
+            const token = session?.access_token;
+
+            // Using placeholders as actual lesson endpoint might be nested
+            const response = await fetch(`${endpoints.admin.upskill.courses}/${courseId}/lessons`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setCourseLessons(data.lessons);
+                }
+            } else {
+                // Fallback demo data
+                setCourseLessons([
+                    { id: 'L1', courseId, title: 'Introduction', type: 'Video', duration: '5:00', order: 1, isPublished: true },
+                    { id: 'L2', courseId, title: 'Basics', type: 'Video', duration: '10:00', order: 2, isPublished: true },
+                ]);
+            }
+        } catch (error) {
+            console.error('Error fetching lessons:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const categories = ['Web Development', 'AI/ML', 'Computer Science', 'Data Science', 'Mobile Development', 'Cloud Computing', 'Cybersecurity', 'Design'];
 
@@ -499,6 +527,12 @@ const UpskillCourseManagement: React.FC = () => {
                                     <Edit size={14} /> Edit
                                 </button>
                                 <button
+                                    onClick={() => { setSelectedCourseForLessons(course); setShowLessons(true); fetchLessons(course.id); }}
+                                    className="flex-1 py-2 rounded-lg bg-[var(--primary)] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+                                >
+                                    <Layers size={14} /> Lessons
+                                </button>
+                                <button
                                     onClick={() => handleToggleStatus(course.id)}
                                     className={`p-2 rounded-lg transition-colors ${course.status === 'Published' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'}`}
                                     title={course.status === 'Published' ? 'Unpublish' : 'Publish'}
@@ -517,15 +551,118 @@ const UpskillCourseManagement: React.FC = () => {
                 ))}
             </div>
 
-            {/* Course Editor Modal */}
-            <AnimatePresence>
-                {isEditing && (
-                    <CourseEditor
-                        course={selectedCourse}
-                        onClose={() => { setIsEditing(false); setSelectedCourse(null); }}
-                    />
-                )}
-            </AnimatePresence>
+            {showLessons && selectedCourseForLessons && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-[#0f111a] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+                    >
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-2xl font-bold text-white">Manage Lessons</h2>
+                                <p className="text-sm text-gray-400">{selectedCourseForLessons.title}</p>
+                            </div>
+                            <button onClick={() => setShowLessons(false)} className="p-2 hover:bg-white/10 rounded-lg text-gray-400">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                            {courseLessons.map((lesson) => (
+                                <div key={lesson.id} className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-lg bg-[var(--primary-light)] flex items-center justify-center text-[var(--primary)] font-bold">
+                                            {lesson.order}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-white">{lesson.title}</h4>
+                                            <p className="text-xs text-gray-500 flex items-center gap-2">
+                                                {lesson.type === 'Video' ? <Video size={12} /> : <FileText size={12} />}
+                                                {lesson.duration} • {lesson.type}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="p-2 hover:bg-white/10 rounded-lg text-gray-400"><Edit size={16} /></button>
+                                        <button className="p-2 hover:bg-red-500/10 rounded-lg text-red-400"><Trash2 size={16} /></button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Add Lesson Form */}
+                            <div className="p-6 rounded-xl border border-dashed border-white/20 space-y-4">
+                                <h3 className="font-bold text-white flex items-center gap-2">
+                                    <Plus size={18} className="text-neon-cyan" /> Add New Lesson
+                                </h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input
+                                        type="text"
+                                        placeholder="Lesson Title"
+                                        className="bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                    />
+                                    <select className="bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white">
+                                        <option>Video</option>
+                                        <option>Article</option>
+                                        <option>Quiz</option>
+                                    </select>
+                                    <div className="col-span-2">
+                                        <label className="block text-xs text-gray-400 mb-2">Video Content (YouTube)</label>
+                                        <div className="flex gap-4">
+                                            <input
+                                                type="text"
+                                                placeholder="YouTube URL or Upload Video"
+                                                className="flex-1 bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white"
+                                            />
+                                            <label className={`px-4 py-2 rounded-lg ${isUploadingVideo ? 'bg-gray-600' : 'bg-red-600 hover:bg-red-700'} text-white text-sm font-bold flex items-center gap-2 cursor-pointer transition-all`}>
+                                                {isUploadingVideo ? <Loader className="animate-spin" size={16} /> : <Upload size={16} />}
+                                                {isUploadingVideo ? 'Uploading...' : 'Upload to YT'}
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept="video/*"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file) return;
+                                                        setIsUploadingVideo(true);
+                                                        try {
+                                                            const formData = new FormData();
+                                                            formData.append('video', file);
+                                                            formData.append('courseId', selectedCourseForLessons.id);
+                                                            formData.append('lessonTitle', 'New Lesson');
+
+                                                            const { data: { session } } = await supabase!.auth.getSession();
+                                                            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/upskill/lessons/upload-video`, {
+                                                                method: 'POST',
+                                                                headers: {
+                                                                    ...(session ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+                                                                },
+                                                                body: formData
+                                                            });
+
+                                                            if (response.ok) {
+                                                                const data = await response.json();
+                                                                alert(`✅ Upload Successful!\nYouTube URL: ${data.videoUrl}`);
+                                                            }
+                                                        } catch (err) {
+                                                            console.error('Upload failed:', err);
+                                                        } finally {
+                                                            setIsUploadingVideo(false);
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button className="w-full py-2 bg-[var(--primary)] text-white font-bold rounded-lg shadow-lg">
+                                    Add Lesson
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 };

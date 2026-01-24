@@ -122,11 +122,11 @@ const Lesson: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'notes' | 'quiz'>('notes');
 
     const lessons = [
-        { id: 1, title: 'Introduction to Data Science', duration: '12:45', completed: true },
-        { id: 2, title: 'Setting Up Your Environment', duration: '18:30', completed: true },
-        { id: 3, title: 'Understanding Data Types', duration: '15:20', completed: false },
-        { id: 4, title: 'Working with DataFrames', duration: '22:10', completed: false },
-        { id: 5, title: 'Data Cleaning Basics', duration: '19:45', completed: false }
+        { id: 1, title: 'Introduction to Data Science', duration: '12:45', completed: true, video_url: 'https://www.youtube.com/embed/ubD2S9048b4' },
+        { id: 2, title: 'Setting Up Your Environment', duration: '18:30', completed: true, video_url: 'https://www.youtube.com/embed/PAtX8vW71vU' },
+        { id: 3, title: 'Understanding Data Types', duration: '15:20', completed: false, video_url: 'https://www.youtube.com/embed/K8L6KVGG-7o' },
+        { id: 4, title: 'Working with DataFrames', duration: '22:10', completed: false, video_url: 'https://www.youtube.com/embed/PPatX8vW71vU' },
+        { id: 5, title: 'Data Cleaning Basics', duration: '19:45', completed: false, video_url: 'https://www.youtube.com/embed/ubD2S9048b4' }
     ];
 
     const currentLessonIndex = lessons.findIndex(l => l.id.toString() === lessonId);
@@ -178,23 +178,32 @@ const Lesson: React.FC = () => {
                             className="relative bg-gray-900 rounded-video overflow-hidden shadow-premium-lg aspect-video group"
                         >
                             {/* Video Content */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-electric-indigo-500/30 to-ai-cyan-500/30" />
-
-                            {/* Play/Pause Overlay */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <motion.button
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => setIsPlaying(!isPlaying)}
-                                    className="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-pill flex items-center justify-center group-hover:bg-white/30 transition-all shadow-glow-cyan"
-                                >
-                                    {isPlaying ? (
-                                        <Pause className="w-10 h-10 text-white" fill="white" />
-                                    ) : (
-                                        <Play className="w-10 h-10 text-white ml-1" fill="white" />
-                                    )}
-                                </motion.button>
-                            </div>
+                            {currentLesson?.video_url ? (
+                                <iframe
+                                    src={`${currentLesson.video_url}?autoplay=${isPlaying ? 1 : 0}&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&controls=1`}
+                                    className="absolute inset-0 w-full h-full border-0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                ></iframe>
+                            ) : (
+                                <>
+                                    <div className="absolute inset-0 bg-gradient-to-br from-electric-indigo-500/30 to-ai-cyan-500/30" />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <motion.button
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
+                                            onClick={() => setIsPlaying(!isPlaying)}
+                                            className="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-pill flex items-center justify-center group-hover:bg-white/30 transition-all shadow-glow-cyan"
+                                        >
+                                            {isPlaying ? (
+                                                <Pause className="w-10 h-10 text-white" fill="white" />
+                                            ) : (
+                                                <Play className="w-10 h-10 text-white ml-1" fill="white" />
+                                            )}
+                                        </motion.button>
+                                    </div>
+                                </>
+                            )}
 
                             {/* Video Controls */}
                             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-gray-900/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
