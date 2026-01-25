@@ -28,12 +28,18 @@ app.use(express.static(join(__dirname, 'public')));
 
 // Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
 // Initialize Supabase only if keys are present
 export const supabase = (supabaseUrl && supabaseKey)
     ? createClient(supabaseUrl, supabaseKey)
     : null;
+
+// Attach Supabase to request for routes in separate files
+app.use((req, res, next) => {
+    req.supabase = supabase;
+    next();
+});
 
 // Encryption key from environment variable
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production';
