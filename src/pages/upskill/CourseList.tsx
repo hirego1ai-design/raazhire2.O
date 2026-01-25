@@ -137,6 +137,35 @@ const CourseCard: React.FC<CourseCardProps> = ({
 const CourseList: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
+    const [recommendations, setRecommendations] = useState<any[]>([]);
+    const [liveClasses, setLiveClasses] = useState<any[]>([]);
+    const [loadingAI, setLoadingAI] = useState(true);
+
+    React.useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch AI Recommendations
+                const recParams = await fetch('http://localhost:3000/api/upskill/recommendations/1');
+                const recData = await recParams.json();
+                if (recData.success && recData.data?.recommendations) {
+                    setRecommendations(recData.data.recommendations);
+                }
+
+                // Fetch Live Classes
+                const liveParams = await fetch('http://localhost:3000/api/upskill/live-classes');
+                const liveData = await liveParams.json();
+                if (liveData.success) {
+                    setLiveClasses(liveData.classes);
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            } finally {
+                setLoadingAI(false);
+            }
+        };
+
+        fetchData();
+    }, []);
 
     const categories = [
         { name: 'All', icon: TrendingUp },
@@ -313,6 +342,74 @@ const CourseList: React.FC = () => {
                     </div>
                 </div>
             </section>
+
+            {/* AI Recommendations Section */}
+            {!loadingAI && recommendations.length > 0 && (
+                <section className="py-12 px-4 bg-gradient-to-br from-indigo-50 to-white">
+                    <div className="container mx-auto max-w-7xl">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Brain className="w-6 h-6 text-electric-indigo-600" />
+                            <h2 className="text-2xl font-bold text-gray-900">Recommended For You</h2>
+                            <span className="px-3 py-1 bg-electric-indigo-100 text-electric-indigo-700 text-xs font-bold rounded-pill">AI POWERED</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {recommendations.slice(0, 4).map((rec, index) => {
+                                const course = courses.find(c => c.id === rec.courseId) || courses[0];
+                                return (
+                                    <CourseCard
+                                        key={rec.courseId}
+                                        {...course}
+                                        title={rec.courseTitle}
+                                        delay={index * 0.1}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Live Classes Section */}
+            {!loadingAI && liveClasses.length > 0 && (
+                <section className="py-12 px-4">
+                    <div className="container mx-auto max-w-7xl">
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                            <h2 className="text-2xl font-bold text-gray-900">Live Now & Upcoming</h2>
+                        </div>
+                        <div className="flex overflow-x-auto gap-6 pb-6 scrollbar-hide">
+                            {liveClasses.map((item, index) => (
+                                <motion.div
+                                    key={item.id}
+                                    initial={{ opacity: 0, x: 50 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className="min-w-[320px] bg-white rounded-card-xl shadow-premium overflow-hidden group cursor-pointer"
+                                    onClick={() => window.open(item.watchUrl, '_blank')}
+                                >
+                                    <div className="relative h-44 bg-gray-900">
+                                        <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                        <div className="absolute top-4 left-4">
+                                            <span className="px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-pill flex items-center gap-1">
+                                                <Play className="w-3 h-3 fill-current" />
+                                                LIVE
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="p-4">
+                                        <h3 className="font-bold text-gray-900 mb-2 line-clamp-1">{item.title}</h3>
+                                        <p className="text-sm text-gray-500 mb-3 line-clamp-2">{item.description}</p>
+                                        <div className="flex items-center justify-between text-xs text-gray-400">
+                                            <span>{new Date(item.scheduledStartTime).toLocaleDateString()}</span>
+                                            <span className="text-electric-indigo-600 font-semibold">Join Class</span>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* Course Grid */}
             <section className="py-16 px-4">

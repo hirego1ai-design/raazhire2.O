@@ -217,13 +217,35 @@ const JobCard: React.FC<JobCardProps> = ({ title, company, match, location, sala
 const SkillDashboard: React.FC = () => {
     const navigate = useNavigate();
 
-    const strengths = [
+    const [insights, setInsights] = React.useState<any>(null);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchInsights = async () => {
+            try {
+                // Use mock user ID '1' for demo
+                const response = await fetch('http://localhost:3000/api/upskill/insights/1');
+                const data = await response.json();
+                if (data.success) {
+                    setInsights(data.data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch insights:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchInsights();
+    }, []);
+
+    const strengths = insights?.strengths || [
         "Strong understanding of data manipulation with Pandas",
         "Excellent problem-solving and analytical thinking",
         "Clear communication of technical concepts"
     ];
 
-    const improvements = [
+    const improvements = insights?.areasForImprovement || [
         "Practice more complex SQL queries and joins",
         "Strengthen machine learning algorithm fundamentals",
         "Improve visualization storytelling techniques"
@@ -338,8 +360,29 @@ const SkillDashboard: React.FC = () => {
                     </h2>
 
                     <div className="grid lg:grid-cols-2 gap-8 mb-16">
-                        <InsightCard type="strength" items={strengths} />
-                        <InsightCard type="improvement" items={improvements} />
+
+                        {loading ? (
+                            <div className="col-span-2 flex justify-center py-12">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-electric-indigo-600"></div>
+                            </div>
+                        ) : (
+                            <>
+                                <InsightCard type="strength" items={strengths} />
+                                <InsightCard type="improvement" items={improvements} />
+
+                                {insights?.motivationalMessage && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="col-span-2 bg-gradient-to-r from-electric-indigo-50 to-ai-cyan-50 border border-electric-indigo-100 rounded-card-xl p-8 text-center"
+                                    >
+                                        <p className="text-xl font-medium text-electric-indigo-900 italic">
+                                            "{insights.motivationalMessage}"
+                                        </p>
+                                    </motion.div>
+                                )}
+                            </>
+                        )}
                     </div>
                 </div>
             </section>
