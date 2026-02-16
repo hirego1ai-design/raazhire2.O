@@ -142,7 +142,7 @@ const VideoResume: React.FC = () => {
                 if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
             }
 
-            const response = await fetch(`${endpoints.test.replace('/test', '')}/video-resume/upload`, {
+            const response = await fetch(endpoints.videoResume, {
                 method: 'POST',
                 headers: headers,
                 body: formData
@@ -161,16 +161,8 @@ const VideoResume: React.FC = () => {
             }
         } catch (error) {
             console.error("Analysis error:", error);
-            // Fallback for demo
-            setAnalysisResult({
-                finalScore: 82,
-                rank: "Top 10%",
-                summary: "Good communication skills. In production, this would be an actual analysis of your uploaded video.",
-                layer1: { score: 85, details: ["Clear introduction", "Good eye contact"] },
-                layer2: { score: 78, domainKnowledge: "Proficient", details: ["Strong technical fundamentals"] },
-                layer3: { score: 88, emotionalTone: "Positive", traits: ["Confident", "Engaging"] },
-                detailedReport: true
-            });
+            alert("Failed to analyze video. Please try again or check your connection.");
+            setAnalysisResult(null);
         } finally {
             setIsAnalyzing(false);
         }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, MapPin, Briefcase, ArrowRight, Users, ChevronRight } from 'lucide-react';
-import { endpoints, API_BASE_URL } from '../../lib/api';
+import { endpoints, API_BASE_URL, getAuthHeaders } from '../../lib/api';
 import InterviewCard from '../../components/InterviewCard';
 
 interface Interview {
@@ -32,53 +32,30 @@ const CandidateDashboard: React.FC = () => {
     React.useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // Fetch applications
-                const appsResponse = await fetch(`${endpoints.applications}/candidate`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                // Fetch candidate stats
+                const statsResponse = await fetch(endpoints.candidate.stats, {
+                    headers: getAuthHeaders()
                 });
-                const appsData = await appsResponse.json();
+                const statsData = await statsResponse.json();
 
                 // Fetch interviews
-                const interviewsResponse = await fetch(`${API_BASE_URL}/api/interviews/candidate`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                const interviewsResponse = await fetch(endpoints.interviews.candidate, {
+                    headers: getAuthHeaders()
                 });
                 const interviewsData = await interviewsResponse.json();
 
-                if (appsData.success) {
-                    const appliedCount = appsData.applications.length;
-                    const pending = appsData.applications.filter((a: any) => a.status === 'applied').length;
-
-                    setStats(prev => prev.map(s => {
-                        if (s.label === 'Pending Assessments') return { ...s, value: pending.toString() };
-                        if (s.label === 'Jobs Applied') return { ...s, value: appliedCount.toString() };
-                        return s;
+                if (statsData.success) {
+                    const s = statsData.stats;
+                    setStats(prev => prev.map(stat => {
+                        if (stat.label === 'Pending Assessments') return { ...stat, value: (s.assessments || 0).toString() };
+                        if (stat.label === 'Jobs Applied') return { ...stat, value: (s.totalApplications || 0).toString() };
+                        if (stat.label === 'Interviews') return { ...stat, value: (s.interviewsScheduled || 0).toString() };
+                        return stat;
                     }));
                 }
 
                 if (interviewsData.success && interviewsData.interviews && interviewsData.interviews.length > 0) {
                     setInterviews(interviewsData.interviews);
-                    setStats(prev => prev.map(s =>
-                        s.label === 'Interviews' ? { ...s, value: interviewsData.interviews.length.toString() } : s
-                    ));
-                } else {
-                    // Fallback to mock interviews
-                    const mockInterviews = [
-                        {
-                            id: 1,
-                            candidateName: 'You',
-                            role: 'Senior Frontend Developer',
-                            date: new Date(Date.now() + 86400000).toISOString(),
-                            time: '10:00 AM',
-                            status: 'Scheduled',
-                            type: 'Technical',
-                            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-                            roundTag: 'Round 1'
-                        }
-                    ];
-                    setInterviews(mockInterviews);
-                    setStats(prev => prev.map(s =>
-                        s.label === 'Interviews' ? { ...s, value: mockInterviews.length.toString() } : s
-                    ));
                 }
 
                 // Fetch recommended jobs
@@ -88,10 +65,10 @@ const CandidateDashboard: React.FC = () => {
                     setRecommendedJobs(jobsData.jobs.slice(0, 3).map((job: any) => ({
                         id: job.id,
                         title: job.title,
-                        company: 'Various',
+                        company: job.employer?.name || 'Top Company',
                         location: job.location,
-                        salary: job.salary_min && job.salary_max ? `${job.salary_min} - ${job.salary_max}` : 'Not disclosed',
-                        match: Math.floor(Math.random() * 20) + 80
+                        salary: job.salary_min && job.salary_max ? `$${(job.salary_min / 1000).toFixed(0)}k - $${(job.salary_max / 1000).toFixed(0)}k` : 'Competitive',
+                        match: job.ai_match_percentage || 0 // Use real score if available
                     })));
                 }
 

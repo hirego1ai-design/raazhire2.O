@@ -141,6 +141,49 @@ const CourseList: React.FC = () => {
     const [liveClasses, setLiveClasses] = useState<any[]>([]);
     const [loadingAI, setLoadingAI] = useState(true);
 
+    // API State
+    const [courses, setCourses] = useState<any[]>([]);
+    const [loadingCourses, setLoadingCourses] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+
+    // Fetch Courses from API
+    React.useEffect(() => {
+        const fetchCourses = async () => {
+            setLoadingCourses(true);
+            setFetchError(null);
+            try {
+                // Build query params
+                const params = new URLSearchParams();
+                if (selectedCategory !== 'All') params.append('category', selectedCategory);
+                if (searchQuery) params.append('search', searchQuery);
+
+                const response = await fetch(`http://localhost:3000/api/upskill/courses?${params.toString()}`);
+
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const data = await response.json();
+
+                if (data.success) {
+                    setCourses(data.courses);
+                } else {
+                    setFetchError('Failed to load courses');
+                }
+            } catch (error) {
+                console.error('Error fetching courses:', error);
+                setFetchError('Could not connect to server. Ensure backend is running.');
+                // Fallback to empty
+                setCourses([]);
+            } finally {
+                setLoadingCourses(false);
+            }
+        };
+
+        // Debounce search
+        const timeoutId = setTimeout(() => fetchCourses(), 300);
+        return () => clearTimeout(timeoutId);
+    }, [selectedCategory, searchQuery]);
+
+    // Fetch Initial AI Data
     React.useEffect(() => {
         const fetchData = async () => {
             try {
@@ -158,7 +201,7 @@ const CourseList: React.FC = () => {
                     setLiveClasses(liveData.classes);
                 }
             } catch (error) {
-                console.error('Error fetching data:', error);
+                console.error('Error fetching AI data:', error);
             } finally {
                 setLoadingAI(false);
             }
@@ -177,104 +220,6 @@ const CourseList: React.FC = () => {
         { name: 'Design', icon: Lightbulb }
     ];
 
-    const courses = [
-        {
-            id: '1',
-            title: 'Data Science Fundamentals with Python',
-            instructor: 'Dr. Sarah Chen',
-            category: 'Data & Analytics',
-            duration: '12 weeks',
-            students: '45K',
-            rating: 4.8,
-            level: 'Beginner',
-            thumbnail: ''
-        },
-        {
-            id: '2',
-            title: 'Machine Learning A-Z: Build AI Models',
-            instructor: 'Prof. James Wilson',
-            category: 'AI & ML',
-            duration: '16 weeks',
-            students: '78K',
-            rating: 4.9,
-            level: 'Intermediate',
-            thumbnail: ''
-        },
-        {
-            id: '3',
-            title: 'Full-Stack Web Development Bootcamp',
-            instructor: 'Alex Martinez',
-            category: 'Coding',
-            duration: '20 weeks',
-            students: '92K',
-            rating: 4.7,
-            level: 'Beginner',
-            thumbnail: ''
-        },
-        {
-            id: '4',
-            title: 'Business Analytics & Data Visualization',
-            instructor: 'Emily Thompson',
-            category: 'Business',
-            duration: '10 weeks',
-            students: '34K',
-            rating: 4.6,
-            level: 'Intermediate',
-            thumbnail: ''
-        },
-        {
-            id: '5',
-            title: 'Effective Communication for Leaders',
-            instructor: 'Michael Roberts',
-            category: 'Communication',
-            duration: '8 weeks',
-            students: '56K',
-            rating: 4.8,
-            level: 'All Levels',
-            thumbnail: ''
-        },
-        {
-            id: '6',
-            title: 'UI/UX Design Masterclass',
-            instructor: 'Lisa Anderson',
-            category: 'Design',
-            duration: '14 weeks',
-            students: '67K',
-            rating: 4.9,
-            level: 'Intermediate',
-            thumbnail: ''
-        },
-        {
-            id: '7',
-            title: 'Advanced SQL & Database Design',
-            instructor: 'David Kumar',
-            category: 'Data & Analytics',
-            duration: '10 weeks',
-            students: '41K',
-            rating: 4.7,
-            level: 'Advanced',
-            thumbnail: ''
-        },
-        {
-            id: '8',
-            title: 'Natural Language Processing with Python',
-            instructor: 'Dr. Priya Sharma',
-            category: 'AI & ML',
-            duration: '12 weeks',
-            students: '29K',
-            rating: 4.8,
-            level: 'Advanced',
-            thumbnail: ''
-        }
-    ];
-
-    const filteredCourses = courses.filter(course => {
-        const matchesCategory = selectedCategory === 'All' || course.category === selectedCategory;
-        const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            course.instructor.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
-    });
-
     return (
         <div className="min-h-screen bg-soft-white font-outfit">
             {/* Header */}
@@ -289,7 +234,7 @@ const CourseList: React.FC = () => {
                             Explore Courses
                         </h1>
                         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                            Choose from 100+ expert-led courses designed to accelerate your career
+                            Choose from expert-led courses designed to accelerate your career
                         </p>
                     </motion.div>
 
@@ -354,12 +299,19 @@ const CourseList: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             {recommendations.slice(0, 4).map((rec, index) => {
-                                const course = courses.find(c => c.id === rec.courseId) || courses[0];
+                                // Fallback mapping if recommendation object is simple
                                 return (
                                     <CourseCard
-                                        key={rec.courseId}
-                                        {...course}
-                                        title={rec.courseTitle}
+                                        key={rec.courseId || rec.id}
+                                        id={rec.courseId || rec.id}
+                                        title={rec.courseTitle || rec.title}
+                                        instructor={rec.instructor || 'AI Instructor'}
+                                        category={rec.category || 'General'}
+                                        duration={rec.duration || rec.duration_hours + ' hours'}
+                                        students={rec.students || rec.enrolled_count + ' Students'}
+                                        rating={rec.rating || 4.5}
+                                        level={rec.level || rec.difficulty}
+                                        thumbnail={rec.thumbnail || 'https://via.placeholder.com/800'}
                                         delay={index * 0.1}
                                     />
                                 );
@@ -416,18 +368,46 @@ const CourseList: React.FC = () => {
                 <div className="container mx-auto max-w-7xl">
                     <div className="mb-8 flex items-center justify-between">
                         <h2 className="text-2xl font-bold text-gray-900">
-                            {filteredCourses.length} Courses
+                            {courses.length} Courses
                             {selectedCategory !== 'All' && ` in ${selectedCategory}`}
                         </h2>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {filteredCourses.map((course, index) => (
-                            <CourseCard key={course.id} {...course} delay={index * 0.1} />
-                        ))}
-                    </div>
+                    {loadingCourses ? (
+                        <div className="flex justify-center items-center py-20">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-electric-indigo-600"></div>
+                        </div>
+                    ) : fetchError ? (
+                        <div className="text-center py-20 text-red-500">
+                            <p>{fetchError}</p>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="mt-4 px-4 py-2 bg-electric-indigo-100 text-electric-indigo-700 rounded-pill hover:bg-electric-indigo-200"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {courses.map((course, index) => (
+                                <CourseCard
+                                    key={course.id}
+                                    id={course.id}
+                                    title={course.title}
+                                    instructor={course.instructor || 'HireGo Expert'}
+                                    category={course.category}
+                                    duration={course.duration_hours ? `${course.duration_hours} hours` : 'Flexible'}
+                                    students={course.enrolled_count ? `${(course.enrolled_count / 1000).toFixed(1)}k` : 'New'}
+                                    rating={course.rating || 5.0}
+                                    level={course.difficulty || 'All Levels'}
+                                    thumbnail={course.thumbnail || 'https://via.placeholder.com/800'}
+                                    delay={index * 0.05}
+                                />
+                            ))}
+                        </div>
+                    )}
 
-                    {filteredCourses.length === 0 && (
+                    {!loadingCourses && !fetchError && courses.length === 0 && (
                         <div className="text-center py-20">
                             <div className="w-24 h-24 mx-auto bg-cloud-grey rounded-card-xl flex items-center justify-center mb-6">
                                 <Search className="w-12 h-12 text-gray-400" />

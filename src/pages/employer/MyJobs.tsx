@@ -34,6 +34,7 @@ interface Job {
     screened_count: number;
     shortlisted_count: number;
     hired_count: number;
+    job_type?: string;
 }
 
 const MyJobs: React.FC = () => {
@@ -86,6 +87,7 @@ const MyJobs: React.FC = () => {
                 title: job.title,
                 location: job.location,
                 type: job.type,
+                job_type: job.job_type, // Map the plan
                 status: job.status || 'active',
                 salary_min: job.salary_min,
                 salary_max: job.salary_max,
@@ -140,11 +142,23 @@ const MyJobs: React.FC = () => {
         if (!window.confirm('Are you sure you want to delete this job? This action cannot be undone.')) return;
 
         try {
-            // Mock delete
-            setJobs(prev => prev.filter(j => j.id !== jobId));
-            // In production: await supabase?.from('jobs').delete().eq('id', jobId);
+            const token = localStorage.getItem('sb-token');
+            const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                setJobs(prev => prev.filter(j => j.id !== jobId));
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to delete job');
+            }
         } catch (error) {
             console.error('Error deleting job:', error);
+            alert('Failed to delete job. Please try again.');
         }
     };
 
@@ -259,6 +273,11 @@ const MyJobs: React.FC = () => {
                                                 <span className="flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500" /> {job.location}</span>
                                                 <span className="flex items-center gap-1.5"><Clock size={14} className="text-indigo-500" /> {job.type}</span>
                                                 <span className="flex items-center gap-1.5"><DollarSign size={14} className="text-indigo-500" /> ${job.salary_min}k – ${job.salary_max}k</span>
+                                                {job.job_type && (
+                                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs uppercase tracking-wide">
+                                                        <TrendingUp size={12} /> {job.job_type.replace(/-/g, ' ')} Plan
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${job.status === 'active'

@@ -7,7 +7,7 @@ import {
     Clock, Eye, CheckCircle, XCircle, Shield
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, endpoints } from '../../lib/api';
 
 interface Question {
     id: number;
@@ -18,7 +18,7 @@ interface Question {
 const LiveAssessment: React.FC = () => {
     const { jobId } = useParams();
     const navigate = useNavigate();
-    
+
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [isRecording, setIsRecording] = useState(false);
@@ -29,7 +29,7 @@ const LiveAssessment: React.FC = () => {
     const [tabSwitchCount, setTabSwitchCount] = useState(0);
     const [showWarning, setShowWarning] = useState(false);
     const [assessmentData, setAssessmentData] = useState<any>(null);
-    
+
     const webcamRef = useRef<Webcam>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
@@ -71,17 +71,33 @@ const LiveAssessment: React.FC = () => {
 
     // Generate questions using AI
     const generateQuestions = async (profile: any, job: any): Promise<Question[]> => {
-        // For now, return template questions. In production, call AI API
-        return [
-            { id: 1, text: `Tell us about your experience with ${job?.title || 'this role'} and why you're interested.`, timeLimit: 180 },
-            { id: 2, text: `Describe a challenging project you worked on that relates to ${job?.title || 'this position'}.`, timeLimit: 180 },
-            { id: 3, text: `What are your key strengths that make you suitable for this role?`, timeLimit: 180 },
-            { id: 4, text: `How do you stay updated with the latest trends in your field?`, timeLimit: 180 },
-            { id: 5, text: `Describe a situation where you had to work in a team. What was your role?`, timeLimit: 180 },
-            { id: 6, text: `What are your career goals for the next 2-3 years?`, timeLimit: 180 },
-            { id: 7, text: `How do you handle tight deadlines and pressure?`, timeLimit: 180 },
-            { id: 8, text: `Why should we hire you for this position?`, timeLimit: 180 }
-        ];
+        try {
+            const response = await fetch(endpoints.generateQuestions, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    jobTitle: job?.title,
+                    jobDescription: job?.description,
+                    candidateId: profile?.user_id
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.questions) {
+                    return data.questions;
+                }
+            }
+            throw new Error('Failed to generate questions');
+        } catch (error) {
+            console.error('Question generation failed:', error);
+            // Minimal fallback only on catastrophic failure, but ideally UI handles error.
+            // Returning empty will likely just show "Question 1 of 0" or break.
+            // Let's return a generic placeholder to avoid crash if backend is down.
+            return [{ id: 1, text: "Describe your professional background.", timeLimit: 180 }];
+        }
     };
 
     // Monitor tab switching
@@ -92,7 +108,7 @@ const LiveAssessment: React.FC = () => {
                     const newCount = prev + 1;
                     setShowWarning(true);
                     setTimeout(() => setShowWarning(false), 5000);
-                    
+
                     if (newCount >= 3) {
                         handleTerminateAssessment();
                     }
@@ -125,8 +141,20 @@ const LiveAssessment: React.FC = () => {
     const handleStartAssessment = async () => {
         // Request camera and microphone permissions
         try {
-            await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             setHasStarted(true);
+
+            // Initialize continuous recorder
+            if (stream) {
+                mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: "video/webm" });
+                mediaRecorderRef.current.addEventListener('dataavailable', (event: BlobEvent) => {
+                    if (event.data.size > 0) {
+                        recordedChunksRef.current.push(event.data);
+                    }
+                });
+                mediaRecorderRef.current.start(1000); // Collect 1s chunks
+            }
+
             handleStartRecording(0);
         } catch (error) {
             alert('Camera and microphone access required for assessment');
@@ -137,25 +165,8 @@ const LiveAssessment: React.FC = () => {
         setCurrentQuestionIndex(questionIndex);
         setIsRecording(true);
         setTimeRemaining(questions[questionIndex]?.timeLimit || 180);
-        recordedChunksRef.current = [];
-        transcriptRef.current = '';
 
-        // Start video recording
-        if (webcamRef.current?.stream) {
-            mediaRecorderRef.current = new MediaRecorder(webcamRef.current.stream, {
-                mimeType: "video/webm"
-            });
-            
-            mediaRecorderRef.current.addEventListener('dataavailable', (event: BlobEvent) => {
-                if (event.data.size > 0) {
-                    recordedChunksRef.current.push(event.data);
-                }
-            });
-            
-            mediaRecorderRef.current.start();
-        }
-
-        // Start speech recognition
+        // Start speech recognition (can be restarted per question to ensure stability)
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
             recognitionRef.current = new SpeechRecognition();
@@ -174,23 +185,19 @@ const LiveAssessment: React.FC = () => {
                     transcriptRef.current += finalTranscript;
                 }
             };
-
             recognitionRef.current.start();
         }
     }, [questions]);
 
     const handleStopRecording = useCallback(() => {
-        mediaRecorderRef.current?.stop();
+        // Stop speech recognition for this segment
         recognitionRef.current?.stop();
         setIsRecording(false);
 
         setTimeout(() => {
-            const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
-            setRecordedAnswers(prev => [...prev, blob]);
-
             // Move to next question or finish
             if (currentQuestionIndex < questions.length - 1) {
-                setTimeout(() => handleStartRecording(currentQuestionIndex + 1), 2000);
+                handleStartRecording(currentQuestionIndex + 1);
             } else {
                 handleSubmitAssessment();
             }
@@ -203,7 +210,41 @@ const LiveAssessment: React.FC = () => {
         try {
             const { data: { user } } = await supabase!.auth.getUser();
 
-            // Submit to AI for analysis
+            // 1. Upload Video
+            let videoUrl = null;
+
+            // Stop continuous recorder and wait for chunks
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                mediaRecorderRef.current.stop();
+            }
+            // Wait for dataavailable event to fire
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            if (recordedChunksRef.current.length > 0) {
+                const combinedBlob = new Blob(recordedChunksRef.current, { type: "video/webm" });
+                const formData = new FormData();
+                formData.append('video', combinedBlob, `assessment-${user?.id}-${jobId}.webm`);
+                formData.append('jobId', jobId || '');
+
+                try {
+                    const uploadRes = await fetch(endpoints.uploadLiveAssessment, {
+                        method: 'POST',
+                        headers: {
+                            ...(supabase ? { 'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}` } : {})
+                        },
+                        body: formData
+                    });
+
+                    if (uploadRes.ok) {
+                        const uploadData = await uploadRes.json();
+                        videoUrl = uploadData.videoUrl;
+                    }
+                } catch (uploadError) {
+                    console.error('Video upload failed, proceeding with text analysis only:', uploadError);
+                }
+            }
+
+            // 2. Submit to AI for analysis
             const response = await fetch(`${API_BASE_URL}/api/analyze-live-assessment`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -213,7 +254,8 @@ const LiveAssessment: React.FC = () => {
                     transcript: transcriptRef.current,
                     questionsAnswered: questions.length,
                     tabSwitches: tabSwitchCount,
-                    totalDuration: questions.length * 180
+                    totalDuration: questions.length * 180,
+                    videoUrl
                 })
             });
 
@@ -230,6 +272,7 @@ const LiveAssessment: React.FC = () => {
                     knowledge_score: result.knowledge,
                     confidence_score: result.confidence,
                     transcript: transcriptRef.current,
+                    video_url: videoUrl,
                     completed_at: new Date().toISOString()
                 }]);
             }
@@ -370,7 +413,7 @@ const LiveAssessment: React.FC = () => {
                                 audio={true}
                                 className="w-full h-full object-cover"
                             />
-                            
+
                             {isRecording && (
                                 <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-red-500 flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
@@ -410,13 +453,12 @@ const LiveAssessment: React.FC = () => {
                                 {questions.map((q, idx) => (
                                     <div
                                         key={q.id}
-                                        className={`flex items-center gap-2 text-sm ${
-                                            idx < currentQuestionIndex
-                                                ? 'text-green-400'
-                                                : idx === currentQuestionIndex
+                                        className={`flex items-center gap-2 text-sm ${idx < currentQuestionIndex
+                                            ? 'text-green-400'
+                                            : idx === currentQuestionIndex
                                                 ? 'text-neon-cyan'
                                                 : 'text-gray-500'
-                                        }`}
+                                            }`}
                                     >
                                         {idx < currentQuestionIndex ? (
                                             <CheckCircle size={16} />

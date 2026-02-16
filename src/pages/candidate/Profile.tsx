@@ -39,22 +39,13 @@ const Profile: React.FC = () => {
                     const data = await response.json();
                     if (data.success) {
                         setProfile(data.user);
-                        return;
                     }
+                } else {
+                    throw new Error('API failed');
                 }
-                throw new Error('API failed');
             } catch (error) {
-                console.error('Error fetching profile, using fallback:', error);
-                // Fallback to mock data after a delay if fetch fails
-                setTimeout(() => {
-                    setProfile({
-                        name: "John Doe",
-                        location: "San Francisco, CA",
-                        bio: "Passionate about building scalable web applications and AI-driven solutions. 10+ years of experience in React, Node.js, and Cloud Architecture.",
-                        avatar_url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3",
-                        profile: { title: "Senior Full Stack Developer" }
-                    });
-                }, 500);
+                console.error('Error fetching profile:', error);
+                // No mock fallback anymore
             }
         };
         fetchProfile();
@@ -326,18 +317,22 @@ const Profile: React.FC = () => {
                                 )}
                                 {activeTab === 'experience' && (
                                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                                        {[
-                                            { role: "Senior Frontend Engineer", company: "Meta", duration: "2021 - Present", desc: "Leading the UI development for core advertising platforms." },
-                                            { role: "Software Engineer", company: "Uber", duration: "2018 - 2021", desc: "Optimizing real-time dispatch systems using Node.js and React." }
-                                        ].map((exp, i) => (
-                                            <div key={i} className="relative pl-8 before:absolute before:left-0 before:top-2 before:w-px before:h-[calc(100%+2rem)] before:bg-[var(--border-subtle)] last:before:h-0">
-                                                <div className="absolute left-[-4px] top-1.5 w-2 h-2 rounded-full bg-[var(--primary)] ring-4 ring-[var(--primary-light)]"></div>
-                                                <h4 className="font-bold">{exp.role}</h4>
-                                                <p className="text-sm font-bold text-[var(--primary)] mb-1">{exp.company}</p>
-                                                <p className="text-xs text-[var(--text-muted)] mb-2">{exp.duration}</p>
-                                                <p className="text-sm text-[var(--text-muted)] leading-relaxed">{exp.desc}</p>
+                                        {UserData.experience && UserData.experience.length > 0 ? (
+                                            UserData.experience.map((exp: any, i: number) => (
+                                                <div key={i} className="relative pl-8 before:absolute before:left-0 before:top-2 before:w-px before:h-[calc(100%+2rem)] before:bg-[var(--border-subtle)] last:before:h-0">
+                                                    <div className="absolute left-[-4px] top-1.5 w-2 h-2 rounded-full bg-[var(--primary)] ring-4 ring-[var(--primary-light)]"></div>
+                                                    <h4 className="font-bold">{exp.role}</h4>
+                                                    <p className="text-sm font-bold text-[var(--primary)] mb-1">{exp.company}</p>
+                                                    <p className="text-xs text-[var(--text-muted)] mb-2">{exp.start_date} - {exp.end_date || 'Present'}</p>
+                                                    <p className="text-sm text-[var(--text-muted)] leading-relaxed">{exp.description}</p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8 text-[var(--text-muted)]">
+                                                <p>No work experience added yet.</p>
+                                                {!isEmployerView && <button className="text-[var(--primary)] text-sm font-bold mt-2 hover:underline">Add Experience</button>}
                                             </div>
-                                        ))}
+                                        )}
                                     </motion.div>
                                 )}
                                 {activeTab === 'skills' && (
@@ -345,9 +340,13 @@ const Profile: React.FC = () => {
                                         <div>
                                             <h4 className="text-xs font-black uppercase text-[var(--text-muted)] mb-4">Core Competencies</h4>
                                             <div className="flex flex-wrap gap-2">
-                                                {["React", "TypeScript", "Node.js", "GraphQL", "AWS", "Docker", "Python"].map(skill => (
-                                                    <span key={skill} className="px-3 py-1 bg-[var(--primary-light)] text-[var(--primary)] text-xs font-bold rounded-lg border border-[var(--primary)]">{skill}</span>
-                                                ))}
+                                                {UserData.skills && UserData.skills.length > 0 ? (
+                                                    UserData.skills.map((skill: string) => (
+                                                        <span key={skill} className="px-3 py-1 bg-[var(--primary-light)] text-[var(--primary)] text-xs font-bold rounded-lg border border-[var(--primary)]">{skill}</span>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-sm text-[var(--text-muted)]">No skills listed.</span>
+                                                )}
                                             </div>
                                         </div>
                                     </motion.div>
@@ -357,11 +356,11 @@ const Profile: React.FC = () => {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="p-4 bg-[var(--bg-page)] rounded-xl border border-[var(--border-subtle)]">
                                                 <div className="text-[10px] font-black uppercase text-[var(--text-muted)] mb-1">Work Preference</div>
-                                                <div className="text-sm font-bold">Remote / Hybrid</div>
+                                                <div className="text-sm font-bold">{UserData.work_mode || 'Remote / Hybrid'}</div>
                                             </div>
                                             <div className="p-4 bg-[var(--bg-page)] rounded-xl border border-[var(--border-subtle)]">
                                                 <div className="text-[10px] font-black uppercase text-[var(--text-muted)] mb-1">Expected Salary</div>
-                                                <div className="text-sm font-bold">$120k - $160k</div>
+                                                <div className="text-sm font-bold">{UserData.expected_salary || 'Negotiable'}</div>
                                             </div>
                                         </div>
                                     </motion.div>

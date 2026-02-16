@@ -1,9 +1,89 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Building, Users, CreditCard, Bell, Save } from 'lucide-react';
+import { Building, Users, CreditCard, Bell, Save, Wallet, CheckCircle, Plus } from 'lucide-react';
+import { API_BASE_URL } from '../../lib/api';
 
 const Settings: React.FC = () => {
     const [activeTab, setActiveTab] = useState('company');
+
+
+    const [walletBalance, setWalletBalance] = useState(0);
+    const [currentPlan, setCurrentPlan] = useState<any>(null);
+    const [addAmount, setAddAmount] = useState('1000');
+    const [loading, setLoading] = useState(false);
+
+    React.useEffect(() => {
+        if (activeTab === 'billing') {
+            fetchBillingData();
+        }
+    }, [activeTab]);
+
+    const fetchBillingData = async () => {
+        try {
+            const token = localStorage.getItem('sb-token');
+            if (!token) return;
+
+            // Fetch Wallet
+            const walletRes = await fetch(`${API_BASE_URL}/api/wallet`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const walletData = await walletRes.json();
+            if (walletData.success) {
+                setWalletBalance(walletData.balance);
+            }
+
+            // Fetch Plan (simplified for now to just show user info or mock)
+            // Ideally fetch from /api/employer/subscription
+            setCurrentPlan({
+                name: 'Starter Plan',
+                price: 'Free',
+                renewalDate: 'Lifetime',
+                status: 'Active'
+            });
+
+        } catch (error) {
+            console.error('Error fetching billing data:', error);
+        }
+    };
+
+    const handleAddFunds = async () => {
+        if (!addAmount || isNaN(Number(addAmount)) || Number(addAmount) <= 0) {
+            alert("Please enter a valid amount");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('sb-token');
+            const response = await fetch(`${API_BASE_URL}/api/wallet/add`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ amount: Number(addAmount), currency: 'INR' })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                if (data.is_mock) {
+                    alert(data.message);
+                    setWalletBalance(prev => prev + Number(addAmount));
+                    setAddAmount('');
+                } else {
+                    // Handle real Razorpay flow here
+                    alert(`Order created: ${data.order_id}. (Integration would open Razorpay modal here)`);
+                }
+            } else {
+                alert('Failed to initiate transaction');
+            }
+        } catch (error) {
+            console.error('Payment error:', error);
+            alert('Payment failed');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const tabs = [
         { id: 'company', label: 'Company Profile', icon: Building },
@@ -153,9 +233,71 @@ const Settings: React.FC = () => {
                         )}
 
                         {activeTab === 'billing' && (
-                            <div className="text-center py-12 text-gray-400">
-                                <CreditCard size={48} className="mx-auto mb-4 opacity-50" />
-                                <p>Billing and subscription management coming soon.</p>
+                            <div className="space-y-8">
+                                {/* Wallet Section */}
+                                <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 p-6 rounded-xl border border-indigo-500/20">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div>
+                                            <h3 className="text-lg font-bold flex items-center gap-2 mb-1">
+                                                <Wallet className="text-indigo-400" size={20} /> Wallet Balance
+                                            </h3>
+                                            <p className="text-sm text-gray-400">Used for Pay-Per-Hire deposits and manual verification.</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-3xl font-black text-white">₹{walletBalance.toLocaleString()}</div>
+                                            <div className="text-xs text-emerald-400 font-bold uppercase tracking-widest">+ Added Funds Available</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4 items-end bg-white/5 p-4 rounded-lg">
+                                        <div className="flex-1">
+                                            <label className="text-xs font-bold text-gray-400 mb-1 block uppercase">Add Funds (INR)</label>
+                                            <input
+                                                type="number"
+                                                value={addAmount}
+                                                onChange={(e) => setAddAmount(e.target.value)}
+                                                className="w-full bg-black/20 border border-white/10 rounded-lg py-2 px-3 focus:border-indigo-500 outline-none"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={handleAddFunds}
+                                            disabled={loading}
+                                            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-all disabled:opacity-50 flex items-center gap-2"
+                                        >
+                                            {loading ? 'Processing...' : <><Plus size={16} /> Add Money</>}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Current Plan Section */}
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <h3 className="text-lg font-bold">Current Subscription</h3>
+                                        <button className="text-indigo-400 text-sm font-bold hover:underline">Change Plan</button>
+                                    </div>
+
+                                    <div className="p-6 rounded-xl bg-white/5 border border-white/10 flex flex-col md:flex-row justify-between gap-6 items-center">
+                                        <div>
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <h4 className="text-xl font-bold">{currentPlan?.name || 'Starter'}</h4>
+                                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-widest border border-emerald-500/20">Active</span>
+                                            </div>
+                                            <p className="text-gray-400 text-sm">Renews on: {currentPlan?.renewalDate || 'Lifetime'}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-2xl font-bold">{currentPlan?.price || 'Free'}</div>
+                                            <div className="text-xs text-gray-500">per month</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {['Unlimited Job Posts', 'AI Candidate Screening', 'Basic Analytics', 'Email Support'].map((feat, i) => (
+                                            <div key={i} className="flex items-center gap-2 text-sm text-gray-300">
+                                                <CheckCircle size={14} className="text-indigo-500" /> {feat}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         )}
 

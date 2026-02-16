@@ -5,10 +5,9 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
     Search, Filter, Plus, Download, Briefcase, Users, ArrowLeft,
     ChevronRight, MapPin, DollarSign, Clock, Star, Play,
-    Mail, Phone, Calendar, CheckCircle, MessageSquare
+    Mail, Phone, Calendar, CheckCircle, MessageSquare, Menu
 } from 'lucide-react';
 import CandidateCard, { type Candidate as CardCandidate } from '../../components/CandidateCard';
-import { mockJobPosts, mockCandidates, getCandidatesForJob, getTalentPoolForJob, getTopTalentPool } from '../../data/mockData';
 import { API_BASE_URL } from '../../lib/api';
 
 type ViewMode = 'JOBS' | 'CANDIDATES' | 'PROFILE';
@@ -17,6 +16,8 @@ type RecommendationType = 'applied' | 'ai_recommended' | 'top_talent';
 interface ExtendedCandidate extends CardCandidate {
     recommendationType?: RecommendationType;
     aiMatchScore?: number;
+    // Additional Profile Fields (optional if not in CardCandidate)
+    experienceYears?: number;
 }
 
 const Candidates: React.FC = () => {
@@ -37,7 +38,7 @@ const Candidates: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'applied' | 'ai_recommended' | 'all'>('all');
 
-    // Fetch Jobs first if needed
+    // Fetch Jobs first
     useEffect(() => {
         const fetchInitialData = async () => {
             setLoading(true);
@@ -55,10 +56,6 @@ const Candidates: React.FC = () => {
                         fetchedJobs = data.jobs || [];
                     }
                 }
-
-                if (fetchedJobs.length === 0) {
-                    fetchedJobs = mockJobPosts; // Fallback to mock
-                }
                 setJobs(fetchedJobs);
 
                 // If jobId is in URL, transition to CANDIDATES view
@@ -70,7 +67,7 @@ const Candidates: React.FC = () => {
                 }
             } catch (error) {
                 console.error("Error loading jobs:", error);
-                setJobs(mockJobPosts);
+                setJobs([]);
             } finally {
                 setLoading(false);
             }
@@ -83,45 +80,21 @@ const Candidates: React.FC = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('sb-token');
-
-            // If no job selected, show top talent pool
-            if (!jobId) {
-                const topTalent = getTopTalentPool(20);
-                const formatted: ExtendedCandidate[] = topTalent.map((c: any) => ({
-                    id: c.id,
-                    name: c.name,
-                    photoUrl: c.profile_photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=random`,
-                    videoUrl: c.video_resume_url || '',
-                    appliedJobTitle: c.job_profile || c.title || 'Talent',
-                    experienceYears: c.experience_years || 0,
-                    skills: c.skills ? c.skills.map((s: any) => s.skill) : [],
-                    location: c.location || 'Remote',
-                    timezone: 'UTC',
-                    aiScore: c.aiMatchScore || Math.round((c.points / 3500) * 100),
-                    status: 'applied' as CardCandidate['status'],
-                    recommendationType: 'top_talent' as RecommendationType,
-                    aiMatchScore: c.aiMatchScore
-                }));
-                setCandidates(formatted);
-                setAiRecommendedCandidates([]);
-                setLoading(false);
-                return;
-            }
-
-            // Job-specific talent pool
             let apps: any[] = [];
+
             if (token) {
                 const response = await fetch(`${API_BASE_URL}/api/applications/employer`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    apps = (data.applications || []).filter((a: any) => a.job_id === jobId);
+                    if (jobId) {
+                        apps = (data.applications || []).filter((a: any) => String(a.job_id) === String(jobId));
+                    } else {
+                        apps = data.applications || [];
+                    }
                 }
             }
-
-            // Get combined talent pool from mock data
-            const talentPool = getTalentPoolForJob(jobId);
 
             // Format applied candidates
             let appliedFormatted: ExtendedCandidate[] = [];
@@ -133,57 +106,21 @@ const Candidates: React.FC = () => {
                     photoUrl: app.candidate?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(app.candidate?.name || 'User')}&background=random`,
                     videoUrl: app.resume_url || '',
                     appliedJobTitle: app.job?.title || 'Candidate',
-                    experienceYears: 3,
-                    skills: app.candidate?.skills ? JSON.parse(app.candidate.skills) : ['TypeScript'],
+                    experienceYears: app.candidate?.experience_years || 0,
+                    skills: app.candidate?.skills ? (typeof app.candidate.skills === 'string' ? JSON.parse(app.candidate.skills) : app.candidate.skills) : [],
                     location: app.candidate?.location || 'Remote',
                     timezone: 'UTC',
-                    aiScore: app.ai_score || 82,
+                    aiScore: app.ai_screening_score || 0,
                     status: (app.status || 'applied') as CardCandidate['status'],
                     recommendationType: 'applied' as RecommendationType,
-                    aiMatchScore: app.ai_score || 82
-                }));
-            } else {
-                // Use mock applied candidates
-                appliedFormatted = talentPool.applied.map((app: any) => ({
-                    id: app.id || Math.random().toString(),
-                    name: app.name || 'Anonymous',
-                    photoUrl: app.profile_photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(app.name || 'User')}&background=random`,
-                    videoUrl: app.video_resume_url || '',
-                    appliedJobTitle: app.title || app.job_profile || 'Candidate',
-                    experienceYears: app.experience_years || 0,
-                    skills: app.skills ? app.skills.map((s: any) => typeof s === 'string' ? s : s.skill) : [],
-                    location: app.location || 'Remote',
-                    timezone: 'UTC',
-                    aiScore: app.aiMatchScore || app.applicationScore || 75,
-                    status: (app.applicationStatus || 'applied') as CardCandidate['status'],
-                    recommendationType: 'applied' as RecommendationType,
-                    aiMatchScore: app.aiMatchScore || app.applicationScore
+                    aiMatchScore: app.ai_screening_score || 0
                 }));
             }
 
-            // Format AI-recommended candidates
-            const aiRecommendedFormatted: ExtendedCandidate[] = talentPool.aiRecommended.map((c: any) => ({
-                id: c.id,
-                name: c.name,
-                photoUrl: c.profile_photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=random`,
-                videoUrl: c.video_resume_url || '',
-                appliedJobTitle: c.job_profile || c.title || 'Recommended Talent',
-                experienceYears: c.experience_years || 0,
-                skills: c.skills ? c.skills.map((s: any) => typeof s === 'string' ? s : s.skill) : [],
-                location: c.location || 'Remote',
-                timezone: 'UTC',
-                aiScore: c.aiMatchScore || 70,
-                status: 'screened' as CardCandidate['status'], // Mark AI recommended as pre-screened
-                recommendationType: 'ai_recommended' as RecommendationType,
-                aiMatchScore: c.aiMatchScore
-            }));
-
             setCandidates(appliedFormatted);
-            setAiRecommendedCandidates(aiRecommendedFormatted);
+            setAiRecommendedCandidates([]); // AI recommendations not yet implemented
         } catch (error) {
             console.error("Error loading candidates:", error);
-            // Fallback to mock
-            const talentPool = getTalentPoolForJob(jobId || '');
             setCandidates([]);
             setAiRecommendedCandidates([]);
         } finally {
@@ -216,27 +153,25 @@ const Candidates: React.FC = () => {
 
     const selectedJob = useMemo(() => jobs.find(j => j.id === selectedJobId), [jobs, selectedJobId]);
 
-    // Normalize Candidate helper to fix lint errors and field mismatches
+    // Normalize Candidate helper
     const normalizedSelectedCandidate = useMemo(() => {
         if (!selectedCandidateId) return null;
 
-        // Search in applied candidates, AI recommended, and mock data
+        // Search in applied candidates and AI recommended
         let raw = candidates.find(c => c.id === selectedCandidateId) ||
-            aiRecommendedCandidates.find(c => c.id === selectedCandidateId) ||
-            (mockCandidates.find(c => c.id === selectedCandidateId) as any);
+            aiRecommendedCandidates.find(c => c.id === selectedCandidateId);
 
         if (!raw) return null;
 
-        // Map mock fields to our standard interface if needed
         return {
             id: raw.id,
             name: raw.name,
-            photoUrl: raw.photoUrl || raw.profile_photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.name)}`,
-            videoUrl: raw.videoUrl || raw.video_resume_url || '',
-            appliedJobTitle: raw.appliedJobTitle || raw.title || raw.job_profile || 'Candidate',
-            experienceYears: raw.experienceYears || raw.experience_years || 0,
+            photoUrl: raw.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.name)}`,
+            videoUrl: raw.videoUrl || '',
+            appliedJobTitle: raw.appliedJobTitle || 'Candidate',
+            experienceYears: raw.experienceYears || 0,
             location: raw.location || 'Remote',
-            aiScore: raw.aiScore || raw.aiMatchScore || 85,
+            aiScore: raw.aiScore || 0,
             skills: Array.isArray(raw.skills)
                 ? raw.skills.map((s: any) => typeof s === 'string' ? s : s.skill)
                 : [],
@@ -252,7 +187,7 @@ const Candidates: React.FC = () => {
         } else if (activeTab === 'ai_recommended') {
             pool = aiRecommendedCandidates;
         } else {
-            // 'all' - combine applied first, then AI recommended
+            // 'all' - combine applied first
             pool = [...candidates, ...aiRecommendedCandidates];
         }
 
@@ -263,21 +198,13 @@ const Candidates: React.FC = () => {
         });
     }, [searchTerm, filterStatus, candidates, aiRecommendedCandidates, activeTab]);
 
-    // Also search AI-recommended when looking for a candidate in profile view
-    const normalizedSelectedCandidateSource = useMemo(() => {
-        if (!selectedCandidateId) return null;
-        return candidates.find(c => c.id === selectedCandidateId) ||
-            aiRecommendedCandidates.find(c => c.id === selectedCandidateId) ||
-            (mockCandidates.find(c => c.id === selectedCandidateId) as any);
-    }, [candidates, aiRecommendedCandidates, selectedCandidateId]);
-
 
     if (loading && viewMode === 'JOBS') {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin"></div>
-                    <p className="text-[var(--text-muted)] font-medium">Assembing your pipeline...</p>
+                    <p className="text-[var(--text-muted)] font-medium">Assembling your pipeline...</p>
                 </div>
             </div>
         );
@@ -306,7 +233,7 @@ const Candidates: React.FC = () => {
                         </div>
 
                         <div className="grid gap-4">
-                            {jobs.map((job) => (
+                            {jobs.length > 0 ? jobs.map((job) => (
                                 <div
                                     key={job.id}
                                     onClick={() => handleSelectJob(job.id)}
@@ -332,7 +259,13 @@ const Candidates: React.FC = () => {
                                         <ChevronRight size={24} className="text-[var(--text-muted)] group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+                                    <Briefcase size={40} className="mx-auto text-gray-400 mb-4" />
+                                    <p className="text-gray-500 font-medium">No job posts found.</p>
+                                    <button onClick={() => navigate('/employer/post-job')} className="mt-4 text-indigo-600 font-bold text-sm hover:underline">Post your first job</button>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 )}
@@ -351,8 +284,10 @@ const Candidates: React.FC = () => {
                                 <ArrowLeft size={20} />
                             </button>
                             <div className="flex-1">
-                                <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tight">{selectedJob?.title}</h1>
-                                <p className="text-[var(--text-muted)] font-bold uppercase text-[10px] tracking-widest">Managing pipeline for {selectedJob?.location}</p>
+                                <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tight">{selectedJob ? selectedJob.title : 'All Candidates'}</h1>
+                                <p className="text-[var(--text-muted)] font-bold uppercase text-[10px] tracking-widest">
+                                    {selectedJob ? `Managing pipeline for ${selectedJob.location}` : 'Viewing all applications'}
+                                </p>
                             </div>
                             <div className="flex gap-2">
                                 <button className="px-4 py-2 bg-white border border-[var(--border-subtle)] rounded-xl text-xs font-black uppercase tracking-widest text-[var(--text-muted)] hover:border-indigo-600 transition-all flex items-center gap-2">
@@ -427,19 +362,6 @@ const Candidates: React.FC = () => {
                                 <Star size={14} /> AI Picks ({aiRecommendedCandidates.length})
                             </button>
                         </div>
-
-                        {/* AI Recommendation Banner */}
-                        {activeTab === 'ai_recommended' && aiRecommendedCandidates.length > 0 && (
-                            <div className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-200 rounded-2xl p-4 flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white">
-                                    <Star size={24} />
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="font-black text-[var(--text-main)]">AI-Powered Talent Discovery</h4>
-                                    <p className="text-sm text-[var(--text-muted)]">These candidates match your job requirements based on skills, experience, and profile strength. They haven't applied yet—reach out to them!</p>
-                                </div>
-                            </div>
-                        )}
 
                         {/* Candidate Grid */}
                         {loading ? (
@@ -557,7 +479,7 @@ const Candidates: React.FC = () => {
 
                             {/* Middle & Right: Video & Professional History */}
                             <div className="lg:col-span-2 space-y-6">
-                                {/* Video Resume Panel - ENHANCED */}
+                                {/* Video Resume Panel */}
                                 <div className="saas-card overflow-hidden">
                                     <div className="p-6 border-b border-[var(--border-subtle)] flex items-center justify-between">
                                         <div className="flex items-center gap-3">
@@ -576,14 +498,12 @@ const Candidates: React.FC = () => {
 
                                     {/* Video Player Container */}
                                     <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 relative group">
-                                        {/* Always show video - use sample if no URL */}
                                         <video
                                             className="w-full h-full object-cover"
                                             controls
                                             poster={normalizedSelectedCandidate.photoUrl}
                                             preload="metadata"
                                         >
-                                            {/* Use candidate's video URL or a sample video */}
                                             <source
                                                 src={normalizedSelectedCandidate.videoUrl || "https://www.w3schools.com/html/mov_bbb.mp4"}
                                                 type="video/mp4"
@@ -591,13 +511,6 @@ const Candidates: React.FC = () => {
                                             Your browser does not support the video tag.
                                         </video>
 
-                                        {/* Video Overlay Info */}
-                                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <p className="text-white text-xl font-black">Hi, I'm {normalizedSelectedCandidate.name}</p>
-                                            <p className="text-white/70 text-sm font-medium">{normalizedSelectedCandidate.appliedJobTitle}</p>
-                                        </div>
-
-                                        {/* If no video URL, show overlay message */}
                                         {!normalizedSelectedCandidate.videoUrl && (
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/60">
                                                 <div className="text-center text-white">
@@ -609,26 +522,6 @@ const Candidates: React.FC = () => {
                                                 </div>
                                             </div>
                                         )}
-                                    </div>
-
-                                    {/* AI Analysis Metrics */}
-                                    <div className="p-6 bg-gradient-to-r from-gray-50 to-indigo-50/30 grid grid-cols-4 gap-4">
-                                        <div className="text-center p-3 bg-white rounded-xl border border-[var(--border-subtle)]">
-                                            <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">Confidence</p>
-                                            <p className="text-xl font-black text-indigo-600 mt-1">92%</p>
-                                        </div>
-                                        <div className="text-center p-3 bg-white rounded-xl border border-[var(--border-subtle)]">
-                                            <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">Communication</p>
-                                            <p className="text-xl font-black text-emerald-600 mt-1">A+</p>
-                                        </div>
-                                        <div className="text-center p-3 bg-white rounded-xl border border-[var(--border-subtle)]">
-                                            <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">English</p>
-                                            <p className="text-xl font-black text-purple-600 mt-1">Pro</p>
-                                        </div>
-                                        <div className="text-center p-3 bg-white rounded-xl border border-[var(--border-subtle)]">
-                                            <p className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">Body Language</p>
-                                            <p className="text-xl font-black text-amber-600 mt-1">88%</p>
-                                        </div>
                                     </div>
                                 </div>
 
@@ -643,40 +536,19 @@ const Candidates: React.FC = () => {
                                     <div className="p-8 space-y-8 relative">
                                         <div className="absolute left-[47px] top-10 bottom-10 w-0.5 bg-indigo-100"></div>
 
-                                        {/* Mock Experience Items */}
-                                        {[
-                                            {
-                                                role: normalizedSelectedCandidate.appliedJobTitle || 'Lead Software Engineer',
-                                                company: 'Google / Vertex AI',
-                                                period: '2021 - Present',
-                                                desc: 'Leading a team of 12 engineers in building next-gen AI interfaces and scaling model deployment workflows.'
-                                            },
-                                            {
-                                                role: 'Senior Full Stack Developer',
-                                                company: 'Amazon Web Services',
-                                                period: '2018 - 2021',
-                                                desc: 'Architected high-throughput data processing pipelines for AWS QuickSight using Node.js and React.'
-                                            },
-                                            {
-                                                role: 'Software Engineer',
-                                                company: 'StartUp Alpha',
-                                                period: '2015 - 2018',
-                                                desc: 'Full-stack development of early-stage products, helping scale the user base from 0 to 1M monthly active users.'
-                                            }
-                                        ].map((exp, idx) => (
-                                            <div key={idx} className="flex gap-8 relative z-10">
-                                                <div className="w-10 h-10 rounded-full bg-white border-2 border-indigo-600 flex items-center justify-center text-indigo-600 shrink-0 shadow-sm shadow-indigo-100">
-                                                    <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full" />
-                                                </div>
-                                                <div className="pb-4">
-                                                    <h4 className="text-lg font-black text-[var(--text-main)] leading-tight">{exp.role}</h4>
-                                                    <p className="text-indigo-600 font-black text-xs uppercase mt-1 tracking-wide">{exp.company} • {exp.period}</p>
-                                                    <p className="text-[var(--text-muted)] mt-2 text-sm leading-relaxed font-medium">
-                                                        {exp.desc}
-                                                    </p>
-                                                </div>
+                                        {/* Dynamic Experience Items */}
+                                        <div className="flex gap-8 relative z-10">
+                                            <div className="w-10 h-10 rounded-full bg-white border-2 border-indigo-600 flex items-center justify-center text-indigo-600 shrink-0 shadow-sm shadow-indigo-100">
+                                                <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full" />
                                             </div>
-                                        ))}
+                                            <div className="pb-4">
+                                                <h4 className="text-lg font-black text-[var(--text-main)] leading-tight">{normalizedSelectedCandidate.appliedJobTitle}</h4>
+                                                <p className="text-indigo-600 font-black text-xs uppercase mt-1 tracking-wide">{normalizedSelectedCandidate.experienceYears} Years Experience</p>
+                                                <p className="text-[var(--text-muted)] mt-2 text-sm leading-relaxed font-medium">
+                                                    Detailed experience information not provided by candidate.
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -688,17 +560,8 @@ const Candidates: React.FC = () => {
                                         </div>
                                         <h3 className="text-lg font-black text-[var(--text-main)]">Education & Certifications</h3>
                                     </div>
-                                    <div className="grid md:grid-cols-2 gap-6">
-                                        <div className="p-4 rounded-xl bg-gray-50 border border-[var(--border-subtle)]">
-                                            <p className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest">Master of Science</p>
-                                            <p className="text-sm font-black text-[var(--text-main)] mt-1">Computer Science & AI</p>
-                                            <p className="text-xs font-bold text-indigo-600 mt-0.5">Stanford University • 2020</p>
-                                        </div>
-                                        <div className="p-4 rounded-xl bg-gray-50 border border-[var(--border-subtle)]">
-                                            <p className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest">B.Tech</p>
-                                            <p className="text-sm font-black text-[var(--text-main)] mt-1">Information Technology</p>
-                                            <p className="text-xs font-bold text-indigo-600 mt-0.5">IIT Bombay • 2015</p>
-                                        </div>
+                                    <div className="p-4 text-sm text-[var(--text-muted)] bg-gray-50 rounded-lg border border-[var(--border-subtle)]">
+                                        Education details not available.
                                     </div>
                                 </div>
                             </div>

@@ -5,6 +5,7 @@ import CompactInterviewCard from '../../components/CompactInterviewCard';
 import ProctoringInterview from '../../components/ProctoringInterview';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { endpoints } from '../../lib/api';
 
 interface Interview {
     id: number;
@@ -41,7 +42,7 @@ const CandidateInterviews: React.FC = () => {
     useEffect(() => {
         const fetchInterviews = async () => {
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/interviews/candidate`, {
+                const res = await fetch(endpoints.interviews.candidate, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
 

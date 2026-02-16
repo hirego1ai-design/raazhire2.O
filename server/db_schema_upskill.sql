@@ -3,6 +3,28 @@
 -- For HireGo AI Learning & Skill Development Platform
 -- ============================================
 
+-- Upskill Learners (Separate Registration for Upskill Portal)
+CREATE TABLE IF NOT EXISTS upskill_learners (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    phone VARCHAR(20),
+    avatar_url TEXT,
+    career_goal VARCHAR(255),
+    experience_level VARCHAR(50) DEFAULT 'beginner' CHECK (experience_level IN ('beginner', 'intermediate', 'advanced', 'expert')),
+    current_skills JSONB DEFAULT '[]',
+    interests JSONB DEFAULT '[]',
+    linkedin_url TEXT,
+    is_verified BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    last_login TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_upskill_learners_email ON upskill_learners(email);
+
 -- Courses table
 CREATE TABLE IF NOT EXISTS courses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -5,9 +5,6 @@
  * ============================================
  */
 
- * ============================================
- */
-
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { DeepSeekAgent } from '../agents/deepseek_agent.js';
@@ -63,256 +60,6 @@ const getApiKey = async (provider, supabase) => {
     return null;
 };
 
-// Helper to get YouTube config
-const getYouTubeConfig = async (supabase) => {
-    try {
-        if (supabase) {
-            const { data } = await supabase.from('youtube_config').select('*').single();
-            if (data) return data;
-        }
-        const localDbPath = path.join(process.cwd(), 'local_db.json');
-        if (fs.existsSync(localDbPath)) {
-            const localData = JSON.parse(fs.readFileSync(localDbPath, 'utf8'));
-            return localData.youtube_config;
-        }
-    } catch (error) {
-        console.error('Error fetching YouTube config:', error);
-    }
-    return null;
-};
-
-/**
- * Generate unique ID for local fallback
- */
-const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
-
-/**
- * Mock course data for fallback/demo
- */
-const getMockCourses = () => [
-    {
-        id: 'course-1',
-        title: 'Data Science Fundamentals',
-        description: 'Master the basics of data science including Python, statistics, and machine learning.',
-        category: 'Data & Analytics',
-        difficulty: 'beginner',
-        duration_hours: 40,
-        lessons_count: 24,
-        instructor: 'Dr. Sarah Chen',
-        rating: 4.8,
-        enrolled_count: 12500,
-        thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800',
-        skills: ['Python', 'Statistics', 'Machine Learning', 'Data Visualization'],
-        is_featured: true,
-        price: 0,
-        created_at: new Date().toISOString()
-    },
-    {
-        id: 'course-2',
-        title: 'AI & Machine Learning Masterclass',
-        description: 'Deep dive into neural networks, deep learning, and modern AI architectures.',
-        category: 'AI & Machine Learning',
-        difficulty: 'intermediate',
-        duration_hours: 60,
-        lessons_count: 36,
-        instructor: 'Prof. James Miller',
-        rating: 4.9,
-        enrolled_count: 8700,
-        thumbnail: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800',
-        skills: ['TensorFlow', 'PyTorch', 'Neural Networks', 'NLP'],
-        is_featured: true,
-        price: 49.99,
-        created_at: new Date().toISOString()
-    },
-    {
-        id: 'course-3',
-        title: 'Full Stack Web Development',
-        description: 'Build modern web applications with React, Node.js, and databases.',
-        category: 'Coding & Software',
-        difficulty: 'intermediate',
-        duration_hours: 80,
-        lessons_count: 48,
-        instructor: 'Alex Johnson',
-        rating: 4.7,
-        enrolled_count: 15200,
-        thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800',
-        skills: ['React', 'Node.js', 'PostgreSQL', 'TypeScript'],
-        is_featured: true,
-        price: 0,
-        created_at: new Date().toISOString()
-    },
-    {
-        id: 'course-4',
-        title: 'Business Communication Excellence',
-        description: 'Master professional communication, presentations, and stakeholder management.',
-        category: 'Communication Skills',
-        difficulty: 'beginner',
-        duration_hours: 20,
-        lessons_count: 12,
-        instructor: 'Maria Garcia',
-        rating: 4.6,
-        enrolled_count: 9800,
-        thumbnail: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800',
-        skills: ['Presentation', 'Email Writing', 'Public Speaking', 'Negotiation'],
-        is_featured: false,
-        price: 0,
-        created_at: new Date().toISOString()
-    },
-    {
-        id: 'course-5',
-        title: 'Customer Service Mastery',
-        description: 'Learn best practices for BPO, customer support, and service excellence.',
-        category: 'BPO / Customer Support',
-        difficulty: 'beginner',
-        duration_hours: 25,
-        lessons_count: 15,
-        instructor: 'Robert Kim',
-        rating: 4.5,
-        enrolled_count: 6500,
-        thumbnail: 'https://images.unsplash.com/photo-1556745757-8d76bdb6984b?w=800',
-        skills: ['CRM Tools', 'Conflict Resolution', 'Active Listening', 'Ticketing Systems'],
-        is_featured: false,
-        price: 0,
-        created_at: new Date().toISOString()
-    },
-    {
-        id: 'course-6',
-        title: 'HR Management & Recruitment',
-        description: 'Comprehensive training in human resources and talent acquisition.',
-        category: 'HR & Admin Skills',
-        difficulty: 'intermediate',
-        duration_hours: 35,
-        lessons_count: 20,
-        instructor: 'Lisa Thompson',
-        rating: 4.7,
-        enrolled_count: 4200,
-        thumbnail: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800',
-        skills: ['Talent Acquisition', 'HRIS', 'Compensation', 'Employee Relations'],
-        is_featured: false,
-        price: 29.99,
-        created_at: new Date().toISOString()
-    },
-    {
-        id: 'course-7',
-        title: 'UI/UX Design Bootcamp',
-        description: 'Learn user interface design, user experience principles, and design tools.',
-        category: 'Creative & Design',
-        difficulty: 'beginner',
-        duration_hours: 45,
-        lessons_count: 28,
-        instructor: 'Emma Wilson',
-        rating: 4.8,
-        enrolled_count: 11000,
-        thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800',
-        skills: ['Figma', 'Adobe XD', 'Prototyping', 'User Research'],
-        is_featured: true,
-        price: 0,
-        created_at: new Date().toISOString()
-    },
-    {
-        id: 'course-8',
-        title: 'Project Management Professional',
-        description: 'Master project management methodologies including Agile and Scrum.',
-        category: 'Business & Operations',
-        difficulty: 'advanced',
-        duration_hours: 50,
-        lessons_count: 30,
-        instructor: 'David Brown',
-        rating: 4.9,
-        enrolled_count: 7800,
-        thumbnail: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800',
-        skills: ['Agile', 'Scrum', 'Risk Management', 'Stakeholder Communication'],
-        is_featured: true,
-        price: 79.99,
-        created_at: new Date().toISOString()
-    }
-];
-
-/**
- * Generate mock lessons for a course
- */
-const getMockLessons = (courseId) => {
-    const lessonTemplates = [
-        { title: 'Introduction & Overview', type: 'video', duration_minutes: 15 },
-        { title: 'Core Concepts', type: 'video', duration_minutes: 25 },
-        { title: 'Hands-On Practice', type: 'interactive', duration_minutes: 30 },
-        { title: 'Deep Dive', type: 'video', duration_minutes: 35 },
-        { title: 'Case Study', type: 'reading', duration_minutes: 20 },
-        { title: 'Quiz & Review', type: 'quiz', duration_minutes: 15 }
-    ];
-
-    return lessonTemplates.map((template, index) => ({
-        id: `${courseId}-lesson-${index + 1}`,
-        course_id: courseId,
-        order: index + 1,
-        title: `Module ${index + 1}: ${template.title}`,
-        description: `Learn about ${template.title.toLowerCase()} in this comprehensive lesson.`,
-        type: template.type,
-        duration_minutes: template.duration_minutes,
-        video_url: template.type === 'video' ? 'https://www.youtube.com/embed/dQw4w9WgXcQ' : null,
-        content: template.type === 'reading' ? 'This is the lesson content...' : null,
-        resources: [
-            { name: 'Supplementary PDF', url: '#' },
-            { name: 'Practice Files', url: '#' }
-        ],
-        created_at: new Date().toISOString()
-    }));
-};
-
-/**
- * Generate mock assessment questions
- */
-const getMockAssessment = (courseId) => ({
-    id: `assessment-${courseId}`,
-    course_id: courseId,
-    title: 'Final Assessment',
-    description: 'Test your knowledge from this course',
-    passing_score: 70,
-    time_limit_minutes: 30,
-    questions: [
-        {
-            id: 'q1',
-            type: 'multiple_choice',
-            question: 'What is the primary purpose of this concept?',
-            options: ['Option A', 'Option B', 'Option C', 'Option D'],
-            correct_answer: 0,
-            points: 10
-        },
-        {
-            id: 'q2',
-            type: 'multiple_choice',
-            question: 'Which of the following is a best practice?',
-            options: ['Practice A', 'Practice B', 'Practice C', 'Practice D'],
-            correct_answer: 2,
-            points: 10
-        },
-        {
-            id: 'q3',
-            type: 'multiple_choice',
-            question: 'How would you approach this problem?',
-            options: ['Approach A', 'Approach B', 'Approach C', 'Approach D'],
-            correct_answer: 1,
-            points: 10
-        },
-        {
-            id: 'q4',
-            type: 'true_false',
-            question: 'This technique is always applicable.',
-            correct_answer: false,
-            points: 5
-        },
-        {
-            id: 'q5',
-            type: 'multiple_choice',
-            question: 'What is the recommended next step?',
-            options: ['Step A', 'Step B', 'Step C', 'Step D'],
-            correct_answer: 3,
-            points: 15
-        }
-    ],
-    created_at: new Date().toISOString()
-});
-
 // ==================== COURSE ROUTES ====================
 
 /**
@@ -322,32 +69,41 @@ const getMockAssessment = (courseId) => ({
 router.get('/courses', async (req, res) => {
     try {
         const { category, difficulty, search, featured } = req.query;
+        const supabase = req.supabase;
 
-        let courses = getMockCourses();
+        let query = supabase.from('courses').select('*');
 
         // Apply filters
-        if (category) {
-            courses = courses.filter(c => c.category.toLowerCase().includes(category.toLowerCase()));
+        if (category && category !== 'All') {
+            query = query.ilike('category', `%${category}%`);
         }
         if (difficulty) {
-            courses = courses.filter(c => c.difficulty === difficulty);
+            query = query.eq('difficulty', difficulty);
         }
         if (search) {
-            const searchLower = search.toLowerCase();
-            courses = courses.filter(c =>
-                c.title.toLowerCase().includes(searchLower) ||
-                c.description.toLowerCase().includes(searchLower) ||
-                c.skills.some(s => s.toLowerCase().includes(searchLower))
-            );
+            // Search in title, description, or instructor
+            query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,instructor.ilike.%${search}%`);
         }
         if (featured === 'true') {
-            courses = courses.filter(c => c.is_featured);
+            query = query.eq('is_featured', true);
+        }
+
+        // Order by popularity (enrolled_count) by default
+        query = query.order('enrolled_count', { ascending: false });
+
+        const { data: courses, error } = await query;
+
+        if (error) throw error;
+
+        // Fallback for demo if no courses found
+        if (!courses || courses.length === 0) {
+            console.log('ℹ️ No courses found in DB, returning empty list (Run seed script!)');
         }
 
         res.json({
             success: true,
-            count: courses.length,
-            courses
+            count: courses?.length || 0,
+            courses: courses || []
         });
     } catch (error) {
         console.error('Error fetching courses:', error);
@@ -362,21 +118,35 @@ router.get('/courses', async (req, res) => {
 router.get('/courses/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const courses = getMockCourses();
-        const course = courses.find(c => c.id === id);
+        const supabase = req.supabase;
 
-        if (!course) {
+        // Fetch course details
+        const { data: course, error: courseError } = await supabase
+            .from('courses')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (courseError || !course) {
             return res.status(404).json({ error: 'Course not found' });
         }
 
-        // Include lessons
-        const lessons = getMockLessons(id);
+        // Fetch lessons
+        const { data: lessons, error: lessonsError } = await supabase
+            .from('lessons')
+            .select('*')
+            .eq('course_id', id)
+            .order('order', { ascending: true });
+
+        if (lessonsError) {
+            console.warn('Error fetching lessons:', lessonsError);
+        }
 
         res.json({
             success: true,
             course: {
                 ...course,
-                lessons
+                lessons: lessons || []
             }
         });
     } catch (error) {
@@ -391,12 +161,28 @@ router.get('/courses/:id', async (req, res) => {
  */
 router.get('/categories', async (req, res) => {
     try {
-        const courses = getMockCourses();
-        const categories = [...new Set(courses.map(c => c.category))];
+        const supabase = req.supabase;
 
-        const categoryStats = categories.map(cat => ({
-            name: cat,
-            count: courses.filter(c => c.category === cat).length
+        // Get unique categories and their counts
+        // Note: Supabase doesn't support easy GROUP BY with COUNT in standard client, 
+        // so we fetch all courses and aggregate (fine for small datasets) or use RPC.
+        // For scalability, create a check_categories view or rpc function.
+
+        const { data: courses, error } = await supabase
+            .from('courses')
+            .select('category');
+
+        if (error) throw error;
+
+        const categoryMap = {};
+        courses.forEach(c => {
+            if (!categoryMap[c.category]) categoryMap[c.category] = 0;
+            categoryMap[c.category]++;
+        });
+
+        const categoryStats = Object.keys(categoryMap).map(name => ({
+            name,
+            count: categoryMap[name]
         }));
 
         res.json({
@@ -418,23 +204,40 @@ router.get('/categories', async (req, res) => {
 router.post('/enroll', async (req, res) => {
     try {
         const { user_id, course_id } = req.body;
+        const supabase = req.supabase;
 
         if (!user_id || !course_id) {
             return res.status(400).json({ error: 'user_id and course_id are required' });
         }
 
-        const enrollment = {
-            id: generateId(),
-            user_id,
-            course_id,
-            enrolled_at: new Date().toISOString(),
-            progress_percent: 0,
-            completed_lessons: [],
-            status: 'active'
-        };
+        // Insert enrollment
+        const { data: enrollment, error } = await supabase
+            .from('user_enrollments')
+            .insert([{
+                user_id,
+                course_id,
+                progress_percent: 0,
+                status: 'active',
+                enrolled_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
 
-        // In production, save to database
-        console.log(`✅ User ${user_id} enrolled in course ${course_id}`);
+        if (error) {
+            // Check for duplicate enrollment
+            if (error.code === '23505') { // Unique violation
+                return res.status(200).json({ // Return success but message already enrolled
+                    success: true,
+                    message: 'Already enrolled in course',
+                    alreadyEnrolled: true
+                });
+            }
+            throw error;
+        }
+
+        // Increment enrolled_count in courses table
+        // Note: For this to work, we need an RPC or just update directly
+        // await supabase.rpc('increment_course_enrollment', { course_id_param: course_id });
 
         res.json({
             success: true,
@@ -454,24 +257,23 @@ router.post('/enroll', async (req, res) => {
 router.get('/enrollments/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
+        const supabase = req.supabase;
 
-        // Mock enrolled courses
-        const courses = getMockCourses().slice(0, 3);
-        const enrollments = courses.map((course, index) => ({
-            id: generateId(),
-            user_id: userId,
-            course_id: course.id,
-            course,
-            enrolled_at: new Date(Date.now() - index * 86400000).toISOString(),
-            progress_percent: Math.floor(Math.random() * 80) + 10,
-            last_accessed: new Date(Date.now() - index * 3600000).toISOString(),
-            status: 'active'
-        }));
+        const { data: enrollments, error } = await supabase
+            .from('user_enrollments')
+            .select(`
+                *,
+                course:courses(*)
+            `)
+            .eq('user_id', userId)
+            .order('last_accessed', { ascending: false });
+
+        if (error) throw error;
 
         res.json({
             success: true,
-            count: enrollments.length,
-            enrollments
+            count: enrollments?.length || 0,
+            enrollments: enrollments || []
         });
     } catch (error) {
         console.error('Error fetching enrollments:', error);
@@ -488,12 +290,20 @@ router.get('/enrollments/:userId', async (req, res) => {
 router.get('/lessons/:courseId', async (req, res) => {
     try {
         const { courseId } = req.params;
-        const lessons = getMockLessons(courseId);
+        const supabase = req.supabase;
+
+        const { data: lessons, error } = await supabase
+            .from('lessons')
+            .select('*')
+            .eq('course_id', courseId)
+            .order('order', { ascending: true });
+
+        if (error) throw error;
 
         res.json({
             success: true,
-            count: lessons.length,
-            lessons
+            count: lessons?.length || 0,
+            lessons: lessons || []
         });
     } catch (error) {
         console.error('Error fetching lessons:', error);
@@ -508,18 +318,15 @@ router.get('/lessons/:courseId', async (req, res) => {
 router.get('/lesson/:lessonId', async (req, res) => {
     try {
         const { lessonId } = req.params;
+        const supabase = req.supabase;
 
-        // Parse courseId from lessonId (format: courseId-lesson-N)
-        const parts = lessonId.split('-lesson-');
-        if (parts.length < 2) {
-            return res.status(400).json({ error: 'Invalid lesson ID format' });
-        }
+        const { data: lesson, error } = await supabase
+            .from('lessons')
+            .select('*')
+            .eq('id', lessonId)
+            .single();
 
-        const courseId = parts[0];
-        const lessons = getMockLessons(courseId);
-        const lesson = lessons.find(l => l.id === lessonId);
-
-        if (!lesson) {
+        if (error || !lesson) {
             return res.status(404).json({ error: 'Lesson not found' });
         }
 
@@ -539,26 +346,60 @@ router.get('/lesson/:lessonId', async (req, res) => {
  */
 router.post('/lesson/complete', async (req, res) => {
     try {
-        const { user_id, course_id, lesson_id } = req.body;
+        const { user_id, course_id, lesson_id, time_spent_minutes } = req.body;
+        const supabase = req.supabase;
 
         if (!user_id || !course_id || !lesson_id) {
             return res.status(400).json({ error: 'user_id, course_id, and lesson_id are required' });
         }
 
-        const completion = {
-            id: generateId(),
-            user_id,
-            course_id,
-            lesson_id,
-            completed_at: new Date().toISOString()
-        };
+        // 1. Record completion
+        const { data: completion, error } = await supabase
+            .from('lesson_completions')
+            .upsert({
+                user_id,
+                course_id,
+                lesson_id,
+                time_spent_minutes: time_spent_minutes || 0,
+                completed_at: new Date().toISOString()
+            }, { onConflict: 'user_id,lesson_id' })
+            .select()
+            .single();
 
-        console.log(`✅ User ${user_id} completed lesson ${lesson_id}`);
+        if (error) throw error;
+
+        // 2. Update overall progress percent
+        // Get total lessons count
+        const { count: totalLessons } = await supabase
+            .from('lessons')
+            .select('*', { count: 'exact', head: true })
+            .eq('course_id', course_id);
+
+        // Get completed lessons count
+        const { count: completedCount } = await supabase
+            .from('lesson_completions')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user_id)
+            .eq('course_id', course_id);
+
+        const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+        // Update enrollment progress
+        await supabase
+            .from('user_enrollments')
+            .update({
+                progress_percent: progressPercent,
+                last_accessed: new Date().toISOString(),
+                status: progressPercent === 100 ? 'completed' : 'active'
+            })
+            .eq('user_id', user_id)
+            .eq('course_id', course_id);
 
         res.json({
             success: true,
             message: 'Lesson marked as completed',
-            completion
+            completion,
+            newProgress: progressPercent
         });
     } catch (error) {
         console.error('Error completing lesson:', error);
@@ -575,34 +416,48 @@ router.post('/lesson/complete', async (req, res) => {
 router.get('/progress/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
+        const supabase = req.supabase;
 
-        // Mock progress data
-        const progress = {
-            user_id: userId,
-            total_courses_enrolled: 5,
-            courses_completed: 2,
-            total_lessons_completed: 47,
-            total_hours_learned: 32.5,
-            current_streak_days: 7,
-            longest_streak_days: 14,
-            certificates_earned: 2,
-            skills_acquired: ['Python', 'Data Analysis', 'Machine Learning', 'SQL', 'React'],
-            skill_scores: {
-                'Data & Analytics': 85,
-                'AI & Machine Learning': 72,
-                'Coding & Software': 90,
-                'Communication Skills': 68
-            },
-            recent_activity: [
-                { type: 'lesson_completed', title: 'Advanced Python Techniques', date: new Date().toISOString() },
-                { type: 'course_started', title: 'Machine Learning Basics', date: new Date(Date.now() - 86400000).toISOString() },
-                { type: 'certificate_earned', title: 'Data Science Fundamentals', date: new Date(Date.now() - 172800000).toISOString() }
-            ],
-            weekly_goal: { target_hours: 10, completed_hours: 6.5 },
-            level: 'Intermediate Learner',
-            xp_points: 2450,
-            next_level_xp: 3000
-        };
+        if (!userId || userId === 'undefined') {
+            return res.json({ success: false, message: 'Invalid user ID' });
+        }
+
+        // Fetch aggregated progress from DB
+        let { data: progress, error } = await supabase
+            .from('user_learning_progress')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+            // throw error; 
+            // Be silent about error, try fallback
+        }
+
+        // If no progress record exists, calculate fresh or return defaults
+        if (!progress) {
+            // Calculate from enrollments
+            const { data: enrollments } = await supabase
+                .from('user_enrollments')
+                .select('*')
+                .eq('user_id', userId);
+
+            const totalEnrollments = enrollments?.length || 0;
+            const coursesCompleted = enrollments?.filter(e => e.status === 'completed').length || 0;
+
+            progress = {
+                user_id: userId,
+                total_courses_enrolled: totalEnrollments,
+                courses_completed: coursesCompleted,
+                total_lessons_completed: 0, // Need to count completions table
+                total_hours_learned: 0,
+                current_streak_days: 0,
+                skills_acquired: ['React', 'Communication'], // Mock needed for UI until DB is populated
+                skill_scores: { 'Coding': 70, 'Business': 50 },
+                level: 'Beginner Learner',
+                xp_points: 0
+            };
+        }
 
         res.json({
             success: true,
@@ -621,22 +476,41 @@ router.get('/progress/:userId', async (req, res) => {
 router.get('/progress/:userId/course/:courseId', async (req, res) => {
     try {
         const { userId, courseId } = req.params;
+        const supabase = req.supabase;
 
-        const lessons = getMockLessons(courseId);
-        const completedCount = Math.floor(lessons.length * 0.6); // Mock 60% completion
+        const { data: enrollment, error } = await supabase
+            .from('user_enrollments')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('course_id', courseId)
+            .single();
+
+        if (error || !enrollment) {
+            return res.status(404).json({ error: 'Enrollment not found' });
+        }
+
+        // Get completed lessons IDs
+        const { data: completions } = await supabase
+            .from('lesson_completions')
+            .select('lesson_id')
+            .eq('user_id', userId)
+            .eq('course_id', courseId);
+
+        const completedLessonIds = completions?.map(c => c.lesson_id) || [];
+
+        // Get next lesson
+        const { data: lessons } = await supabase
+            .from('lessons')
+            .select('id')
+            .eq('course_id', courseId)
+            .order('order', { ascending: true });
+
+        const nextLesson = lessons.find(l => !completedLessonIds.includes(l.id));
 
         const courseProgress = {
-            user_id: userId,
-            course_id: courseId,
-            total_lessons: lessons.length,
-            completed_lessons: completedCount,
-            progress_percent: Math.round((completedCount / lessons.length) * 100),
-            time_spent_minutes: completedCount * 25,
-            last_lesson_id: lessons[completedCount - 1]?.id || null,
-            next_lesson_id: lessons[completedCount]?.id || null,
-            started_at: new Date(Date.now() - 604800000).toISOString(),
-            last_accessed: new Date().toISOString(),
-            estimated_completion: '2 hours remaining'
+            ...enrollment,
+            completed_lessons_count: completedLessonIds.length,
+            next_lesson_id: nextLesson?.id || null,
         };
 
         res.json({
@@ -658,15 +532,43 @@ router.get('/progress/:userId/course/:courseId', async (req, res) => {
 router.get('/assessment/:courseId', async (req, res) => {
     try {
         const { courseId } = req.params;
-        const assessment = getMockAssessment(courseId);
+        const supabase = req.supabase;
+
+        const { data: assessment, error } = await supabase
+            .from('assessments')
+            .select('*')
+            .eq('course_id', courseId)
+            .single();
+
+        if (error || !assessment) {
+            // Check if assessment with this ID exists directly (sometimes ID is passed instead of courseId)
+            const { data: assessmentById, error: errorById } = await supabase
+                .from('assessments')
+                .select('*')
+                .eq('id', courseId)
+                .single();
+
+            if (assessmentById) {
+                const clientAssessment = {
+                    ...assessmentById,
+                    questions: assessmentById.questions.map(q => {
+                        const { correct_answer, ...rest } = q;
+                        return rest;
+                    })
+                };
+                return res.json({ success: true, assessment: clientAssessment });
+            }
+
+            return res.status(404).json({ error: 'Assessment not found for this course' });
+        }
 
         // Don't send correct answers to client
         const clientAssessment = {
             ...assessment,
-            questions: assessment.questions.map(q => ({
-                ...q,
-                correct_answer: undefined // Hide answers
-            }))
+            questions: assessment.questions.map(q => {
+                const { correct_answer, ...rest } = q;
+                return rest;
+            })
         };
 
         res.json({
@@ -680,27 +582,98 @@ router.get('/assessment/:courseId', async (req, res) => {
 });
 
 /**
+ * GET /api/upskill/assessments
+ * List all available assessments
+ */
+router.get('/assessments', async (req, res) => {
+    try {
+        const supabase = req.supabase;
+        const { data: assessments, error } = await supabase
+            .from('assessments')
+            .select('*');
+
+        if (error) throw error;
+
+        res.json({
+            success: true,
+            assessments: assessments || []
+        });
+    } catch (error) {
+        console.error('Error fetching assessments:', error);
+        res.status(500).json({ error: 'Failed to fetch assessments' });
+    }
+});
+
+/**
  * POST /api/upskill/assessment/submit
  * Submit assessment answers and get results
  */
 router.post('/assessment/submit', async (req, res) => {
     try {
-        const { user_id, assessment_id, answers } = req.body;
+        const { user_id, assessment_id, course_id, answers } = req.body;
+        const supabase = req.supabase;
 
-        // In a real app, calculate score based on answers
-        // For demo, generate random passing score
-        const score = Math.floor(Math.random() * 30) + 70; // 70-100
-        const passed = score >= 70;
+        // Fetch original assessment to check answers
+        const { data: assessment, error } = await supabase
+            .from('assessments')
+            .select('*')
+            .eq('id', assessment_id)
+            .single();
+
+        if (error || !assessment) {
+            return res.status(404).json({ error: 'Assessment not found' });
+        }
+
+        // Grading Logic
+        let totalPoints = 0;
+        let earnedPoints = 0;
+        const questionResults = [];
+
+        assessment.questions.forEach((q, index) => {
+            totalPoints += (q.points || 1);
+            const userAnswer = answers[q.id] || answers[index]; // Support ID or Index keyed answers
+
+            const isCorrect = userAnswer === q.correct_answer;
+            if (isCorrect) earnedPoints += (q.points || 1);
+
+            questionResults.push({
+                question_id: q.id,
+                correct: isCorrect,
+                user_answer: userAnswer,
+                correct_answer: q.correct_answer // Send back correct answer now
+            });
+        });
+
+        const score = Math.round((earnedPoints / totalPoints) * 100);
+        const passed = score >= assessment.passing_score;
+
+        // Save result
+        const { data: result, error: saveError } = await supabase
+            .from('assessment_results')
+            .insert([{
+                user_id,
+                assessment_id,
+                course_id,
+                score,
+                passed,
+                total_points: totalPoints,
+                earned_points: earnedPoints,
+                question_results: questionResults,
+                completed_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+
+        if (saveError) throw saveError;
+
+        // If passed, generate certificate (placeholder logic)
+        if (passed) {
+            // trigger certificate generation logic here
+        }
 
         res.json({
             success: true,
-            result: {
-                score,
-                passed,
-                total_points: 100,
-                earned_points: score,
-                completed_at: new Date().toISOString()
-            }
+            result
         });
     } catch (error) {
         console.error('Error submitting assessment:', error);
@@ -734,15 +707,31 @@ router.get('/recommendations/:userId', async (req, res) => {
             experienceLevel: 'Intermediate'
         };
 
-        const courses = getMockCourses();
+        // Fetch courses from DB
+        const { data: courses } = await supabase.from('courses').select('*');
         const enrolled = []; // Fetch from DB
 
         // 3. Generate recommendations
-        const recommendations = await agent.generateCourseRecommendations(userProfile, courses, enrolled);
+        const aiResponse = await agent.generateCourseRecommendations(userProfile, courses || [], enrolled);
+
+        // 4. Enrich recommendations with full course data
+        const enrichedRecs = {
+            ...aiResponse,
+            recommendations: aiResponse.recommendations?.map(rec => {
+                const courseDetails = courses?.find(c => c.id === rec.courseId);
+                return {
+                    ...rec,
+                    ...courseDetails, // Merges title, description, thumbnail, etc.
+                    // Priority to AI explanations if they differ, but visuals from DB
+                    title: courseDetails?.title || rec.courseTitle,
+                    id: rec.courseId
+                };
+            }) || []
+        };
 
         res.json({
             success: true,
-            data: recommendations
+            data: enrichedRecs
         });
 
     } catch (error) {
@@ -750,7 +739,7 @@ router.get('/recommendations/:userId', async (req, res) => {
         // Fallback response
         res.json({
             success: true,
-            data: new DeepSeekAgent(null).getFallbackRecommendations(getMockCourses(), [])
+            data: { recommendations: [] }
         });
     }
 });
@@ -785,452 +774,456 @@ router.get('/insights/:userId', async (req, res) => {
         });
     } catch (error) {
         console.error('Error generating insights:', error);
-        res.json({
-            success: true,
-            data: new DeepSeekAgent(null).getFallbackInsights({})
-        });
+        res.status(500).json({ error: 'Failed to generate insights' });
     }
 });
 
-// ==================== LIVE CLASS ROUTES (YOUTUBE) ====================
+/**
+ * GET /api/upskill/gamification
+ * Get current user's gamification stats
+ */
+router.get('/gamification', async (req, res) => {
+    try {
+        const supabase = req.supabase;
+        let userId = null;
+
+        // Manually check auth since this router isn't protected by default middleware
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            const token = authHeader.split(' ')[1];
+            const { data: { user } } = await supabase.auth.getUser(token);
+            if (user) userId = user.id;
+        }
+
+        if (!userId) {
+            // Check current dev environment for mock user fallback if not prod
+            if (process.env.NODE_ENV !== 'production') {
+                // userId = 'demo-candidate-001'; 
+                // Actually, better to enforce auth or return 401. 
+                // Let's return 401 to force frontend to handle it or login.
+            }
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const { data: stats } = await supabase
+            .from('gamification_stats')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        // Default stats if none exist
+        const safeStats = stats || {
+            level: 'Bronze',
+            points: 0,
+            next_level_points: 1000,
+            global_rank: 0,
+            total_candidates: 100, // Minimal social proof
+            skill_mastery: 0,
+            correct_rate: 0,
+            challenges_completed: 0,
+            total_attempts: 0,
+            streak: 0
+        };
+
+        // CamelCase conversion for frontend
+        const frontendStats = {
+            level: safeStats.level,
+            points: safeStats.points,
+            nextLevelPoints: safeStats.next_level_points,
+            globalRank: safeStats.global_rank,
+            totalCandidates: safeStats.total_candidates,
+            skillMastery: safeStats.skill_mastery,
+            correctRate: safeStats.correct_rate,
+            challengesCompleted: safeStats.challenges_completed,
+            totalAttempts: safeStats.total_attempts,
+            streak: safeStats.streak
+        };
+
+        res.json({
+            success: true,
+            stats: frontendStats
+        });
+    } catch (error) {
+        console.error('Error fetching gamification stats:', error);
+        res.status(500).json({ error: 'Failed to fetch gamification stats' });
+    }
+});
+
+// ==================== LIVE CLASS ROUTES ====================
 
 /**
  * GET /api/upskill/live-classes
- * Get upcoming live classes from YouTube
+ * Get simplified live classes (Mock for now, easy to extend)
  */
 router.get('/live-classes', async (req, res) => {
     try {
         const supabase = req.supabase;
-        const config = await getYouTubeConfig(supabase);
+        // Fetch real live classes from DB
+        const { data: classes, error } = await supabase
+            .from('live_classes')
+            .select('*')
+            .gte('scheduled_start_time', new Date().toISOString())
+            .order('scheduled_start_time', { ascending: true });
 
-        if (!config) {
-            return res.json({ success: true, classes: [] }); // No config, return empty
+        if (error && error.code !== '42P01') { // Ignore "relation does not exist" for now, return empty
+            console.error('Error fetching live classes:', error);
         }
-
-        const agent = new YouTubeLiveAgent(config, decrypt);
-        const broadcasts = await agent.getUpcomingBroadcasts();
 
         res.json({
             success: true,
-            classes: broadcasts
+            classes: classes || []
         });
     } catch (error) {
         console.error('Error fetching live classes:', error);
-        // Return mock data for demo if API fails
-        res.json({
-            success: true,
-            classes: [
-                {
-                    id: 'mock1',
-                    title: 'Advanced React Patterns Live',
-                    description: 'Deep dive into performance optimization',
-                    scheduledStartTime: new Date(Date.now() + 86400000).toISOString(),
-                    thumbnailUrl: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?ixlib=rb-4.0.3',
-                    instructor: 'Sarah Drasner'
-                },
-                {
-                    id: 'mock2',
-                    title: 'System Design Interview Prep',
-                    description: 'Live mock interviews and Q&A',
-                    scheduledStartTime: new Date(Date.now() + 172800000).toISOString(),
-                    thumbnailUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3',
-                    instructor: 'Alex Xu'
-                }
-            ]
-        });
+        res.json({ success: true, classes: [] });
     }
 });
 
+// ==================== UPSKILL AUTH ROUTES ====================
+
 /**
- * POST /api/upskill/live-classes
- * Create a new live class (admin/instructor)
+ * POST /api/upskill/register
+ * Register a new Upskill learner
  */
-router.post('/live-classes', async (req, res) => {
+router.post('/register', async (req, res) => {
     try {
-        const { title, description, startTime, endTime, privacy } = req.body;
+        const { fullName, email, password, phone, careerGoal, experienceLevel, currentSkills, interests } = req.body;
         const supabase = req.supabase;
-        const config = await getYouTubeConfig(supabase);
 
-        if (!config) {
-            return res.status(400).json({ error: 'YouTube API not configured' });
+        // Validation
+        if (!fullName || !email || !password) {
+            return res.status(400).json({ error: 'Full name, email, and password are required' });
         }
 
-        const agent = new YouTubeLiveAgent(config, decrypt);
-        const broadcast = await agent.createLiveBroadcast({
-            title,
-            description,
-            scheduledStartTime: startTime,
-            scheduledEndTime: endTime,
-            privacyStatus: privacy || 'unlisted'
-        });
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
 
-        res.json({
+        // Email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+
+        // Check if email already exists
+        const { data: existing, error: checkError } = await supabase
+            .from('upskill_learners')
+            .select('id')
+            .eq('email', email.toLowerCase().trim())
+            .single();
+
+        if (existing) {
+            return res.status(409).json({ error: 'An account with this email already exists. Please sign in.' });
+        }
+
+        // Hash the password using crypto (no bcrypt dependency needed)
+        const salt = crypto.randomBytes(16).toString('hex');
+        const passwordHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+        const storedHash = `${salt}:${passwordHash}`;
+
+        // Insert learner
+        const { data: learner, error: insertError } = await supabase
+            .from('upskill_learners')
+            .insert([{
+                full_name: fullName.trim(),
+                email: email.toLowerCase().trim(),
+                password_hash: storedHash,
+                phone: phone || null,
+                career_goal: careerGoal || null,
+                experience_level: experienceLevel || 'beginner',
+                current_skills: currentSkills || [],
+                interests: interests || [],
+                is_active: true,
+                last_login: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }])
+            .select('id, full_name, email, experience_level, career_goal, current_skills, interests, created_at')
+            .single();
+
+        if (insertError) {
+            console.error('Registration error:', insertError);
+            throw insertError;
+        }
+
+        // Generate a simple session token
+        const sessionToken = crypto.randomBytes(32).toString('hex');
+
+        // Also initialize learning progress for this user
+        await supabase
+            .from('user_learning_progress')
+            .insert([{
+                user_id: learner.id,
+                total_courses_enrolled: 0,
+                courses_completed: 0,
+                total_lessons_completed: 0,
+                total_hours_learned: 0,
+                current_streak_days: 0,
+                longest_streak_days: 0,
+                certificates_earned: 0,
+                skills_acquired: currentSkills || [],
+                skill_scores: {},
+                xp_points: 0,
+                level: 'Beginner Learner'
+            }]);
+
+        console.log(`✅ New Upskill Learner Registered: ${learner.email}`);
+
+        res.status(201).json({
             success: true,
-            data: broadcast
+            message: 'Account created successfully!',
+            user: learner,
+            token: sessionToken
         });
     } catch (error) {
-        console.error('Error creating live class:', error);
-        res.status(500).json({ error: 'Failed to create live class' });
+        console.error('Registration failed:', error);
+        res.status(500).json({ error: 'Registration failed. Please try again.' });
     }
 });
 
+/**
+ * POST /api/upskill/login
+ * Login an Upskill learner
+ */
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const supabase = req.supabase;
+
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        // Fetch user by email
+        const { data: learner, error } = await supabase
+            .from('upskill_learners')
+            .select('*')
+            .eq('email', email.toLowerCase().trim())
+            .single();
+
+        if (error || !learner) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
+        if (!learner.is_active) {
+            return res.status(403).json({ error: 'Account is deactivated. Please contact support.' });
+        }
+
+        // Verify password
+        const [salt, storedHash] = learner.password_hash.split(':');
+        const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+
+        if (hash !== storedHash) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
+        // Update last login
+        await supabase
+            .from('upskill_learners')
+            .update({ last_login: new Date().toISOString() })
+            .eq('id', learner.id);
+
+        // Generate session token
+        const sessionToken = crypto.randomBytes(32).toString('hex');
+
+        // Return user data (without password hash)
+        const { password_hash, ...safeUser } = learner;
+
+        console.log(`✅ Upskill Learner Logged In: ${learner.email}`);
+
+        res.json({
+            success: true,
+            message: 'Login successful!',
+            user: safeUser,
+            token: sessionToken
+        });
+    } catch (error) {
+        console.error('Login failed:', error);
+        res.status(500).json({ error: 'Login failed. Please try again.' });
+    }
+});
 
 /**
- * GET /api/upskill/assessment/history/:userId
- * Get assessment history for a user
+ * GET /api/upskill/profile/:userId
+ * Get learner profile
  */
-router.get('/assessment/history/:userId', async (req, res) => {
+router.get('/profile/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
+        const supabase = req.supabase;
 
-        // Mock assessment history
-        const history = [
-            {
-                id: generateId(),
-                course_id: 'course-1',
-                course_title: 'Data Science Fundamentals',
-                score: 92,
-                passed: true,
-                completed_at: new Date(Date.now() - 86400000).toISOString()
-            },
-            {
-                id: generateId(),
-                course_id: 'course-3',
-                course_title: 'Full Stack Web Development',
-                score: 85,
-                passed: true,
-                completed_at: new Date(Date.now() - 604800000).toISOString()
-            },
-            {
-                id: generateId(),
-                course_id: 'course-2',
-                course_title: 'AI & Machine Learning Masterclass',
-                score: 65,
-                passed: false,
-                completed_at: new Date(Date.now() - 1209600000).toISOString()
+        const { data: learner, error } = await supabase
+            .from('upskill_learners')
+            .select('id, full_name, email, phone, avatar_url, career_goal, experience_level, current_skills, interests, linkedin_url, is_verified, created_at')
+            .eq('id', userId)
+            .single();
+
+        if (error || !learner) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Also fetch learning progress
+        const { data: progress } = await supabase
+            .from('user_learning_progress')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        // Fetch enrolled courses count
+        const { count: enrolledCount } = await supabase
+            .from('user_enrollments')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
+
+        // Fetch certificates count
+        const { count: certsCount } = await supabase
+            .from('certificates')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
+
+        res.json({
+            success: true,
+            profile: {
+                ...learner,
+                progress: progress || null,
+                stats: {
+                    courses_enrolled: enrolledCount || 0,
+                    certificates_earned: certsCount || 0,
+                    xp_points: progress?.xp_points || 0,
+                    level: progress?.level || 'Beginner Learner'
+                }
             }
-        ];
-
-        res.json({
-            success: true,
-            count: history.length,
-            history
         });
     } catch (error) {
-        console.error('Error fetching assessment history:', error);
-        res.status(500).json({ error: 'Failed to fetch assessment history' });
-    }
-});
-
-// ==================== CERTIFICATE ROUTES ====================
-
-/**
- * POST /api/upskill/certificate/generate
- * Generate certificate for completed course
- */
-router.post('/certificate/generate', async (req, res) => {
-    try {
-        const { user_id, course_id, user_name } = req.body;
-
-        if (!user_id || !course_id) {
-            return res.status(400).json({ error: 'user_id and course_id are required' });
-        }
-
-        const courses = getMockCourses();
-        const course = courses.find(c => c.id === course_id);
-
-        if (!course) {
-            return res.status(404).json({ error: 'Course not found' });
-        }
-
-        const certificate = {
-            id: generateId(),
-            certificate_number: `HIREGO-${Date.now().toString(36).toUpperCase()}`,
-            user_id,
-            user_name: user_name || 'Learner',
-            course_id,
-            course_title: course.title,
-            course_category: course.category,
-            skills_acquired: course.skills,
-            instructor: course.instructor,
-            duration_hours: course.duration_hours,
-            issued_at: new Date().toISOString(),
-            valid_until: new Date(Date.now() + 31536000000 * 2).toISOString(), // 2 years
-            verification_url: `https://hirego.ai/verify/${generateId()}`
-        };
-
-        console.log(`🎓 Certificate generated for user ${user_id}: ${certificate.certificate_number}`);
-
-        res.json({
-            success: true,
-            message: 'Certificate generated successfully',
-            certificate
-        });
-    } catch (error) {
-        console.error('Error generating certificate:', error);
-        res.status(500).json({ error: 'Failed to generate certificate' });
+        console.error('Error fetching profile:', error);
+        res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
 
 /**
- * GET /api/upskill/certificates/:userId
- * Get all certificates for a user
+ * PUT /api/upskill/profile/:userId
+ * Update learner profile
  */
-router.get('/certificates/:userId', async (req, res) => {
+router.put('/profile/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
+        const { fullName, phone, careerGoal, experienceLevel, currentSkills, interests, linkedinUrl } = req.body;
+        const supabase = req.supabase;
 
-        // Mock certificates
-        const certificates = [
-            {
-                id: generateId(),
-                certificate_number: 'HIREGO-ABC123XYZ',
-                course_id: 'course-1',
-                course_title: 'Data Science Fundamentals',
-                course_category: 'Data & Analytics',
-                skills_acquired: ['Python', 'Statistics', 'Machine Learning'],
-                instructor: 'Dr. Sarah Chen',
-                issued_at: new Date(Date.now() - 2592000000).toISOString(),
-                verification_url: 'https://hirego.ai/verify/abc123'
-            },
-            {
-                id: generateId(),
-                certificate_number: 'HIREGO-DEF456UVW',
-                course_id: 'course-3',
-                course_title: 'Full Stack Web Development',
-                course_category: 'Coding & Software',
-                skills_acquired: ['React', 'Node.js', 'PostgreSQL'],
-                instructor: 'Alex Johnson',
-                issued_at: new Date(Date.now() - 5184000000).toISOString(),
-                verification_url: 'https://hirego.ai/verify/def456'
+        const updateData = {};
+        if (fullName) updateData.full_name = fullName;
+        if (phone !== undefined) updateData.phone = phone;
+        if (careerGoal !== undefined) updateData.career_goal = careerGoal;
+        if (experienceLevel) updateData.experience_level = experienceLevel;
+        if (currentSkills) updateData.current_skills = currentSkills;
+        if (interests) updateData.interests = interests;
+        if (linkedinUrl !== undefined) updateData.linkedin_url = linkedinUrl;
+        updateData.updated_at = new Date().toISOString();
+
+        const { data: updated, error } = await supabase
+            .from('upskill_learners')
+            .update(updateData)
+            .eq('id', userId)
+            .select('id, full_name, email, phone, career_goal, experience_level, current_skills, interests, linkedin_url')
+            .single();
+
+        if (error) throw error;
+
+        res.json({
+            success: true,
+            message: 'Profile updated successfully',
+            user: updated
+        });
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+
+/**
+ * GET /api/upskill/gamification
+ * Get user gamification statistics
+ */
+router.get('/gamification', async (req, res) => {
+    try {
+        // Authenticate
+        const authHeader = req.headers.authorization;
+        const supabase = req.supabase;
+
+        if (!authHeader) {
+            return res.status(401).json({ error: 'Missing Authorization header' });
+        }
+
+        const token = authHeader.split(' ')[1];
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+        if (authError || !user) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const userId = user.id;
+
+        // 1. Get User Progress
+        let { data: progress } = await supabase
+            .from('user_learning_progress')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        if (!progress) {
+            // Create default if missing
+            progress = {
+                xp_points: 0,
+                current_streak_days: 0,
+                level: 'Beginner'
+            };
+        }
+
+        const xp = progress.xp_points || 0;
+
+        // 2. Calculate Global Rank (users with more XP)
+        const { count: rankCount } = await supabase
+            .from('user_learning_progress')
+            .select('*', { count: 'exact', head: true })
+            .gt('xp_points', xp);
+
+        const globalRank = (rankCount || 0) + 1;
+
+        // 3. Total Candidates/Learners
+        const { count: totalLearners } = await supabase
+            .from('user_learning_progress')
+            .select('*', { count: 'exact', head: true });
+
+        // 4. Challenges/Lessons Completed
+        const { count: completedLessons } = await supabase
+            .from('lesson_completions')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
+
+        // 5. Calculate Stats
+        const nextLevelPoints = Math.ceil((xp + 1) / 1000) * 1000;
+        const level = xp < 1000 ? 'Beginner' : xp < 5000 ? 'Intermediate' : 'Advanced';
+
+        res.json({
+            success: true,
+            stats: {
+                level: level,
+                points: xp,
+                nextLevelPoints: nextLevelPoints,
+                globalRank: globalRank,
+                totalCandidates: totalLearners || 1,
+                skillMastery: 75, // Placeholder: could be calc from avg quiz scores
+                correctRate: 85, // Placeholder
+                challengesCompleted: completedLessons || 0,
+                totalAttempts: completedLessons || 0,
+                streak: progress.current_streak_days || 0
             }
-        ];
-
-        res.json({
-            success: true,
-            count: certificates.length,
-            certificates
         });
+
     } catch (error) {
-        console.error('Error fetching certificates:', error);
-        res.status(500).json({ error: 'Failed to fetch certificates' });
-    }
-});
-
-/**
- * GET /api/upskill/certificate/verify/:certificateNumber
- * Verify a certificate
- */
-router.get('/certificate/verify/:certificateNumber', async (req, res) => {
-    try {
-        const { certificateNumber } = req.params;
-
-        // Mock verification (would check database in production)
-        const isValid = certificateNumber.startsWith('HIREGO-');
-
-        res.json({
-            success: true,
-            valid: isValid,
-            certificate: isValid ? {
-                certificate_number: certificateNumber,
-                holder_name: 'John Doe',
-                course_title: 'Data Science Fundamentals',
-                issued_at: new Date(Date.now() - 2592000000).toISOString(),
-                issuer: 'HireGo AI'
-            } : null
-        });
-    } catch (error) {
-        console.error('Error verifying certificate:', error);
-        res.status(500).json({ error: 'Failed to verify certificate' });
-    }
-});
-
-// ==================== JOB MATCHING ROUTES ====================
-
-/**
- * GET /api/upskill/job-matches/:userId
- * Get job matches based on user's skills
- */
-router.get('/job-matches/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-
-        // Mock job matches based on acquired skills
-        const jobMatches = [
-            {
-                id: 'job-1',
-                title: 'Data Analyst',
-                company: 'TechCorp Inc.',
-                location: 'Remote',
-                salary_range: '$70,000 - $90,000',
-                match_score: 95,
-                matching_skills: ['Python', 'Data Analysis', 'SQL'],
-                missing_skills: ['Tableau'],
-                posted_at: new Date(Date.now() - 86400000).toISOString()
-            },
-            {
-                id: 'job-2',
-                title: 'Junior Data Scientist',
-                company: 'AI Solutions Ltd.',
-                location: 'New York, NY',
-                salary_range: '$85,000 - $110,000',
-                match_score: 87,
-                matching_skills: ['Python', 'Machine Learning', 'Statistics'],
-                missing_skills: ['Deep Learning', 'TensorFlow'],
-                posted_at: new Date(Date.now() - 172800000).toISOString()
-            },
-            {
-                id: 'job-3',
-                title: 'Full Stack Developer',
-                company: 'StartupXYZ',
-                location: 'Remote',
-                salary_range: '$80,000 - $100,000',
-                match_score: 92,
-                matching_skills: ['React', 'Node.js', 'TypeScript'],
-                missing_skills: ['AWS'],
-                posted_at: new Date(Date.now() - 259200000).toISOString()
-            }
-        ];
-
-        res.json({
-            success: true,
-            count: jobMatches.length,
-            matches: jobMatches
-        });
-    } catch (error) {
-        console.error('Error fetching job matches:', error);
-        res.status(500).json({ error: 'Failed to fetch job matches' });
-    }
-});
-
-/**
- * POST /api/upskill/job-apply
- * Apply to a matched job
- */
-router.post('/job-apply', async (req, res) => {
-    try {
-        const { user_id, job_id, cover_letter } = req.body;
-
-        if (!user_id || !job_id) {
-            return res.status(400).json({ error: 'user_id and job_id are required' });
-        }
-
-        const application = {
-            id: generateId(),
-            user_id,
-            job_id,
-            cover_letter: cover_letter || '',
-            status: 'submitted',
-            applied_at: new Date().toISOString()
-        };
-
-        console.log(`📝 User ${user_id} applied to job ${job_id}`);
-
-        res.json({
-            success: true,
-            message: 'Application submitted successfully',
-            application
-        });
-    } catch (error) {
-        console.error('Error applying to job:', error);
-        res.status(500).json({ error: 'Failed to submit application' });
-    }
-});
-
-// ==================== SKILL RECOMMENDATIONS ====================
-
-/**
- * GET /api/upskill/recommendations/:userId
- * Get personalized course recommendations
- */
-router.get('/recommendations/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-
-        const allCourses = getMockCourses();
-
-        // Mock personalized recommendations
-        const recommendations = allCourses.slice(0, 4).map(course => ({
-            ...course,
-            recommendation_reason: [
-                'Based on your learning history',
-                'Popular in your field',
-                'Recommended for career growth',
-                'Trending this month'
-            ][Math.floor(Math.random() * 4)],
-            relevance_score: Math.floor(Math.random() * 20) + 80
-        }));
-
-        res.json({
-            success: true,
-            count: recommendations.length,
-            recommendations
-        });
-    } catch (error) {
-        console.error('Error fetching recommendations:', error);
-        res.status(500).json({ error: 'Failed to fetch recommendations' });
-    }
-});
-
-// ==================== LEADERBOARD & GAMIFICATION ====================
-
-/**
- * GET /api/upskill/leaderboard
- * Get learning leaderboard
- */
-router.get('/leaderboard', async (req, res) => {
-    try {
-        const { period = 'weekly' } = req.query;
-
-        // Mock leaderboard data
-        const leaderboard = [
-            { rank: 1, user_id: 'user-1', name: 'Priya Sharma', avatar: null, xp_points: 4520, courses_completed: 8, badges: 12 },
-            { rank: 2, user_id: 'user-2', name: 'Rahul Verma', avatar: null, xp_points: 4280, courses_completed: 7, badges: 10 },
-            { rank: 3, user_id: 'user-3', name: 'Ananya Patel', avatar: null, xp_points: 3950, courses_completed: 6, badges: 9 },
-            { rank: 4, user_id: 'user-4', name: 'Vikram Singh', avatar: null, xp_points: 3720, courses_completed: 6, badges: 8 },
-            { rank: 5, user_id: 'user-5', name: 'Neha Gupta', avatar: null, xp_points: 3580, courses_completed: 5, badges: 7 },
-            { rank: 6, user_id: 'user-6', name: 'Amit Kumar', avatar: null, xp_points: 3420, courses_completed: 5, badges: 7 },
-            { rank: 7, user_id: 'user-7', name: 'Deepika Reddy', avatar: null, xp_points: 3280, courses_completed: 5, badges: 6 },
-            { rank: 8, user_id: 'user-8', name: 'Arjun Nair', avatar: null, xp_points: 3150, courses_completed: 4, badges: 6 },
-            { rank: 9, user_id: 'user-9', name: 'Kavita Joshi', avatar: null, xp_points: 2980, courses_completed: 4, badges: 5 },
-            { rank: 10, user_id: 'user-10', name: 'Ravi Krishnan', avatar: null, xp_points: 2850, courses_completed: 4, badges: 5 }
-        ];
-
-        res.json({
-            success: true,
-            period,
-            leaderboard
-        });
-    } catch (error) {
-        console.error('Error fetching leaderboard:', error);
-        res.status(500).json({ error: 'Failed to fetch leaderboard' });
-    }
-});
-
-/**
- * GET /api/upskill/badges/:userId
- * Get user's earned badges
- */
-router.get('/badges/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-
-        const badges = [
-            { id: 'badge-1', name: 'Quick Learner', description: 'Complete 5 lessons in one day', icon: '🚀', earned_at: new Date(Date.now() - 604800000).toISOString() },
-            { id: 'badge-2', name: 'Week Warrior', description: 'Learn 7 days in a row', icon: '🔥', earned_at: new Date(Date.now() - 432000000).toISOString() },
-            { id: 'badge-3', name: 'Data Master', description: 'Complete Data Science track', icon: '📊', earned_at: new Date(Date.now() - 259200000).toISOString() },
-            { id: 'badge-4', name: 'First Steps', description: 'Complete your first course', icon: '👣', earned_at: new Date(Date.now() - 1209600000).toISOString() },
-            { id: 'badge-5', name: 'Code Ninja', description: 'Score 100% on a coding assessment', icon: '🥷', earned_at: new Date(Date.now() - 86400000).toISOString() }
-        ];
-
-        res.json({
-            success: true,
-            count: badges.length,
-            badges
-        });
-    } catch (error) {
-        console.error('Error fetching badges:', error);
-        res.status(500).json({ error: 'Failed to fetch badges' });
+        console.error('Error fetching gamification stats:', error);
+        res.status(500).json({ error: 'Failed to fetch gamification stats' });
     }
 });
 

@@ -10,6 +10,11 @@ import Assessment from './pages/upskill/Assessment';
 import SkillDashboard from './pages/upskill/SkillDashboard';
 import Certificate from './pages/upskill/Certificate';
 import JobConnection from './pages/upskill/JobConnection';
+import UpskillRegistration from './pages/upskill/UpskillRegistration';
+import UpskillLogin from './pages/upskill/UpskillLogin';
+import UpskillInsights from './pages/upskill/UpskillInsights';
+import SkillAssessment from './pages/upskill/SkillAssessment';
+import NotFound from './pages/NotFound';
 import Landing from './pages/Landing';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
@@ -31,7 +36,7 @@ import LiveAssessment from './pages/candidate/LiveAssessment';
 import AssessmentResult from './pages/candidate/AssessmentResult';
 import Applications from './pages/candidate/Applications';
 import Connections from './pages/candidate/Connections';
-import Messages from './pages/candidate/Messages';
+import Messages from './pages/common/Messages'; // Shared Messages Component
 import CandidateSettings from './pages/candidate/Settings';
 import EmployerLayout from './layouts/EmployerLayout';
 import EmployerDashboard from './pages/employer/Dashboard';
@@ -100,7 +105,9 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
   const hideNavbar = location.pathname.startsWith('/admin') ||
     location.pathname.startsWith('/employer') ||
     location.pathname.startsWith('/candidate') ||
-    location.pathname.startsWith('/educator');
+    location.pathname.startsWith('/educator') ||
+    location.pathname.startsWith('/register/upskill') ||
+    location.pathname.startsWith('/upskill/login');
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-outfit">
@@ -118,6 +125,8 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
         <Route path="/upskill/dashboard" element={<SkillDashboard />} />
         <Route path="/upskill/certificate/:id" element={<Certificate />} />
         <Route path="/upskill/jobs" element={<JobConnection />} />
+        <Route path="/upskill/insights" element={<UpskillInsights />} />
+        <Route path="/upskill/assessment" element={<SkillAssessment />} />
 
         {/* Public Pages */}
         <Route path="/pricing" element={<PricingPage />} />
@@ -143,6 +152,8 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
         <Route path="/signup" element={<SignUp />} />
         <Route path="/register/candidate" element={<CandidateRegister />} />
         <Route path="/register/employer" element={<EmployerRegister />} />
+        <Route path="/register/upskill" element={<UpskillRegistration />} />
+        <Route path="/upskill/login" element={<UpskillLogin />} />
         <Route path="/create-account" element={<CreateAccount />} />
         {/* Candidate Routes */}
         <Route path="/candidate" element={<DashboardLayout />}>
@@ -174,6 +185,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
           <Route path="job/:jobId" element={<JobDetail />} />
           <Route path="post-job" element={<JobPostingForm />} />
           <Route path="candidates" element={<Candidates />} />
+          <Route path="messages" element={<Messages />} />
           <Route path="candidate/:id" element={<CandidateProfileView />} />
           <Route path="interviews" element={<Interviews />} />
           <Route path="interview-schedule/:id" element={<InterviewSchedule />} />
@@ -213,6 +225,9 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
           <Route path="upskill-courses" element={<UpskillCourseManagement />} />
           <Route path="upskill-learners" element={<UpskillLearnerProgress />} />
         </Route>
+
+        {/* 404 Catch-All Route */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
       {showLogin && (
