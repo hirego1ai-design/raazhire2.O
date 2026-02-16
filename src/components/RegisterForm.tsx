@@ -262,7 +262,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ userType }) => {
             console.log('Registration Data:', formData);
 
             // Sign up user
-            if (!supabase) throw new Error('Supabase client not initialized');
+            if (!supabase) {
+                throw new Error('Supabase client not initialized');
+            }
 
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: formData.email,
@@ -351,16 +353,14 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ userType }) => {
                     }
 
                     // Backend creation successful, now sign in
+                    if (!supabase) throw new Error('Supabase client not initialized');
+
                     const { error: signInError } = await supabase.auth.signInWithPassword({
                         email: formData.email,
                         password: formData.password
                     });
 
                     if (signInError) throw signInError;
-
-                    // Proceed to save profile data (same flow)
-                    // We need to re-trigger the success flow manually or just let it fall through?
-                    // The best way is to wrap the profile creation in a reusable function, but for now:
 
                     // Call supabase again to get the user ID we just signed in with
                     const { data: { user: signedInUser } } = await supabase.auth.getUser();
