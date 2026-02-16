@@ -3,14 +3,14 @@
  * 
  * Complete backend endpoints for admin panel functionality:
  * - User Management
- * - Email Configuration
- * - Credit System Control
- * - Job Pricing Control
- * - Proctoring Configuration
- * - Interview Management
- * - AI Control
- * - Dashboard Statistics
- */
+    * - Email Configuration
+        * - Credit System Control
+            * - Job Pricing Control
+                * - Proctoring Configuration
+                    * - Interview Management
+                        * - AI Control
+                            * - Dashboard Statistics
+                                */
 
 import express from 'express';
 
@@ -72,13 +72,13 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
 
                 // Get job counts
                 const { count: activeJobs } = await supabase
-                    .from('jobs')
+                    .from('employer_job_posts')
                     .select('*', { count: 'exact', head: true })
                     .eq('status', 'active');
 
                 // Get application counts
                 const { count: totalApplications } = await supabase
-                    .from('applications')
+                    .from('job_applications')
                     .select('*', { count: 'exact', head: true });
 
                 // Get interview counts
@@ -184,14 +184,14 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
 
             if (user.role === 'candidate') {
                 const { count: applicationsCount } = await supabase
-                    .from('applications')
+                    .from('job_applications')
                     .select('*', { count: 'exact', head: true })
                     .eq('candidate_id', id);
 
                 additionalData = { applicationsCount };
             } else if (user.role === 'employer') {
                 const { count: jobsCount } = await supabase
-                    .from('jobs')
+                    .from('employer_job_posts')
                     .select('*', { count: 'exact', head: true })
                     .eq('employer_id', id);
 
@@ -2077,6 +2077,83 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
         } catch (error) {
             console.error('Error awarding badge:', error);
             res.status(500).json({ error: 'Failed to award badge' });
+        }
+    });
+
+    // ==================== YOUTUBE CONFIGURATION ====================
+
+    /**
+     * Get YouTube configuration
+     * GET /api/admin/youtube-config
+     */
+    app.get('/api/admin/youtube-config', authenticateUser, async (req, res) => {
+        try {
+            let config = null;
+            if (supabase) {
+                const { data } = await supabase.from('youtube_config').select('*').single();
+                config = data;
+            } else {
+                const localDb = await readLocalDb();
+                config = localDb.youtube_config;
+            }
+
+            if (!config) return res.json({});
+
+            // Decrypt
+            const decryptedConfig = {
+                ...config,
+                api_key: config.api_key ? decrypt(config.api_key) : '',
+                client_id: config.client_id ? decrypt(config.client_id) : '',
+                client_secret: config.client_secret ? decrypt(config.client_secret) : '',
+                access_token: config.access_token ? decrypt(config.access_token) : ''
+            };
+
+            res.json(decryptedConfig);
+        } catch (error) {
+            console.error('Error fetching YouTube config:', error);
+            res.status(500).json({ error: 'Failed to fetch YouTube configuration' });
+        }
+    });
+
+    /**
+     * Save YouTube configuration
+     * POST /api/admin/youtube-config
+     */
+    app.post('/api/admin/youtube-config', authenticateUser, async (req, res) => {
+        try {
+            const { api_key, client_id, client_secret, access_token, channel_id, privacy_status, auto_upload } = req.body;
+
+            const encryptedConfig = {
+                api_key: api_key ? encrypt(api_key) : null,
+                client_id: client_id ? encrypt(client_id) : null,
+                client_secret: client_secret ? encrypt(client_secret) : null,
+                access_token: access_token ? encrypt(access_token) : null,
+                channel_id,
+                privacy_status,
+                auto_upload,
+                updated_at: new Date().toISOString()
+            };
+
+            let result;
+            if (supabase) {
+                const { data: existing } = await supabase.from('youtube_config').select('id').single();
+                if (existing) {
+                    const { data } = await supabase.from('youtube_config').update(encryptedConfig).eq('id', existing.id).select();
+                    result = data[0];
+                } else {
+                    const { data } = await supabase.from('youtube_config').insert([encryptedConfig]).select();
+                    result = data[0];
+                }
+            } else {
+                const localDb = await readLocalDb();
+                localDb.youtube_config = { ...encryptedConfig, id: 1 };
+                await writeLocalDb(localDb);
+                result = localDb.youtube_config;
+            }
+            res.json(result);
+        } catch (error) {
+            console.error('Error saving YouTube config:', error);
+            res.status(500).json({ error: 'Failed to save YouTube configuration' });
         }
     });
 

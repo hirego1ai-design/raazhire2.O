@@ -58,13 +58,13 @@ const UserManagement: React.FC = () => {
                     if (supabase) {
                         if (u.role === 'candidate') {
                             const { count } = await supabase
-                                .from('applications')
+                                .from('job_applications')
                                 .select('*', { count: 'exact', head: true })
                                 .eq('candidate_id', u.id); // Assuming user.id maps to candidate_id or similar
                             extraData = { jobApplied: count || 0 };
                         } else if (u.role === 'employer') {
                             const { count } = await supabase
-                                .from('jobs')
+                                .from('employer_job_posts')
                                 .select('*', { count: 'exact', head: true })
                                 .eq('employer_id', u.id);
                             extraData = { jobsPosted: count || 0, companyName: u.company_name, walletBalance: u.wallet_balance || 0, plan: u.plan || 'Basic' };

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Image as ImageIcon,
@@ -19,220 +19,240 @@ import {
     Rocket,
     Building2,
     CheckCircle2,
-    User
+    User,
+    Search,
+    ArrowRight
 } from 'lucide-react';
+import { API_BASE_URL } from '../lib/api';
 
-interface Post {
-    id: number;
-    type: 'social' | 'job';
-    author: {
-        name: string;
-        title: string;
-        avatar: string;
-    };
+interface FeedItem {
+    id: string | number;
+    type: 'job' | 'application' | 'alert';
+    title: string;
+    subtitle: string;
     content: string;
-    image?: string;
-    likes: number;
-    comments: number;
     timestamp: string;
-    isPPH?: boolean;
+    tags?: string[];
+    actionLabel?: string;
+    actionLink?: string;
 }
 
 const UniversalDashboard: React.FC = () => {
     const location = useLocation();
-    const [posts, setPosts] = useState<Post[]>([
-        {
-            id: 1,
-            type: 'social',
-            author: {
-                name: "Sarah Chen",
-                title: "AI Researcher at DeepMind",
-                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1"
-            },
-            content: "Just published our latest findings on multi-modal LLMs! The future of autonomous talent matching is looking incredibly bright. 🚀 #AI #TechTrends",
-            image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?ixlib=rb-4.0.3",
-            likes: 124,
-            comments: 12,
-            timestamp: "2h ago"
-        },
-        {
-            id: 101,
-            type: 'job',
-            author: {
-                name: "TechCorp Global",
-                title: "Enterprise Technology",
-                avatar: "https://images.unsplash.com/photo-1549924231-f129b911e442?ixlib=rb-1.2.1"
-            },
-            content: "Hiring: Senior Backend Engineer (Node.js/Go). Join our core infrastructure team to build the next generation of cloud services.",
-            isPPH: true,
-            likes: 45,
-            comments: 8,
-            timestamp: "Promoted"
-        },
-        {
-            id: 2,
-            type: 'social',
-            author: {
-                name: "Marcus Miller",
-                title: "Engineering Manager @ TechCorp",
-                avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1"
-            },
-            content: "We're hiring 5 Senior Backend Engineers! If you love working on low-latency systems and distributed architecture, hit me up. Distributed-first team. 💻",
-            likes: 32,
-            comments: 5,
-            timestamp: "5h ago"
-        }
-    ]);
-
-    const [newPostContent, setNewPostContent] = useState("");
-
+    const navigate = useNavigate();
     const isEmployer = location.pathname.startsWith('/employer');
+    const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [userName, setUserName] = useState('');
+    const [userRole, setUserRole] = useState('');
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            setLoading(true);
+            try {
+                const token = localStorage.getItem('sb-token');
+                const userStr = localStorage.getItem('sb-user');
+                const user = userStr ? JSON.parse(userStr) : null;
+
+                if (user) {
+                    setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'User');
+                    setUserRole(isEmployer ? 'Recruiter' : 'Candidate'); // refine if role is in metadata
+                }
+
+                if (!token) return;
+
+                let items: FeedItem[] = [];
+
+                if (isEmployer) {
+                    // Fetch recent applications or candidates
+                    // For now, let's fetch Jobs as "Your Active Jobs"
+                    const res = await fetch(`${API_BASE_URL}/api/employer/jobs`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        const jobs = data.jobs || [];
+                        items = jobs.slice(0, 5).map((job: any) => ({
+                            id: job.id,
+                            type: 'job',
+                            title: job.title,
+                            subtitle: `${job.applicant_count || 0} Applicants • ${job.location}`,
+                            content: `Active job post. Expires on ${new Date(job.expires_at).toLocaleDateString()}.`,
+                            timestamp: new Date(job.created_at).toLocaleDateString(),
+                            tags: [job.employment_type, job.work_mode],
+                            actionLabel: 'Manage Candidates',
+                            actionLink: `/employer/candidates?jobId=${job.id}`
+                        }));
+                    }
+                } else {
+                    // Fetch recent jobs for candidates
+                    const res = await fetch(`${API_BASE_URL}/api/jobs?limit=5`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        const jobs = data.jobs || [];
+                        items = jobs.map((job: any) => ({
+                            id: job.id,
+                            type: 'job',
+                            title: job.employer?.name || 'Top Company',
+                            subtitle: job.title,
+                            content: `${job.description?.substring(0, 120)}...`,
+                            timestamp: new Date(job.created_at).toLocaleDateString(),
+                            tags: [job.location, job.salary_min ? `$${job.salary_min}k+` : 'Competitive'],
+                            actionLabel: 'View Job',
+                            actionLink: `/jobs/${job.id}`
+                        }));
+                    }
+                }
+
+                setFeedItems(items);
+            } catch (error) {
+                console.error("Error fetching dashboard data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, [isEmployer]);
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-20">
 
             {/* Left Column: Profile & Stats */}
             <div className="lg:col-span-3 space-y-6 lg:sticky lg:top-24">
                 <div className="saas-card overflow-hidden">
                     <div className={`h-20 bg-gradient-to-br ${isEmployer ? 'from-emerald-500 to-teal-600' : 'from-indigo-500 to-purple-600'}`} />
                     <div className="px-6 pb-6 -mt-10 text-center">
-                        {isEmployer ? (
-                            <div className="w-20 h-20 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-bold text-3xl mx-auto mb-4 shadow-lg border-4 border-[var(--bg-surface)]">
-                                S
-                            </div>
-                        ) : (
-                            <img
-                                src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80"
-                                className="w-20 h-20 rounded-2xl border-4 border-[var(--bg-surface)] mx-auto mb-4 object-cover shadow-lg"
-                                alt="Profile"
-                            />
-                        )}
-                        <h3 className="text-lg font-bold">{isEmployer ? "Stripe Inc." : "John Doe"}</h3>
-                        <p className="text-sm text-[var(--text-muted)] mb-4">{isEmployer ? "Enterprise Partner" : "Senior Full Stack Developer"}</p>
+                        <div className={`w-20 h-20 rounded-2xl ${isEmployer ? 'bg-emerald-600' : 'bg-indigo-600'} flex items-center justify-center text-white font-bold text-3xl mx-auto mb-4 shadow-lg border-4 border-[var(--bg-surface)]`}>
+                            {userName.charAt(0).toUpperCase()}
+                        </div>
+                        <h3 className="text-lg font-bold">{userName}</h3>
+                        <p className="text-sm text-[var(--text-muted)] mb-4">{userRole}</p>
 
                         <div className="flex flex-col gap-2 pt-4 border-t border-[var(--border-subtle)]">
                             <div className="flex justify-between items-center text-xs">
-                                <span className="text-[var(--text-muted)]">{isEmployer ? "Platform Utilization" : "Profile Strength"}</span>
-                                <span className={`font-bold ${isEmployer ? 'text-emerald-500' : 'text-indigo-600'}`}>{isEmployer ? '92%' : '85%'}</span>
+                                <span className="text-[var(--text-muted)]">Profile Completion</span>
+                                <span className={`font-bold ${isEmployer ? 'text-emerald-500' : 'text-indigo-600'}`}>75%</span>
                             </div>
                             <div className="w-full bg-[var(--bg-page)] h-1.5 rounded-full overflow-hidden">
-                                <div className={`${isEmployer ? 'bg-emerald-500' : 'bg-indigo-600'} h-full ${isEmployer ? 'w-[92%]' : 'w-[85%]'}`} />
+                                <div className={`${isEmployer ? 'bg-emerald-500' : 'bg-indigo-600'} h-full w-[75%]`} />
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div className="saas-card p-6 space-y-4">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{isEmployer ? "Global Presence" : "Performance"}</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">Quick Stats</h4>
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${isEmployer ? 'bg-emerald-500/10 text-emerald-600' : 'bg-indigo-500/10 text-indigo-600'}`}>
-                                {isEmployer ? <Building2 size={16} /> : <TrendingUp size={16} />}
+                                {isEmployer ? <Building2 size={16} /> : <Briefcase size={16} />}
                             </div>
                             <div>
-                                <div className="text-sm font-bold">{isEmployer ? "14" : "1.2k"}</div>
-                                <div className="text-[10px] text-[var(--text-muted)]">{isEmployer ? "Active Roles" : "Profile Views"}</div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${isEmployer ? 'bg-amber-500/10 text-amber-600' : 'bg-green-500/10 text-green-600'}`}>
-                                {isEmployer ? <Plus size={16} /> : <Rocket size={16} />}
-                            </div>
-                            <div>
-                                <div className="text-sm font-bold">{isEmployer ? "124" : "12"}</div>
-                                <div className="text-[10px] text-[var(--text-muted)]">{isEmployer ? "New Applications" : "Job Matches"}</div>
+                                <div className="text-sm font-bold">--</div>
+                                <div className="text-[10px] text-[var(--text-muted)]">{isEmployer ? "Active Roles" : "Applications"}</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Center Column: Combined Feed */}
+            {/* Center Column: Feed / Activity */}
             <div className="lg:col-span-6 space-y-6">
-                {/* Create Post */}
+                {/* Action Bar */}
                 <div className="saas-card p-6">
-                    <div className="flex gap-4">
-                        {isEmployer ? (
-                            <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-                                S
-                            </div>
-                        ) : (
-                            <img
-                                src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80"
-                                className="w-10 h-10 rounded-lg object-cover"
-                                alt=""
-                            />
-                        )}
-                        <div className="flex-1">
-                            <textarea
-                                value={newPostContent}
-                                onChange={(e) => setNewPostContent(e.target.value)}
-                                placeholder="Share an update or post a question..."
-                                className="w-full bg-transparent border-none focus:ring-0 text-sm resize-none min-h-[60px]"
-                            />
-                            <div className="flex items-center justify-between mt-4 pt-4 border-t border-[var(--border-subtle)]">
-                                <div className="flex gap-2">
-                                    <button className="p-2 hover:bg-[var(--bg-page)] rounded-lg text-[var(--text-muted)] transition-colors"><ImageIcon size={18} /></button>
-                                    <button className="p-2 hover:bg-[var(--bg-page)] rounded-lg text-[var(--text-muted)] transition-colors"><LinkIcon size={18} /></button>
-                                    <button className="p-2 hover:bg-[var(--bg-page)] rounded-lg text-[var(--text-muted)] transition-colors"><Smile size={18} /></button>
-                                </div>
-                                <button className="btn-saas-primary text-xs px-6">Post</button>
-                            </div>
+                    <div className="flex gap-4 items-center">
+                        <div className={`w-10 h-10 rounded-lg ${isEmployer ? 'bg-emerald-100 text-emerald-600' : 'bg-indigo-100 text-indigo-600'} flex items-center justify-center`}>
+                            {isEmployer ? <Plus size={20} /> : <Search size={20} />}
                         </div>
+                        <div className="flex-1">
+                            {isEmployer ? (
+                                <button onClick={() => navigate('/employer/post-job')} className="w-full text-left bg-transparent text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">
+                                    Post a new job opportunity...
+                                </button>
+                            ) : (
+                                <button onClick={() => navigate('/jobs')} className="w-full text-left bg-transparent text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">
+                                    Search for your next dream job...
+                                </button>
+                            )}
+                        </div>
+                        <button className="btn-saas-primary text-xs px-4" onClick={() => navigate(isEmployer ? '/employer/post-job' : '/jobs')}>
+                            {isEmployer ? 'Post Job' : 'Find Jobs'}
+                        </button>
                     </div>
                 </div>
 
                 {/* Feed Items */}
-                <AnimatePresence>
-                    {posts.map(post => (
-                        <motion.div
-                            key={post.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="saas-card p-6"
-                        >
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <img src={post.author.avatar} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                                    <div>
-                                        <h5 className="text-sm font-bold leading-tight">{post.author.name}</h5>
-                                        <p className="text-[10px] text-[var(--text-muted)]">{post.author.title} • {post.timestamp}</p>
+                <div className="space-y-4">
+                    <h3 className="text-lg font-black text-[var(--text-main)] px-2">
+                        {isEmployer ? 'Your Recent Job Posts' : 'Recommended Jobs'}
+                    </h3>
+
+                    {loading ? (
+                        <div className="flex justify-center py-10">
+                            <div className="w-8 h-8 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin"></div>
+                        </div>
+                    ) : feedItems.length > 0 ? (
+                        <AnimatePresence>
+                            {feedItems.map((item, idx) => (
+                                <motion.div
+                                    key={item.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.1 }}
+                                    className="saas-card p-6 group hover:border-indigo-500/30 transition-all cursor-pointer"
+                                    onClick={() => item.actionLink && navigate(item.actionLink)}
+                                >
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${isEmployer ? 'bg-emerald-100 text-emerald-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                                                {item.title.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <h5 className="text-sm font-bold leading-tight text-[var(--text-main)]">{item.title}</h5>
+                                                <p className="text-[10px] text-[var(--text-muted)] font-medium">{item.subtitle}</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] bg-[var(--bg-page)] px-2 py-1 rounded text-[var(--text-muted)] font-bold">
+                                            {item.timestamp}
+                                        </span>
                                     </div>
-                                </div>
-                                {post.isPPH && (
-                                    <span className="pph-badge text-[10px] flex items-center gap-1">
-                                        <CheckCircle2 size={10} /> PPH Role
-                                    </span>
-                                )}
-                            </div>
 
-                            <p className="text-sm text-[var(--text-main)] mb-4 leading-relaxed">
-                                {post.content}
+                                    <p className="text-sm text-[var(--text-muted)] mb-4 leading-relaxed line-clamp-2">
+                                        {item.content}
+                                    </p>
+
+                                    {item.tags && (
+                                        <div className="flex flex-wrap gap-2 mb-4">
+                                            {item.tags.map((tag, i) => (
+                                                <span key={i} className="text-[10px] px-2 py-1 bg-[var(--bg-page)] rounded text-[var(--text-muted)] font-bold uppercase tracking-wider">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center text-xs font-black uppercase tracking-widest text-indigo-600 group-hover:underline">
+                                        {item.actionLabel} <ArrowRight size={14} className="ml-1" />
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    ) : (
+                        <div className="saas-card p-10 text-center">
+                            <Rocket size={40} className="mx-auto text-[var(--text-muted)] opacity-20 mb-4" />
+                            <h4 className="font-bold text-[var(--text-main)]">No activity yet</h4>
+                            <p className="text-sm text-[var(--text-muted)] mt-1">
+                                {isEmployer ? 'Post a job to start finding talent.' : 'Explore jobs to find your next opportunity.'}
                             </p>
-
-                            {post.image && (
-                                <img src={post.image} alt="" className="w-full h-64 object-cover rounded-xl mb-4 border border-[var(--border-subtle)]" />
-                            )}
-
-                            <div className="flex items-center gap-6 pt-4 border-t border-[var(--border-subtle)]">
-                                <button className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-red-500 transition-colors">
-                                    <Heart size={18} />
-                                    <span className="text-xs font-medium">{post.likes}</span>
-                                </button>
-                                <button className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors">
-                                    <MessageCircle size={18} />
-                                    <span className="text-xs font-medium">{post.comments}</span>
-                                </button>
-                                <button className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors ml-auto">
-                                    <Share2 size={18} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Right Column: PPH & Suggestions */}
+            {/* Right Column: Info */}
             <div className="lg:col-span-3 space-y-6 lg:sticky lg:top-24">
                 <div className="saas-card p-6 bg-gradient-to-br from-indigo-600/10 to-transparent border-indigo-500/30">
                     <div className="flex items-center gap-2 text-[var(--primary)] mb-4">
@@ -247,36 +267,6 @@ const UniversalDashboard: React.FC = () => {
                     <button className="text-[var(--primary)] text-xs font-bold hover:underline flex items-center gap-1">
                         Learn more <Plus size={12} />
                     </button>
-                </div>
-
-                <div className="saas-card p-6">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4">
-                        {isEmployer ? "Rising Talent" : "Suggested Companies"}
-                    </h4>
-                    <div className="space-y-4">
-                        {(isEmployer ? [
-                            { name: "Alex Rivera", industry: "Senior DevOps", logo: User },
-                            { name: "Priya Sharma", industry: "Full Stack UI", logo: User },
-                            { name: "David Chen", industry: "ML Architect", logo: User }
-                        ] : [
-                            { name: "Vercel", industry: "Cloud Tech", logo: Building2 },
-                            { name: "Anthropic", industry: "AI Safety", logo: Rocket },
-                            { name: "Linear", industry: "Productivity", logo: Building2 }
-                        ]).map((item, i) => (
-                            <div key={i} className="flex items-center gap-3 group cursor-pointer">
-                                <div className="w-10 h-10 rounded-lg bg-[var(--bg-page)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--primary)] group-hover:bg-[var(--primary-light)] transition-colors">
-                                    <item.logo size={18} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-bold truncate group-hover:text-[var(--primary)] transition-colors">{item.name}</div>
-                                    <div className="text-[10px] text-[var(--text-muted)]">{item.industry}</div>
-                                </div>
-                                <button className="p-1 px-3 border border-[var(--border-subtle)] rounded-lg text-xs font-bold hover:bg-[var(--bg-page)] transition-colors">
-                                    {isEmployer ? "View" : "Follow"}
-                                </button>
-                            </div>
-                        ))}
-                    </div>
                 </div>
             </div>
 

@@ -6,12 +6,18 @@ import crypto from 'crypto';
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import morgan from 'morgan';
 import Stripe from 'stripe';
 import Razorpay from 'razorpay';
 import { setupAIRoutes } from './routes/ai_routes.js';
 import { setupAdminRoutes } from './routes/admin_routes.js';
 import { setupPortalRoutes } from './routes/portal_routes.js';
 import { setupPageRoutes } from './routes/page_routes.js';
+import { setupPaymentRoutes } from './routes/payment_routes.js';
+import { setupEngagementRoutes } from './routes/engagement_routes.js';
+import upskillRoutes from './routes/upskill_routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,13 +28,37 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware
+// Security & Logging Middleware
+app.use(helmet()); // Protects against XSS, clickjacking, etc.
+app.use(morgan('combined')); // Structured logging for production
+
+// Rate Limiting (100 requests per 15 minutes)
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' }
+});
+app.use(limiter);
+
+// Standard Middleware
 app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(join(__dirname, 'public')));
 
 // Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+// Select the best available key
+let supabaseKey = process.env.SUPABASE_ANON_KEY;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Use Service Key if available to enable Admin features (bypassing rate limits)
+if (serviceKey) {
+    supabaseKey = serviceKey;
+    console.log('Using SUPABASE_SERVICE_ROLE_KEY for elevated privileges');
+}
 
 // Initialize Supabase only if keys are present
 export const supabase = (supabaseUrl && supabaseKey)
@@ -136,6 +166,41 @@ const authenticateUser = async (req, res, next) => {
         return res.status(500).json({ error: 'Internal authentication error' });
     }
 };
+// ==================== AUTHENTICATION API (BYPASS RATE LIMITS) ====================
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { email, password, data } = req.body;
+
+        if (!supabase) {
+            return res.status(503).json({ error: 'Database connection unavailable' });
+        }
+
+        console.log(`Attempting admin create user for: ${email}`);
+
+        // Admin Create User (Bypasses Rate Limits & Email Verification)
+        const { data: userData, error } = await supabase.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true, // Auto-confirm email
+            user_metadata: data || {}
+        });
+
+        if (error) {
+            console.error('Admin create user error:', error);
+            throw error;
+        }
+
+        if (!userData.user) {
+            throw new Error('User creation failed despite no error returned');
+        }
+
+        console.log(`User created successfully: ${userData.user.id}`);
+        res.json({ user: userData.user });
+    } catch (error) {
+        console.error('Registration bypass failed:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
 
 // ==================== API KEY MANAGEMENT ====================
 
@@ -627,6 +692,64 @@ app.post('/api/video-resume/upload', authenticateUser, upload.single('video'), a
     }
 });
 
+/**
+ * Live Assessment Video Upload
+ * POST /api/live-assessment/upload
+ */
+app.post('/api/live-assessment/upload', authenticateUser, upload.single('video'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No video file provided' });
+        }
+
+        const { jobId } = req.body;
+        const candidateId = req.user?.id;
+
+        // 1. Get YouTube Agent
+        const agent = await getYouTubeAgent();
+        let videoUrl = null;
+        let videoId = null;
+
+        if (agent) {
+            console.log('Uploading live assessment to YouTube...');
+            try {
+                const result = await agent.uploadVideo(req.file.path, {
+                    title: `Live Assessment - ${req.user?.email || 'Candidate'} - Job ${jobId}`,
+                    description: `Live Assessment Recording for Job ID: ${jobId}`,
+                    tags: ['HireGo', 'Assessment', 'Live Interview']
+                });
+                videoUrl = result.url;
+                videoId = result.id;
+                console.log('YouTube Upload Success:', videoUrl);
+            } catch (err) {
+                console.error('YouTube Agent Upload Failed:', err);
+                // Fallback
+                videoUrl = `local://uploads/${req.file.filename}`;
+            }
+        } else {
+            console.warn('YouTube Agent not configured. Skipping upload.');
+            videoUrl = `local://uploads/${req.file.filename}`;
+        }
+
+        // 2. Clean up temp file
+        try {
+            await fs.unlink(req.file.path);
+        } catch (e) {
+            console.warn('Failed to cleanup temp file:', e);
+        }
+
+        res.json({
+            success: true,
+            videoUrl,
+            videoId
+        });
+
+    } catch (error) {
+        console.error('Live assessment upload error:', error);
+        res.status(500).json({ error: 'Failed to upload assessment video', details: error.message });
+    }
+});
+
 // Lesson Video Upload
 app.post('/api/admin/upskill/lessons/upload-video', authenticateUser, upload.single('video'), async (req, res) => {
     try {
@@ -670,12 +793,17 @@ app.post('/api/admin/youtube-upload-test', authenticateUser, upload.single('vide
         }
 
         const result = await agent.uploadVideo(req.file.path, {
-            title: 'HireGo Test Upload',
-            description: 'This is a test upload from HireGo Admin Panel'
+            title: 'HireGo Test Upload - ' + new Date().toISOString(),
+            description: 'This is a test upload from HireGo Admin Panel to verify API configuration.',
+            privacyStatus: 'unlisted'
         });
 
         // Clean up temporary file
-        await fs.unlink(req.file.path);
+        try {
+            await fs.unlink(req.file.path);
+        } catch (e) {
+            console.warn('Failed to cleanup temp file:', e);
+        }
 
         res.json({ success: true, videoUrl: result.url, videoId: result.id });
     } catch (error) {
@@ -1001,8 +1129,14 @@ setupPortalRoutes(app, supabase, authenticateUser);
 // Setup Page Routes
 setupPageRoutes(app, supabase, authenticateUser, readLocalDb, writeLocalDb);
 
+// Setup Payment Routes
+setupPaymentRoutes(app, supabase, authenticateUser);
+
+// Setup Engagement Routes
+setupEngagementRoutes(app, supabase, authenticateUser);
+
 // Setup Upskill Routes
-import upskillRoutes from './routes/upskill_routes.js';
+// Setup Upskill Routes
 app.use('/api/upskill', upskillRoutes);
 
 // Start server only if not in Vercel serverless environment

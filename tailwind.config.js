@@ -127,6 +127,8 @@ export default {
                 'shimmer': 'shimmer 2s linear infinite',
                 'gradient-shift': 'gradientShift 8s ease-in-out infinite',
                 'spin-slow': 'spin 8s linear infinite',
+                'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+                'fade-in-down': 'fadeInDown 0.5s ease-out forwards',
             },
             keyframes: {
                 float: {

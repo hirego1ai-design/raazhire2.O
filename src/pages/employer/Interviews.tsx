@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Filter, X, Calendar, Clock, User, MapPin, Phone, Mail, Briefcase, ArrowRight, CalendarCheck, CalendarX, VideoIcon as Video, Star, CheckCircle } from 'lucide-react';
 import ScheduleInterviewModal from '../../components/ScheduleInterviewModal';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, endpoints } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 
 interface Interview {
@@ -43,7 +43,7 @@ const EmployerInterviews: React.FC = () => {
     useEffect(() => {
         const fetchInterviews = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/interviews/employer`, {
+                const response = await fetch(endpoints.interviews.employer, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
                 const data = await response.json();
@@ -69,36 +69,11 @@ const EmployerInterviews: React.FC = () => {
                     }));
                     setInterviews(formattedInterviews);
                 } else {
-                    // Fallback mock data
-                    setInterviews([
-                        {
-                            id: 1,
-                            candidateName: "Priya Sharma",
-                            role: "Senior Full Stack Developer",
-                            date: "2024-12-05",
-                            time: "10:30 AM",
-                            duration: "60 mins",
-                            type: "Technical",
-                            status: "Scheduled",
-                            avatar: "https://ui-avatars.com/api/?name=Priya+Sharma&background=random",
-                            interviewer: "Sarah Conners"
-                        },
-                        {
-                            id: 2,
-                            candidateName: "Rahul Verma",
-                            role: "Data Scientist",
-                            date: "2024-12-05",
-                            time: "02:00 PM",
-                            duration: "45 mins",
-                            type: "Video",
-                            status: "Pending",
-                            avatar: "https://ui-avatars.com/api/?name=Rahul+Verma&background=random",
-                            interviewer: "David Miller"
-                        }
-                    ]);
+                    setInterviews([]);
                 }
             } catch (error) {
                 console.error('Failed to fetch interviews:', error);
+                setInterviews([]);
             }
         };
 

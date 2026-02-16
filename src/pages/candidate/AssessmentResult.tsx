@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-    TrendingUp, CheckCircle, Award, Star, Brain,
+    TrendingUp, CheckCircle, Award, Star, Brain, AlertCircle,
     Mic, Eye, Clock, BarChart3, Home
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -46,17 +46,8 @@ const AssessmentResult: React.FC = () => {
                     feedback: data.ai_feedback || 'Excellent performance! You demonstrated strong communication skills and technical knowledge.'
                 });
             } else {
-                // Mock data for demo
-                setResult({
-                    overallScore: 85,
-                    communication: 88,
-                    knowledge: 82,
-                    confidence: 90,
-                    clarity: 86,
-                    professionalism: 92,
-                    completedAt: new Date().toISOString(),
-                    feedback: 'Excellent performance! You demonstrated strong communication skills and technical knowledge.'
-                });
+                console.warn('No assessment result found.');
+                // No mock data fallback
             }
 
             setLoading(false);
@@ -71,6 +62,23 @@ const AssessmentResult: React.FC = () => {
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-neon-cyan mx-auto mb-4" />
                     <p className="text-gray-400">Loading your results...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!result) {
+        return (
+            <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center p-6">
+                <div className="text-center max-w-md">
+                    <div className="bg-red-500/10 p-4 rounded-full inline-block mb-4">
+                        <AlertCircle className="text-red-500" size={48} />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-2 text-white">Result Not Found</h2>
+                    <p className="text-gray-400 mb-6">We couldn't find the assessment results you're looking for. It may not have been saved or you might be logged in as a different user.</p>
+                    <Link to="/candidate/dashboard" className="btn-3d btn-primary px-8 py-3">
+                        Return to Dashboard
+                    </Link>
                 </div>
             </div>
         );

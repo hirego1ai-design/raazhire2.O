@@ -7,33 +7,20 @@ import { endpoints } from '../../lib/api';
 
 const GamificationDashboard: React.FC = () => {
     const [userStats, setUserStats] = useState({
-        level: 'Bronze',
-        points: 450,
+        level: 'Beginner',
+        points: 0,
         nextLevelPoints: 1000,
-        globalRank: 1242,
-        totalCandidates: 15420,
-        skillMastery: 68,
-        correctRate: 84,
-        challengesCompleted: 12,
-        totalAttempts: 18,
-        streak: 3
+        globalRank: 0,
+        totalCandidates: 0,
+        skillMastery: 0,
+        correctRate: 0,
+        challengesCompleted: 0,
+        totalAttempts: 0,
+        streak: 0
     });
-    const [improvementTrend, setImprovementTrend] = useState([
-        { day: 'Mon', score: 65 }, { day: 'Tue', score: 68 },
-        { day: 'Wed', score: 75 }, { day: 'Thu', score: 72 },
-        { day: 'Fri', score: 80 }, { day: 'Sat', score: 85 },
-        { day: 'Sun', score: 88 }
-    ]);
-    const [categoryPerformance, setCategoryPerformance] = useState([
-        { name: 'Frontend', score: 92, color: 'var(--primary)' },
-        { name: 'Backend', score: 75, color: '#4F46E5' },
-        { name: 'Algorithms', score: 65, color: '#8B5CF6' }
-    ]);
-    const [badges, setBadges] = useState([
-        { id: 1, name: 'First Milestone', icon: <Trophy size={18} />, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-        { id: 2, name: 'Fast Learner', icon: <Zap size={18} />, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-        { id: 3, name: 'Secure Coder', icon: <Shield size={18} />, color: 'text-blue-500', bg: 'bg-blue-500/10' }
-    ]);
+    const [improvementTrend, setImprovementTrend] = useState<any[]>([]);
+    const [categoryPerformance, setCategoryPerformance] = useState<any[]>([]);
+    const [badges, setBadges] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -46,9 +33,10 @@ const GamificationDashboard: React.FC = () => {
                 if (response.ok) {
                     const data = await response.json();
                     if (data.stats) setUserStats(data.stats);
+                    // If we had endpoints for history/badges, we'd set them here
                 }
             } catch (error) {
-                console.warn("Using mock gamification data");
+                console.error("Failed to fetch gamification stats", error);
             }
         };
         fetchData();

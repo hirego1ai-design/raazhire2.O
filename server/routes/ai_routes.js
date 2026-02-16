@@ -85,6 +85,36 @@ export function setupAIRoutes(app, supabase, decrypt) {
         }
     });
 
+    /**
+     * Generate interview questions
+     * POST /api/generate-questions
+     */
+    app.post('/api/generate-questions', async (req, res) => {
+        try {
+            const { jobTitle, jobDescription } = req.body;
+            // In a real scenario, we would use an LLM here.
+            // For now, we return structured questions based on the job title.
+
+            const title = jobTitle || 'this role';
+
+            const questions = [
+                { id: 1, text: `Tell us about your experience with ${title} and why you're interested.`, timeLimit: 180 },
+                { id: 2, text: `Describe a challenging project you worked on that relates to ${title}.`, timeLimit: 180 },
+                { id: 3, text: `What are your key strengths that make you suitable for this role?`, timeLimit: 180 },
+                { id: 4, text: `How do you stay updated with the latest trends in your field?`, timeLimit: 180 },
+                { id: 5, text: `Describe a situation where you had to work in a team. What was your role?`, timeLimit: 180 },
+                { id: 6, text: `What are your career goals for the next 2-3 years?`, timeLimit: 180 },
+                { id: 7, text: `How do you handle tight deadlines and pressure?`, timeLimit: 180 },
+                { id: 8, text: `Why should we hire you for this position?`, timeLimit: 180 }
+            ];
+
+            res.json({ success: true, questions });
+        } catch (error) {
+            console.error('Question generation error:', error);
+            res.status(500).json({ error: 'Failed to generate questions' });
+        }
+    });
+
     // ==================== VIDEO PROCESSING ====================
 
     /**
@@ -734,7 +764,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
 
             // Fetch job details
             const { data: job, error: jobError } = await supabase
-                .from('jobs')
+                .from('employer_job_posts')
                 .select('*')
                 .eq('id', jobId)
                 .single();
@@ -819,7 +849,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
 
             // Get application counts by status
             const { data: applications, error } = await supabase
-                .from('applications')
+                .from('job_applications')
                 .select('status')
                 .eq('job_id', jobId);
 

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-    Users, 
-    Filter, 
-    Target, 
-    CheckCircle, 
-    Calendar, 
-    UserCheck, 
+import {
+    Users,
+    Filter,
+    Target,
+    CheckCircle,
+    Calendar,
+    UserCheck,
     Search,
     ArrowRight,
     Briefcase,
@@ -44,6 +44,7 @@ interface JobDetails {
     requirements: string;
     skills: string[];
     created_at: string;
+    job_type?: string;
 }
 
 type CandidateSource = 'applicants' | 'database';
@@ -51,19 +52,19 @@ type CandidateSource = 'applicants' | 'database';
 const JobDetail: React.FC = () => {
     const { jobId } = useParams<{ jobId: string }>();
     const navigate = useNavigate();
-    
+
     const [job, setJob] = useState<JobDetails | null>(null);
     const [activeSource, setActiveSource] = useState<CandidateSource>('applicants');
     const [searchTerm, setSearchTerm] = useState('');
     const [filterSkills, setFilterSkills] = useState<string[]>([]);
-    
+
     // Applicants data
     const [applicants, setApplicants] = useState<CardCandidate[]>([]);
-    
+
     // Database candidates with rotation
     const [dbCandidates, setDbCandidates] = useState<CardCandidate[]>([]);
     const [rotationOffset, setRotationOffset] = useState(0);
-    
+
     // Pipeline stages
     const [pipeline, setPipeline] = useState<PipelineStage[]>([
         { id: 'applied', name: 'Applied', count: 0, icon: Users, color: 'text-blue-400' },
@@ -168,7 +169,7 @@ const JobDetail: React.FC = () => {
                     // Skill match score
                     const candidateSkills = candidate.skills || [];
                     const jobSkills = job.skills || [];
-                    const matchingSkills = candidateSkills.filter((skill: string) => 
+                    const matchingSkills = candidateSkills.filter((skill: string) =>
                         jobSkills.some((js: string) => js.toLowerCase().includes(skill.toLowerCase()))
                     );
                     const skillScore = jobSkills.length > 0 ? (matchingSkills.length / jobSkills.length) * 100 : 50;
@@ -181,8 +182,8 @@ const JobDetail: React.FC = () => {
 
                     // Composite score with rotation fairness
                     const compositeScore = Math.round(
-                        (skillScore * 0.5) + 
-                        (experienceScore * 0.3) + 
+                        (skillScore * 0.5) +
+                        (experienceScore * 0.3) +
                         (rotationBoost * 0.2)
                     );
 
@@ -239,9 +240,9 @@ const JobDetail: React.FC = () => {
     // Filter candidates based on search and skills
     const filteredCandidates = (activeSource === 'applicants' ? applicants : dbCandidates).filter(candidate => {
         const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            candidate.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesSkills = filterSkills.length === 0 || 
-                            filterSkills.some(fs => candidate.skills.some(cs => cs.toLowerCase().includes(fs.toLowerCase())));
+            candidate.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesSkills = filterSkills.length === 0 ||
+            filterSkills.some(fs => candidate.skills.some(cs => cs.toLowerCase().includes(fs.toLowerCase())));
         return matchesSearch && matchesSkills;
     });
 
@@ -292,6 +293,11 @@ const JobDetail: React.FC = () => {
                                     <span className="flex items-center gap-1">
                                         <TrendingUp size={14} /> ${job.salary_min}k - ${job.salary_max}k
                                     </span>
+                                    {job.job_type && (
+                                        <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 text-neon-cyan text-xs uppercase tracking-wide border border-neon-cyan/30">
+                                            <Star size={12} /> {job.job_type.replace(/-/g, ' ')} Plan
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -357,21 +363,19 @@ const JobDetail: React.FC = () => {
                 <div className="bg-black/40 p-1.5 rounded-full flex items-center border border-white/10">
                     <button
                         onClick={() => setActiveSource('applicants')}
-                        className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
-                            activeSource === 'applicants'
-                                ? 'bg-gradient-to-r from-neon-cyan to-blue-500 text-white shadow-[0_4px_15px_rgba(6,182,212,0.4)]'
-                                : 'text-gray-400 hover:text-white'
-                        }`}
+                        className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${activeSource === 'applicants'
+                            ? 'bg-gradient-to-r from-neon-cyan to-blue-500 text-white shadow-[0_4px_15px_rgba(6,182,212,0.4)]'
+                            : 'text-gray-400 hover:text-white'
+                            }`}
                     >
                         <Users size={16} /> Applicants ({applicants.length})
                     </button>
                     <button
                         onClick={() => setActiveSource('database')}
-                        className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
-                            activeSource === 'database'
-                                ? 'bg-gradient-to-r from-neon-purple to-purple-600 text-white shadow-[0_4px_15px_rgba(168,85,247,0.4)]'
-                                : 'text-gray-400 hover:text-white'
-                        }`}
+                        className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 ${activeSource === 'database'
+                            ? 'bg-gradient-to-r from-neon-purple to-purple-600 text-white shadow-[0_4px_15px_rgba(168,85,247,0.4)]'
+                            : 'text-gray-400 hover:text-white'
+                            }`}
                     >
                         <Database size={16} /> Candidate Database
                     </button>
@@ -401,8 +405,8 @@ const JobDetail: React.FC = () => {
                             <div className="flex-1">
                                 <h3 className="text-white font-bold mb-1">Fair Rotation Algorithm Active</h3>
                                 <p className="text-sm text-gray-400">
-                                    Our algorithm ensures every candidate gets visibility by rotating recommendations 
-                                    based on time and skill match. Top performers are balanced with equally qualified candidates 
+                                    Our algorithm ensures every candidate gets visibility by rotating recommendations
+                                    based on time and skill match. Top performers are balanced with equally qualified candidates
                                     to give everyone a fair chance. Rotation offset: #{rotationOffset}
                                 </p>
                             </div>
@@ -453,7 +457,7 @@ const JobDetail: React.FC = () => {
                     <div className="col-span-full text-center py-12">
                         <Database className="mx-auto mb-4 text-gray-600" size={48} />
                         <p className="text-gray-400">
-                            {activeSource === 'applicants' 
+                            {activeSource === 'applicants'
                                 ? 'No applicants yet for this job.'
                                 : 'No matching candidates found in database.'}
                         </p>

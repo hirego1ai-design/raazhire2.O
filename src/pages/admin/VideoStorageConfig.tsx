@@ -46,7 +46,7 @@ const VideoStorageConfig: React.FC = () => {
         setIsLoading(true);
         try {
             const headers = await getAuthHeaders();
-            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/youtube-config`, {
+            const response = await fetch(endpoints.admin.youtubeConfig, {
                 headers: { ...headers }
             });
             if (response.ok) {
@@ -147,7 +147,7 @@ const VideoStorageConfig: React.FC = () => {
         setIsSaving(true);
         try {
             const headers = await getAuthHeaders();
-            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/youtube-config`, {
+            const response = await fetch(endpoints.admin.youtubeConfig, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ const VideoStorageConfig: React.FC = () => {
             const formData = new FormData();
             formData.append('video', file);
 
-            const response = await fetch(`${endpoints.test.replace('/test', '')}/admin/youtube-upload-test`, {
+            const response = await fetch(endpoints.admin.youtubeUploadTest, {
                 method: 'POST',
                 headers: { ...headers },
                 body: formData

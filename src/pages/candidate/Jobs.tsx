@@ -26,31 +26,28 @@ const Jobs: React.FC = () => {
         const fetchJobs = async () => {
             try {
                 const response = await fetch(endpoints.jobs);
-                if (!response.ok) throw new Error('Failed to fetch jobs');
-                const data = await response.json();
-                if (data.jobs && data.jobs.length > 0) {
-                    setJobs(data.jobs.map((j: any) => ({
-                        id: j.id,
-                        title: j.title,
-                        company: "TechCorp Global",
-                        location: j.location,
-                        type: j.type || "Full-time",
-                        salary: j.salary_min && j.salary_max ? `$${(j.salary_min / 1000).toFixed(0)}k - $${(j.salary_max / 1000).toFixed(0)}k` : "Negotiable",
-                        isPPH: Math.random() > 0.5, // Mocking PPH status
-                        posted: "2d ago",
-                        logo: "https://images.unsplash.com/photo-15499231-f129b911e442?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80"
-                    })));
-                } else {
-                    // Mock data
-                    const mockJobs = [
-                        { id: 1, title: 'Senior Frontend Engineer', company: 'Linear', location: 'Remote', type: 'Full-time', salary: '$120k - $160k', isPPH: true, posted: '1d ago', logo: 'https://images.unsplash.com/photo-1614680376593-902f74cc0d41?ixlib=rb-1.2.1' },
-                        { id: 2, title: 'Product Designer', company: 'Airbnb', location: 'San Francisco', type: 'Contract', salary: '$90k - $130k', isPPH: false, posted: '3h ago', logo: 'https://images.unsplash.com/photo-1585238341267-1cfec2046a55?ixlib=rb-1.2.1' },
-                        { id: 3, title: 'Backend Developer (Go)', company: 'Vercel', location: 'Europe (Remote)', type: 'Full-time', salary: '$140k - $180k', isPPH: true, posted: '5d ago', logo: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?ixlib=rb-1.2.1' },
-                    ];
-                    setJobs(mockJobs);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && Array.isArray(data.jobs)) {
+                        const formattedJobs = data.jobs.map((j: any) => ({
+                            id: j.id,
+                            title: j.title,
+                            company: j.employer?.name || "HireGo Partner",
+                            location: j.location,
+                            type: j.type || "Full-time",
+                            salary: j.salary_min && j.salary_max ?
+                                `$${(j.salary_min / 1000).toFixed(0)}k - $${(j.salary_max / 1000).toFixed(0)}k` :
+                                "Negotiable",
+                            isPPH: j.job_type === 'pph' || j.job_type === 'urgent',
+                            posted: new Date(j.created_at).toLocaleDateString(),
+                            logo: j.employer?.avatar_url || "https://images.unsplash.com/photo-15499231-f129b911e442?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80"
+                        }));
+                        setJobs(formattedJobs);
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching jobs:', error);
+                // Keep empty state or show error, but don't inject mock data that confuses users
             }
         };
         fetchJobs();

@@ -6,7 +6,7 @@ import {
     TrendingUp, Activity, ArrowUpRight, Zap, Target
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, endpoints } from '../../lib/api';
 
 type PricingModel = 'subscription' | 'pph';
 
@@ -27,38 +27,39 @@ const EmployerDashboard: React.FC = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/employer/stats`, {
+                // Fetch Stats
+                const response = await fetch(endpoints.employer.stats, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
-                const data = await response.json();
-                if (data.success) {
-                    setStats(prev => ({
-                        ...prev, ...data.stats,
-                        due: (data.stats.hires || 0) * 50000
-                    }));
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        setStats(prev => ({
+                            ...prev, ...data.stats,
+                            due: (data.stats.hired || 0) * 50000 // Example calculation
+                        }));
+                    }
                 }
 
-                const appsResponse = await fetch(`${API_BASE_URL}/api/applications/employer`, {
+                // Fetch Recent Applicants
+                const appsResponse = await fetch(`${API_BASE_URL}/api/applications/employer?limit=5`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
-                const appsData = await appsResponse.json();
-                if (appsData.success) {
-                    setRecentApplicants(appsData.applications.slice(0, 5).map((app: any) => ({
-                        name: app.candidate?.name || 'Unknown',
-                        role: app.job?.title || 'Unknown',
-                        score: Math.floor(Math.random() * 20) + 75,
-                        status: app.status.charAt(0).toUpperCase() + app.status.slice(1),
-                        isPremium: Math.random() > 0.7
-                    })));
+                if (appsResponse.ok) {
+                    const appsData = await appsResponse.json();
+                    if (appsData.success && Array.isArray(appsData.applications)) {
+                        setRecentApplicants(appsData.applications.map((app: any) => ({
+                            name: app.candidate?.name || 'Unknown Candidate',
+                            role: app.job?.title || 'Unknown Role',
+                            score: app.ai_screening_score || 0,
+                            status: app.status.charAt(0).toUpperCase() + app.status.slice(1).replace('_', ' '),
+                            isPremium: false // Placeholder as premium status isn't in backend yet
+                        })));
+                    }
                 }
             } catch (error) {
-                console.warn('Sync failed, using snapshot data');
-                // Mock for demo
-                setRecentApplicants([
-                    { name: "John Cooper", role: "Senior Frontend", score: 94, status: "Shortlisted", isPremium: true },
-                    { name: "Sarah Miller", role: "UI Designer", score: 88, status: "Pending", isPremium: false },
-                    { name: "Alex Tuan", role: "Product Manager", score: 91, status: "Interview", isPremium: true }
-                ]);
+                console.error('Error fetching dashboard data:', error);
+                // Keep default zero state or show error notification
             }
         };
         fetchDashboardData();
@@ -92,10 +93,10 @@ const EmployerDashboard: React.FC = () => {
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    { label: 'Active Pipeline', value: stats.totalCandidates || 124, sub: '+12% from last week', icon: Users, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-                    { label: 'Live Roles', value: stats.activeJobs || 8, sub: '2 urgent openings', icon: Briefcase, color: 'text-indigo-600', bg: 'bg-indigo-500/10' },
-                    { label: 'Interviews', value: stats.interviews || 4, sub: 'Next: Today 3:00 PM', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                    { label: 'Hiring Budget', value: pricingModel === 'pph' ? `₹${stats.due}` : '$12.4k', sub: 'Invoices clear', icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
+                    { label: 'Active Pipeline', value: stats.totalCandidates, sub: 'Total Candidates', icon: Users, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+                    { label: 'Live Roles', value: stats.activeJobs, sub: 'Active Job Posts', icon: Briefcase, color: 'text-indigo-600', bg: 'bg-indigo-500/10' },
+                    { label: 'Interviews', value: stats.interviews, sub: 'Scheduled Interviews', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                    { label: 'Hiring Budget', value: pricingModel === 'pph' ? `₹${stats.due}` : '$0', sub: 'Calculated Cost', icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
                 ].map((s, i) => (
                     <motion.div
                         key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
@@ -139,7 +140,7 @@ const EmployerDashboard: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--border-subtle)]">
-                                    {recentApplicants.map((app, i) => (
+                                    {recentApplicants.length > 0 ? recentApplicants.map((app, i) => (
                                         <tr key={i} className="hover:bg-[var(--bg-page)]/50 transition-colors group">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
@@ -172,7 +173,13 @@ const EmployerDashboard: React.FC = () => {
                                                 </button>
                                             </td>
                                         </tr>
-                                    ))}
+                                    )) : (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-8 text-center text-[var(--text-muted)] text-sm">
+                                                No recent applicants found.
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -196,20 +203,7 @@ const EmployerDashboard: React.FC = () => {
                             <h4 className="font-bold text-sm">Hiring Activity</h4>
                         </div>
                         <div className="space-y-6">
-                            {[
-                                { title: 'New Agreement', sub: 'PPH Agreement #2024-01 active.', time: '2h ago', color: 'bg-blue-500' },
-                                { title: 'Interview Reminder', sub: 'Sarah Johnson at 3:00 PM.', time: '45m left', color: 'bg-amber-500' },
-                                { title: 'System Alert', sub: 'Budget threshold reached for Sub-04.', time: '1d ago', color: 'bg-indigo-600' }
-                            ].map((item, i) => (
-                                <div key={i} className="flex gap-4 relative last:after:hidden after:absolute after:left-[7px] after:top-5 after:w-[1px] after:h-full after:bg-[var(--border-subtle)]">
-                                    <div className={`w-3.5 h-3.5 rounded-full ${item.color} mt-1.5 shrink-0 shadow-sm ring-4 ring-white dark:ring-[#1a1f2e]`} />
-                                    <div>
-                                        <p className="text-sm font-bold text-[var(--text-main)] leading-none mb-1">{item.title}</p>
-                                        <p className="text-[10px] font-bold text-[var(--text-muted)] leading-relaxed">{item.sub}</p>
-                                        <span className="text-[8px] font-black uppercase text-indigo-600 mt-2 block">{item.time}</span>
-                                    </div>
-                                </div>
-                            ))}
+                            <p className="text-sm text-[var(--text-muted)]">No recent activity.</p>
                         </div>
                     </div>
                 </div>

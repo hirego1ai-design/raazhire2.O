@@ -16,8 +16,28 @@ const JOB_TYPES = [
 
 const PostJob: React.FC = () => {
     const navigate = useNavigate();
-    const [walletBalance, setWalletBalance] = useState(450); // Mock balance
+    const [walletBalance, setWalletBalance] = useState(0);
     const [selectedType, setSelectedType] = useState(JOB_TYPES[0]);
+
+    // Fetch real wallet balance
+    React.useEffect(() => {
+        const fetchBalance = async () => {
+            try {
+                const token = localStorage.getItem('sb-token');
+                if (!token) return;
+                const response = await fetch(`${endpoints.jobs.replace('/jobs', '')}/wallet`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    setWalletBalance(data.balance);
+                }
+            } catch (error) {
+                console.error('Error fetching wallet:', error);
+            }
+        };
+        fetchBalance();
+    }, []);
 
     const [jobData, setJobData] = useState({
         title: '',
@@ -93,6 +113,12 @@ const PostJob: React.FC = () => {
                         work_mode: 'On-site' // Defaulting for now as form doesn't have it explicitly
                     })
                 });
+
+                if (response.status === 402) {
+                    const data = await response.json();
+                    alert(data.error || 'Insufficient credits to post this job.');
+                    return;
+                }
 
                 if (!response.ok) throw new Error('Failed to post job');
 

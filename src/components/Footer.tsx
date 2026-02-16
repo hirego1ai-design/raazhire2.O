@@ -1,5 +1,5 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
+import { Zap } from 'lucide-react';
 
 const Footer = () => {
     return (
@@ -7,11 +7,13 @@ const Footer = () => {
             <div className="container mx-auto max-w-6xl px-6">
                 <div className="grid md:grid-cols-4 gap-12 mb-20">
                     <div className="col-span-2">
-                        {/* Logo Placeholder or Text if image missing */}
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">H</div>
+                        {/* Logo */}
+                        <Link to="/" className="flex items-center gap-2 mb-6 group">
+                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 group-hover:shadow-indigo-300 transition-all">
+                                <Zap size={20} fill="currentColor" />
+                            </div>
                             <span className="text-xl font-bold text-slate-900">HireGo AI</span>
-                        </div>
+                        </Link>
 
                         <p className="max-w-sm mb-8 leading-relaxed text-slate-600 font-medium">
                             The global standard for autonomous AI recruitment. Building the future of work with intelligence.
