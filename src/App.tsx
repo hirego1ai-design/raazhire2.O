@@ -36,7 +36,7 @@ import LiveAssessment from './pages/candidate/LiveAssessment';
 import AssessmentResult from './pages/candidate/AssessmentResult';
 import Applications from './pages/candidate/Applications';
 import Connections from './pages/candidate/Connections';
-import Messages from './pages/common/Messages'; // Shared Messages Component
+import Messages from './pages/Messages'; // Shared Messages Component
 import CandidateSettings from './pages/candidate/Settings';
 import EmployerLayout from './layouts/EmployerLayout';
 import EmployerDashboard from './pages/employer/Dashboard';

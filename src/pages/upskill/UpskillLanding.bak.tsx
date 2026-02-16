@@ -6,7 +6,7 @@ import {
     CircleCheck, BookOpen, Sparkles,
     Shield, Globe, Bot, Link2, CirclePlay, Cpu, Activity,
     Bell, Lightbulb, GitBranch, Gauge, X, Users, Map,
-    ChevronDown, ChevronUp, Star, CircleHelp, MessageCircle
+    ChevronDown, ChevronUp, Star, CircleHelp, MessageCircle, TrendingUp
 } from 'lucide-react';
 
 // ============================================

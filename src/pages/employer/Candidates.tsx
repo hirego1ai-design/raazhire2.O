@@ -17,7 +17,6 @@ interface ExtendedCandidate extends CardCandidate {
     recommendationType?: RecommendationType;
     aiMatchScore?: number;
     // Additional Profile Fields (optional if not in CardCandidate)
-    experienceYears?: number;
 }
 
 const Candidates: React.FC = () => {
