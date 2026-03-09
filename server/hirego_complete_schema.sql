@@ -957,51 +957,20 @@ ALTER TABLE routes_registry ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_logs ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- PUBLIC ACCESS POLICIES (All 42 Tables)
+-- ROW LEVEL SECURITY POLICIES
 -- ============================================================
-CREATE POLICY "Public Access" ON users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON user_profiles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON candidates FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON candidate_progress FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON candidate_certificates FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON candidate_assessments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON candidate_activity_log FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON courses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON course_lessons FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON course_quizzes FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON course_assignments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON assignment_submissions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON live_classes FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON educators FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON educator_payouts FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON employers FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON employer_job_posts FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON employer_activity_log FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON job_applications FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON screening_results FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON interviews FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON interview_logs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON interview_feedback FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON video_interview_sessions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON session_recordings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON subscription_plans FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON employer_subscriptions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON pay_per_hire_records FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON transactions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON wallet FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON wallet_transactions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON payments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON staff_users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON staff_activity FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON crm_leads FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON notifications FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON admin_users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON admin_settings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON platform_reports FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON analytics FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON routes_registry FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON email_logs FOR ALL USING (true) WITH CHECK (true);
+-- ⚠️ IMPORTANT: Do NOT use "Public Access" USING (true) policies!
+-- 
+-- The proper RLS policies are defined in: production_rls_policies.sql
+-- Run that script AFTER this schema script to apply secure policies.
+--
+-- Each table gets role-appropriate policies:
+--   • Public read: employer_job_posts, courses, lessons, etc.
+--   • User-owned: users, candidates, wallet, notifications, etc.
+--   • Employer-owned: employers, employer_subscriptions, etc.
+--   • Admin-only: admin_users, admin_settings, staff_users, etc.
+--   • Shared: job_applications, interviews (candidate + employer access)
+--
+-- Run: \i production_rls_policies.sql
+-- ============================================================
 
--- ============================================================
--- SCHEMA COMPLETE - 42 TABLES CREATED
--- ============================================================

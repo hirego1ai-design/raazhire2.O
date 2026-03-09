@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import RichTextEditor from '../../components/RichTextEditor';
 import { Save, CheckCircle, AlertCircle, Loader, Eye } from 'lucide-react';
 
 const PageEditor = () => {
@@ -392,19 +391,10 @@ const PageEditor = () => {
                             </div>
 
                             <div className="flex-1 mb-6 bg-white rounded-lg text-slate-900 overflow-hidden flex flex-col">
-                                <ReactQuill
-                                    theme="snow"
+                                <RichTextEditor
                                     value={content}
                                     onChange={setContent}
                                     className="h-full flex-1"
-                                    modules={{
-                                        toolbar: [
-                                            [{ 'header': [1, 2, 3, false] }],
-                                            ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-                                            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                                            ['link', 'clean']
-                                        ],
-                                    }}
                                 />
                             </div>
 

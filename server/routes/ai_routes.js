@@ -27,8 +27,25 @@ import {
     getPerformanceSummary,
     generatePerformanceReport
 } from '../agents/performance_tracking_agent.js';
+import { generateRealAssessmentQuestions, evaluateCandidateAnswer, generateRealJobDescription } from '../services/ai_services.js';
 
-export function setupAIRoutes(app, supabase, decrypt) {
+export function setupAIRoutes(app, supabase, decrypt, authenticateUser) {
+
+    // ==================== SECURITY ====================
+    // All AI routes are now PROTECTED by authenticateUser middleware.
+    // If authenticateUser is not provided (backward compatibility), create a secure fallback.
+    const auth = authenticateUser || ((req, res) => {
+        console.error('🔴 SECURITY ERROR: AI routes called WITHOUT authentication middleware!');
+        return res.status(500).json({
+            error: 'Authentication middleware not available',
+            security_violation: true
+        });
+    });
+
+    // Log security warning if fallback is used
+    if (!authenticateUser) {
+        console.warn('⚠️ AI routes using fallback authentication - this should not happen in production');
+    }
 
     // ==================== LIVE ASSESSMENT ====================
 
@@ -36,7 +53,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Analyze live assessment
      * POST /api/analyze-live-assessment
      */
-    app.post('/api/analyze-live-assessment', async (req, res) => {
+    app.post('/api/analyze-live-assessment', auth, async (req, res) => {
         try {
             const { userId, jobId, transcript, questionsAnswered, tabSwitches, totalDuration } = req.body;
 
@@ -89,7 +106,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Generate interview questions
      * POST /api/generate-questions
      */
-    app.post('/api/generate-questions', async (req, res) => {
+    app.post('/api/generate-questions', auth, async (req, res) => {
         try {
             const { jobTitle, jobDescription } = req.body;
             // In a real scenario, we would use an LLM here.
@@ -121,7 +138,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Process and analyze video
      * POST /api/ai/video/process
      */
-    app.post('/api/ai/video/process', async (req, res) => {
+    app.post('/api/ai/video/process', auth, async (req, res) => {
         try {
             const { candidateId, videoUrl } = req.body;
 
@@ -161,7 +178,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Analyze video content (Frontend Direct)
      * POST /api/ai/analyze-video
      */
-    app.post('/api/ai/analyze-video', async (req, res) => {
+    app.post('/api/ai/analyze-video', auth, async (req, res) => {
         try {
             const { candidateData, videoData } = req.body;
 
@@ -202,7 +219,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get video analysis results
      * GET /api/ai/video/analysis/:candidateId
      */
-    app.get('/api/ai/video/analysis/:candidateId', async (req, res) => {
+    app.get('/api/ai/video/analysis/:candidateId', auth, async (req, res) => {
         try {
             const { candidateId } = req.params;
 
@@ -232,7 +249,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Submit employer feedback (mandatory)
      * POST /api/ai/feedback/submit
      */
-    app.post('/api/ai/feedback/submit', async (req, res) => {
+    app.post('/api/ai/feedback/submit', auth, async (req, res) => {
         try {
             const {
                 interviewId,
@@ -316,7 +333,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get feedback for a candidate
      * GET /api/ai/feedback/:candidateId
      */
-    app.get('/api/ai/feedback/:candidateId', async (req, res) => {
+    app.get('/api/ai/feedback/:candidateId', auth, async (req, res) => {
         try {
             const { candidateId } = req.params;
 
@@ -345,7 +362,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get real-time rankings for a job
      * GET /api/ai/rankings/:jobId
      */
-    app.get('/api/ai/rankings/:jobId', async (req, res) => {
+    app.get('/api/ai/rankings/:jobId', auth, async (req, res) => {
         try {
             const { jobId } = req.params;
 
@@ -369,7 +386,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Update rankings for a job
      * POST /api/ai/rankings/update
      */
-    app.post('/api/ai/rankings/update', async (req, res) => {
+    app.post('/api/ai/rankings/update', auth, async (req, res) => {
         try {
             const { jobId } = req.body;
 
@@ -395,7 +412,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get top candidates for a job
      * GET /api/ai/rankings/:jobId/top
      */
-    app.get('/api/ai/rankings/:jobId/top', async (req, res) => {
+    app.get('/api/ai/rankings/:jobId/top', auth, async (req, res) => {
         try {
             const { jobId } = req.params;
             const limit = parseInt(req.query.limit) || 10;
@@ -417,7 +434,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Compare two candidates
      * GET /api/ai/rankings/compare
      */
-    app.get('/api/ai/rankings/compare', async (req, res) => {
+    app.get('/api/ai/rankings/compare', auth, async (req, res) => {
         try {
             const { candidate1, candidate2, jobId } = req.query;
 
@@ -446,7 +463,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Analyze skill mapping for a candidate
      * POST /api/ai/skills/analyze
      */
-    app.post('/api/ai/skills/analyze', async (req, res) => {
+    app.post('/api/ai/skills/analyze', auth, async (req, res) => {
         try {
             const { candidateData, jobRole } = req.body;
 
@@ -480,7 +497,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Batch analyze skills for multiple candidates
      * POST /api/ai/skills/batch-analyze
      */
-    app.post('/api/ai/skills/batch-analyze', async (req, res) => {
+    app.post('/api/ai/skills/batch-analyze', auth, async (req, res) => {
         try {
             const { candidates, jobRole } = req.body;
 
@@ -512,7 +529,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Trigger manual model retraining
      * POST /api/ai/learning/trigger
      */
-    app.post('/api/ai/learning/trigger', async (req, res) => {
+    app.post('/api/ai/learning/trigger', auth, async (req, res) => {
         try {
             const result = await triggerAutoLearning('manual', supabase);
 
@@ -531,7 +548,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get current model weights
      * GET /api/ai/learning/weights
      */
-    app.get('/api/ai/learning/weights', async (req, res) => {
+    app.get('/api/ai/learning/weights', auth, async (req, res) => {
         try {
             const weights = await getCurrentModelWeights(supabase);
 
@@ -550,7 +567,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get training history
      * GET /api/ai/learning/history
      */
-    app.get('/api/ai/learning/history', async (req, res) => {
+    app.get('/api/ai/learning/history', auth, async (req, res) => {
         try {
             const limit = parseInt(req.query.limit) || 20;
 
@@ -579,7 +596,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Update daily metrics
      * POST /api/ai/analytics/update
      */
-    app.post('/api/ai/analytics/update', async (req, res) => {
+    app.post('/api/ai/analytics/update', auth, async (req, res) => {
         try {
             const metrics = await updateDailyMetrics(supabase);
 
@@ -596,7 +613,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get suggested job titles
      * GET /api/ai/job-titles
      */
-    app.get('/api/ai/job-titles', async (req, res) => {
+    app.get('/api/ai/job-titles', auth, async (req, res) => {
         try {
             const titles = [
                 "Software Engineer", "Full Stack Developer", "Frontend Developer", "Backend Developer",
@@ -613,7 +630,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Suggest skills for a job title
      * POST /api/ai/skills/suggest
      */
-    app.post('/api/ai/skills/suggest', async (req, res) => {
+    app.post('/api/ai/skills/suggest', auth, async (req, res) => {
         try {
             const { jobTitle } = req.body;
             const apiKeys = await getDecryptedApiKeys(supabase, decrypt);
@@ -635,7 +652,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Generate Job Description
      * POST /api/ai/job-description/generate
      */
-    app.post('/api/ai/job-description/generate', async (req, res) => {
+    app.post('/api/ai/job-description/generate', auth, async (req, res) => {
         try {
             const { jobTitle, company, skills, experience } = req.body;
             const apiKeys = await getDecryptedApiKeys(supabase, decrypt);
@@ -656,7 +673,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get performance metrics for date range
      * GET /api/ai/analytics/metrics
      */
-    app.get('/api/ai/analytics/metrics', async (req, res) => {
+    app.get('/api/ai/analytics/metrics', auth, async (req, res) => {
         try {
             const { startDate, endDate } = req.query;
 
@@ -683,7 +700,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get performance summary
      * GET /api/ai/analytics/summary
      */
-    app.get('/api/ai/analytics/summary', async (req, res) => {
+    app.get('/api/ai/analytics/summary', auth, async (req, res) => {
         try {
             const summary = await getPerformanceSummary(supabase);
 
@@ -702,7 +719,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Generate performance report
      * GET /api/ai/analytics/report
      */
-    app.get('/api/ai/analytics/report', async (req, res) => {
+    app.get('/api/ai/analytics/report', auth, async (req, res) => {
         try {
             const report = await generatePerformanceReport(supabase);
 
@@ -723,7 +740,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get AI system status
      * GET /api/ai/status
      */
-    app.get('/api/ai/status', async (req, res) => {
+    app.get('/api/ai/status', auth, async (req, res) => {
         try {
             const apiKeys = await getDecryptedApiKeys(supabase, decrypt);
 
@@ -757,7 +774,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get recommended candidates for a job with fair rotation
      * GET /api/ai/candidates/recommend/:jobId
      */
-    app.get('/api/ai/candidates/recommend/:jobId', async (req, res) => {
+    app.get('/api/ai/candidates/recommend/:jobId', auth, async (req, res) => {
         try {
             const { jobId } = req.params;
             const { rotationOffset = 0, limit = 20 } = req.query;
@@ -843,7 +860,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get job pipeline statistics
      * GET /api/ai/job/:jobId/pipeline
      */
-    app.get('/api/ai/job/:jobId/pipeline', async (req, res) => {
+    app.get('/api/ai/job/:jobId/pipeline', auth, async (req, res) => {
         try {
             const { jobId } = req.params;
 
@@ -886,7 +903,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get all job titles
      * GET /api/ai/job-titles
      */
-    app.get('/api/ai/job-titles', async (req, res) => {
+    app.get('/api/ai/job-titles', auth, async (req, res) => {
         try {
             const { data, error } = await supabase
                 .from('job_titles')
@@ -916,7 +933,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Add new job title
      * POST /api/ai/job-titles/add
      */
-    app.post('/api/ai/job-titles/add', async (req, res) => {
+    app.post('/api/ai/job-titles/add', auth, async (req, res) => {
         try {
             const { title } = req.body;
 
@@ -968,7 +985,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Get AI-powered skill suggestions for a job title
      * POST /api/ai/skills/suggest
      */
-    app.post('/api/ai/skills/suggest', async (req, res) => {
+    app.post('/api/ai/skills/suggest', auth, async (req, res) => {
         try {
             const { jobTitle } = req.body;
 
@@ -1030,7 +1047,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Generate AI-powered job description
      * POST /api/ai/job-description/generate
      */
-    app.post('/api/ai/job-description/generate', async (req, res) => {
+    app.post('/api/ai/job-description/generate', auth, async (req, res) => {
         try {
             const { jobTitle, company, skills, experience } = req.body;
 
@@ -1066,7 +1083,7 @@ export function setupAIRoutes(app, supabase, decrypt) {
      * Analyze live assessment recording/transcript
      * POST /api/analyze-live-assessment
      */
-    app.post('/api/analyze-live-assessment', async (req, res) => {
+    app.post('/api/analyze-live-assessment', auth, async (req, res) => {
         try {
             const { transcript, questionsAnswered, tabSwitches, totalDuration } = req.body;
 
@@ -1150,89 +1167,16 @@ export function setupAIRoutes(app, supabase, decrypt) {
 
 // ==================== HELPER FUNCTIONS ====================
 
-/**
- * Generate job description using AI (OpenAI/Deepseek)
- */
-async function generateJobDescriptionWithAI(jobTitle, company, skills, experience, apiKeys) {
+async function generateJobDescriptionWithAI(jobTitle, company, skills, experience, apiKeys, supabase = null) {
     try {
-        const skillsText = skills && skills.length > 0 ? skills.slice(0, 5).join(', ') : 'relevant skills';
-        const companyName = company || 'our company';
-        const expLevel = experience || 'appropriate';
+        const { generateAIResponse, getAIConfig } = await import('../agents/ai_utils.js');
+        const aiConfig = await getAIConfig(supabase);
 
-        const prompt = `Generate a professional, well-formatted job description for a ${jobTitle} position at ${companyName}. Requirements: ${expLevel} experience level, skills in ${skillsText}. 
+        const prompt = `Create a professional job description for ${jobTitle} at ${company}. Skills: ${skills.join(', ')}. Experience: ${experience}. Return in HTML format with proper tags.`;
+        const systemPrompt = 'You are an expert HR recruiter who writes compelling, professional job descriptions in HTML format.';
 
-Format the output as HTML with:
-- <h2> for main sections (Role Summary, Key Responsibilities, Requirements, What We Offer)
-- <h3> for subsections
-- <strong> for important terms
-- <ul><li> for bullet lists
-- Keep it detailed but scannable
-- Make it ATS-friendly
-
-Return ONLY the HTML formatted job description, no additional text.`;
-
-        // Try OpenAI first
-        if (apiKeys.openai) {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKeys.openai}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are an expert HR recruiter who writes compelling, professional job descriptions in HTML format.'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    temperature: 0.7,
-                    max_tokens: 800
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                return data.choices[0].message.content;
-            }
-        }
-
-        // Try Deepseek as fallback
-        if (apiKeys.deepseek) {
-            const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKeys.deepseek}`
-                },
-                body: JSON.stringify({
-                    model: 'deepseek-chat',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are an expert HR recruiter who writes compelling, professional job descriptions in HTML format.'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    temperature: 0.7
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                return data.choices[0].message.content;
-            }
-        }
-
-        return generateFallbackJobDescription(jobTitle, company, skills);
+        const response = await generateAIResponse(apiKeys, prompt, systemPrompt, aiConfig);
+        return response || generateFallbackJobDescription(jobTitle, company, skills);
 
     } catch (error) {
         console.error('AI job description generation error:', error);
@@ -1252,74 +1196,21 @@ function generateFallbackJobDescription(jobTitle, company, skills) {
 }
 
 /**
- * Generate skills using AI (OpenAI/Deepseek)
+ * Generate skills using AI
  */
-async function generateSkillsUsingAI(jobTitle, apiKeys) {
+async function generateSkillsUsingAI(jobTitle, apiKeys, supabase = null) {
     try {
-        // Try OpenAI first
-        if (apiKeys.openai) {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKeys.openai}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are a recruitment expert. Generate a list of 10-15 essential skills for the given job title. Return ONLY a JSON array of skill strings, no explanation.'
-                        },
-                        {
-                            role: 'user',
-                            content: `Generate essential skills for: ${jobTitle}`
-                        }
-                    ],
-                    temperature: 0.7,
-                    max_tokens: 200
-                })
-            });
+        const { generateAIResponse, getAIConfig } = await import('../agents/ai_utils.js');
+        const aiConfig = await getAIConfig(supabase);
 
-            if (response.ok) {
-                const data = await response.json();
-                const content = data.choices[0].message.content;
-                // Parse the JSON array from the response
-                const skills = JSON.parse(content);
-                return skills;
-            }
-        }
+        const prompt = `Generate essential skills for: ${jobTitle}`;
+        const systemPrompt = 'You are a recruitment expert. Generate a list of 10-15 essential skills for the given job title. Return ONLY a JSON array of skill strings, no explanation.';
 
-        // Try Deepseek as fallback
-        if (apiKeys.deepseek) {
-            const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKeys.deepseek}`
-                },
-                body: JSON.stringify({
-                    model: 'deepseek-chat',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are a recruitment expert. Generate a list of 10-15 essential skills for the given job title. Return ONLY a JSON array of skill strings, no explanation.'
-                        },
-                        {
-                            role: 'user',
-                            content: `Generate essential skills for: ${jobTitle}`
-                        }
-                    ],
-                    temperature: 0.7
-                })
-            });
+        const response = await generateAIResponse(apiKeys, prompt, systemPrompt, aiConfig);
 
-            if (response.ok) {
-                const data = await response.json();
-                const content = data.choices[0].message.content;
-                const skills = JSON.parse(content);
-                return skills;
-            }
+        if (response) {
+            const cleanRes = response.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(cleanRes);
         }
 
         return getFallbackSkills(jobTitle);

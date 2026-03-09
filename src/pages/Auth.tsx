@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { Mail, Lock, User, Briefcase, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import './Auth.css';
 
 const Auth = () => {
@@ -34,9 +35,23 @@ const Auth = () => {
         }
     };
 
-    const handleSocialLogin = (provider: 'google' | 'linkedin') => {
-        console.log(`Login with ${provider}`);
-        // Implement social login logic here
+    const handleSocialLogin = async (provider: 'google' | 'linkedin') => {
+        if (!supabase) {
+            console.error('Supabase client not initialized');
+            return;
+        }
+        try {
+            const supabaseProvider = provider === 'linkedin' ? 'linkedin_oidc' : provider;
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: supabaseProvider as any,
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                },
+            });
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error logging in:', error);
+        }
     };
 
     const containerVariants: Variants = {

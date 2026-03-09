@@ -31,6 +31,9 @@ dist-ssr
 server/local_db.json
 
 # Build artifacts
+# Build artifacts
 build/
 .next/
 out/
+*.exe
+server/.env

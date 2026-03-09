@@ -15,11 +15,16 @@ export class YouTubeAgent {
             this.oauth2Client = new google.auth.OAuth2(
                 this.decrypt(config.client_id),
                 this.decrypt(config.client_secret),
-                'http://localhost:3000/auth/callback' // Redirect URI
+                process.env.YOUTUBE_OAUTH_REDIRECT_URI || 'http://localhost:3000/api/youtube/oauth/callback' // Redirect URI
             );
 
+            const token = this.decrypt(config.access_token);
+            // Set as both access and refresh token to support both scenarios
+            // logic: If it's a Refresh Token, refreshAccessToken() will work. 
+            // If it's an Access Token, refreshAccessToken() will fail but we can still use it as access_token.
             this.oauth2Client.setCredentials({
-                refresh_token: this.decrypt(config.access_token) // We store the refresh token in the access_token field in the DB for simplicity based on the setup guide
+                access_token: token,
+                refresh_token: token
             });
         }
     }
@@ -34,8 +39,10 @@ export class YouTubeAgent {
             this.oauth2Client.setCredentials(credentials);
             return credentials;
         } catch (error) {
-            console.error('Error refreshing YouTube access token:', error);
-            throw error;
+            console.warn('Note: YouTube token refresh failed (using stored token as-is):', error.message);
+            // Do not throw. We fallback to using the stored token as an access_token.
+            // If it is invalid/expired, the API call itself will fail later with 401.
+            return null;
         }
     }
 

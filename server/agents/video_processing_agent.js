@@ -1,4 +1,18 @@
 import { generateAIResponse } from './ai_utils.js';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const execAsync = promisify(exec);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const TRANSCRIBE_SCRIPT = path.resolve(__dirname, '../services/transcribe.py');
+
+// Robust Python detection
+const LOCAL_PYTHON = "C:\\Users\\RaAz\\AppData\\Local\\Programs\\Python\\Python311\\python.exe";
+const PYTHON_CMD = fs.existsSync(LOCAL_PYTHON) ? `"${LOCAL_PYTHON}"` : "python";
 
 /**
  * Video Processing & Transcription Agent
@@ -110,57 +124,102 @@ async function extractVideoMetadata(videoUrl) {
  * Extract audio from video
  */
 async function extractAudio(videoUrl) {
-    // In production: Use FFmpeg to extract audio
-    // For now: Return mock audio data
-    return {
-        format: 'mp3',
-        sampleRate: 44100,
-        channels: 2,
-        duration: 120
-    };
+    console.log('[Video Processing Agent] Extracting audio from:', videoUrl);
+    try {
+        // Resolve absolute path for ffmpeg
+        const absoluteVideoPath = path.resolve(videoUrl);
+        const outputFilename = `audio-${Date.now()}.mp3`;
+        // Ensure uploads/temp dir exists
+        const outputDir = path.join(process.cwd(), 'uploads');
+        if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+        const outputPath = path.join(outputDir, outputFilename);
+
+        // Try to find ffmpeg
+        let ffmpegCmd = 'ffmpeg';
+        const localFfmpeg = path.join(process.env.LOCALAPPDATA || '', 'ffmpeg', 'bin', 'ffmpeg.exe');
+
+        if (fs.existsSync(localFfmpeg)) {
+            ffmpegCmd = `"${localFfmpeg}"`;
+        } else {
+            // Fallback: Check if we can get it from python imageio-ffmpeg
+            try {
+                const ffmpegPathScript = path.resolve(__dirname, '../services/get_ffmpeg_path.py');
+                const { stdout } = await execAsync(`${PYTHON_CMD} "${ffmpegPathScript}"`);
+                const pyFfmpegPath = stdout.trim();
+                if (pyFfmpegPath && fs.existsSync(pyFfmpegPath)) {
+                    ffmpegCmd = `"${pyFfmpegPath}"`;
+                    console.log('[Video Processing Agent] Found FFmpeg via Python:', ffmpegCmd);
+                }
+            } catch (e) {
+                console.warn('[Video Processing Agent] Could not find FFmpeg via Python helper:', e.message);
+            }
+        }
+
+        // Run extraction: -y (overwrite), -vn (no video), -acodec libmp3lame (mp3)
+        // Note: Using a timeout to prevent hanging
+        console.log(`[Video Processing Agent] Running: ${ffmpegCmd} -i "${absoluteVideoPath}" ...`);
+        await execAsync(`${ffmpegCmd} -i "${absoluteVideoPath}" -vn -acodec libmp3lame -q:a 2 -y "${outputPath}"`, { timeout: 60000 });
+
+        if (fs.existsSync(outputPath)) {
+            console.log('[Video Processing Agent] Audio extracted to:', outputPath);
+            return {
+                path: outputPath,
+                format: 'mp3',
+                sampleRate: 44100, // approximations
+                duration: 120
+            };
+        } else {
+            throw new Error("Output file not created");
+        }
+    } catch (error) {
+        console.error('[Video Processing Agent] Real audio extraction failed:', error);
+        throw new Error(`Audio extraction failed: ${error.message}. Ensure FFmpeg is installed locally.`);
+    }
 }
 
 /**
  * Transcribe audio to text using AI
  */
 async function transcribeAudio(audioData, apiKeys) {
-    console.log('[Video Processing Agent] Transcribing audio...');
+    console.log('[Video Processing Agent] Transcribing audio with local Whisper model...');
+
+    if (!audioData || !audioData.path || !fs.existsSync(audioData.path)) {
+        throw new Error("Invalid audio data for local transcription. Audio file missing.");
+    }
 
     try {
-        // In production: Use Whisper API, Google Speech-to-Text, or similar
-        // For now: Use AI to simulate transcription
+        console.log(`[Video Processing Agent] Running Whisper (small model) on: ${audioData.path}`);
 
-        const systemPrompt = `
-            You are a professional transcription service.
-            Generate a realistic interview transcription for a software engineering candidate.
-            The transcription should include:
-            - Professional responses to technical questions
-            - Some natural speech patterns (um, uh, pauses)
-            - Discussion of technical skills and experience
-            
-            Return ONLY the transcription text, no additional formatting.
-        `;
+        // Run python script: python transcribe.py <path> small
+        const cmd = `${PYTHON_CMD} "${TRANSCRIBE_SCRIPT}" "${audioData.path}" small`;
 
-        const aiResponse = await generateAIResponse(
-            apiKeys,
-            "Generate a realistic 2-minute interview transcription.",
-            systemPrompt,
-            'gemini'
-        );
+        // 10 minute timeout for slower local machines
+        const { stdout, stderr } = await execAsync(cmd, { timeout: 600000 });
 
-        return {
-            text: aiResponse || "I have extensive experience in React and Node.js. I've worked on several full-stack projects, um, including e-commerce platforms and real-time applications. I'm confident in my ability to, uh, contribute to your team and deliver high-quality solutions.",
-            confidence: 0.92,
-            language: 'en-US'
-        };
+        // Check for python script errors in stderr first
+        if (stderr && stderr.includes('Traceback')) {
+            throw new Error(`Python script error: ${stderr}`);
+        }
+
+        try {
+            const result = JSON.parse(stdout.trim());
+            if (result.error) throw new Error(result.error);
+
+            console.log('[Video Processing Agent] Local transcription successful');
+            return {
+                text: result.text,
+                confidence: 0.95,
+                language: result.language || 'en'
+            };
+        } catch (parseError) {
+            console.error('[Video Processing Agent] Failed to parse Whisper output:', stdout);
+            throw new Error(`Transcription output parsing failed: ${parseError.message}`);
+        }
 
     } catch (error) {
-        console.warn('[Video Processing Agent] Transcription failed, using fallback');
-        return {
-            text: "I have extensive experience in React and Node.js. I've worked on several full-stack projects.",
-            confidence: 0.85,
-            language: 'en-US'
-        };
+        console.error('[Video Processing Agent] Local transcription failed:', error);
+        throw new Error(`Local Whisper transcription failed: ${error.message}`);
     }
 }
 

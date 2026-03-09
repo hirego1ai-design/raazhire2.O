@@ -12,6 +12,8 @@ import { YouTubeLiveAgent } from '../agents/youtube_live_agent.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { authenticateUser } from '../middleware/auth.js';
+import { supabaseAdmin } from '../utils/supabaseClient.js';
 
 const router = express.Router();
 
@@ -35,11 +37,11 @@ const decrypt = (text) => {
 };
 
 // Helper to get API keys
-const getApiKey = async (provider, supabase) => {
+const getApiKey = async (provider) => {
     try {
-        // Try Supabase first
-        if (supabase) {
-            const { data } = await supabase
+        // Try Supabase Admin first (Bypass RLS)
+        if (supabaseAdmin) {
+            const { data } = await supabaseAdmin
                 .from('api_keys')
                 .select('api_key')
                 .eq('provider', provider)
@@ -201,7 +203,7 @@ router.get('/categories', async (req, res) => {
  * POST /api/upskill/enroll
  * Enroll user in a course
  */
-router.post('/enroll', async (req, res) => {
+router.post('/enroll', authenticateUser, async (req, res) => {
     try {
         const { user_id, course_id } = req.body;
         const supabase = req.supabase;
@@ -344,7 +346,7 @@ router.get('/lesson/:lessonId', async (req, res) => {
  * POST /api/upskill/lesson/complete
  * Mark a lesson as completed
  */
-router.post('/lesson/complete', async (req, res) => {
+router.post('/lesson/complete', authenticateUser, async (req, res) => {
     try {
         const { user_id, course_id, lesson_id, time_spent_minutes } = req.body;
         const supabase = req.supabase;
@@ -608,7 +610,7 @@ router.get('/assessments', async (req, res) => {
  * POST /api/upskill/assessment/submit
  * Submit assessment answers and get results
  */
-router.post('/assessment/submit', async (req, res) => {
+router.post('/assessment/submit', authenticateUser, async (req, res) => {
     try {
         const { user_id, assessment_id, course_id, answers } = req.body;
         const supabase = req.supabase;
@@ -693,7 +695,7 @@ router.get('/recommendations/:userId', async (req, res) => {
         const supabase = req.supabase; // Assuming middleware adds this
 
         // 1. Get DeepSeek API Key
-        const deepSeekKey = await getApiKey('deepseek', supabase);
+        const deepSeekKey = await getApiKey('deepseek');
         if (!deepSeekKey) {
             console.warn('DeepSeek API key not found, using fallback logic');
         }
@@ -753,7 +755,7 @@ router.get('/insights/:userId', async (req, res) => {
         const { userId } = req.params;
         const supabase = req.supabase;
 
-        const deepSeekKey = await getApiKey('deepseek', supabase);
+        const deepSeekKey = await getApiKey('deepseek');
         const agent = new DeepSeekAgent(deepSeekKey);
 
         // Mock progress data
@@ -879,187 +881,42 @@ router.get('/live-classes', async (req, res) => {
     }
 });
 
-// ==================== UPSKILL AUTH ROUTES ====================
-
-/**
- * POST /api/upskill/register
- * Register a new Upskill learner
- */
-router.post('/register', async (req, res) => {
-    try {
-        const { fullName, email, password, phone, careerGoal, experienceLevel, currentSkills, interests } = req.body;
-        const supabase = req.supabase;
-
-        // Validation
-        if (!fullName || !email || !password) {
-            return res.status(400).json({ error: 'Full name, email, and password are required' });
-        }
-
-        if (password.length < 8) {
-            return res.status(400).json({ error: 'Password must be at least 8 characters' });
-        }
-
-        // Email format validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({ error: 'Invalid email format' });
-        }
-
-        // Check if email already exists
-        const { data: existing, error: checkError } = await supabase
-            .from('upskill_learners')
-            .select('id')
-            .eq('email', email.toLowerCase().trim())
-            .single();
-
-        if (existing) {
-            return res.status(409).json({ error: 'An account with this email already exists. Please sign in.' });
-        }
-
-        // Hash the password using crypto (no bcrypt dependency needed)
-        const salt = crypto.randomBytes(16).toString('hex');
-        const passwordHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
-        const storedHash = `${salt}:${passwordHash}`;
-
-        // Insert learner
-        const { data: learner, error: insertError } = await supabase
-            .from('upskill_learners')
-            .insert([{
-                full_name: fullName.trim(),
-                email: email.toLowerCase().trim(),
-                password_hash: storedHash,
-                phone: phone || null,
-                career_goal: careerGoal || null,
-                experience_level: experienceLevel || 'beginner',
-                current_skills: currentSkills || [],
-                interests: interests || [],
-                is_active: true,
-                last_login: new Date().toISOString(),
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            }])
-            .select('id, full_name, email, experience_level, career_goal, current_skills, interests, created_at')
-            .single();
-
-        if (insertError) {
-            console.error('Registration error:', insertError);
-            throw insertError;
-        }
-
-        // Generate a simple session token
-        const sessionToken = crypto.randomBytes(32).toString('hex');
-
-        // Also initialize learning progress for this user
-        await supabase
-            .from('user_learning_progress')
-            .insert([{
-                user_id: learner.id,
-                total_courses_enrolled: 0,
-                courses_completed: 0,
-                total_lessons_completed: 0,
-                total_hours_learned: 0,
-                current_streak_days: 0,
-                longest_streak_days: 0,
-                certificates_earned: 0,
-                skills_acquired: currentSkills || [],
-                skill_scores: {},
-                xp_points: 0,
-                level: 'Beginner Learner'
-            }]);
-
-        console.log(`✅ New Upskill Learner Registered: ${learner.email}`);
-
-        res.status(201).json({
-            success: true,
-            message: 'Account created successfully!',
-            user: learner,
-            token: sessionToken
-        });
-    } catch (error) {
-        console.error('Registration failed:', error);
-        res.status(500).json({ error: 'Registration failed. Please try again.' });
-    }
-});
-
-/**
- * POST /api/upskill/login
- * Login an Upskill learner
- */
-router.post('/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const supabase = req.supabase;
-
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
-        }
-
-        // Fetch user by email
-        const { data: learner, error } = await supabase
-            .from('upskill_learners')
-            .select('*')
-            .eq('email', email.toLowerCase().trim())
-            .single();
-
-        if (error || !learner) {
-            return res.status(401).json({ error: 'Invalid email or password' });
-        }
-
-        if (!learner.is_active) {
-            return res.status(403).json({ error: 'Account is deactivated. Please contact support.' });
-        }
-
-        // Verify password
-        const [salt, storedHash] = learner.password_hash.split(':');
-        const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
-
-        if (hash !== storedHash) {
-            return res.status(401).json({ error: 'Invalid email or password' });
-        }
-
-        // Update last login
-        await supabase
-            .from('upskill_learners')
-            .update({ last_login: new Date().toISOString() })
-            .eq('id', learner.id);
-
-        // Generate session token
-        const sessionToken = crypto.randomBytes(32).toString('hex');
-
-        // Return user data (without password hash)
-        const { password_hash, ...safeUser } = learner;
-
-        console.log(`✅ Upskill Learner Logged In: ${learner.email}`);
-
-        res.json({
-            success: true,
-            message: 'Login successful!',
-            user: safeUser,
-            token: sessionToken
-        });
-    } catch (error) {
-        console.error('Login failed:', error);
-        res.status(500).json({ error: 'Login failed. Please try again.' });
-    }
-});
+// ==================== UPSKILL AUTH ====================
+// Authentication is now handled entirely by Supabase Auth on the frontend.
+// - Login:    supabase.auth.signInWithPassword() (UpskillLogin.tsx)
+// - Register: supabase.auth.signUp() (UpskillRegistration.tsx / UpskillRegister.tsx)
+// - OAuth:    supabase.auth.signInWithOAuth() (Google/LinkedIn buttons)
+// - Session:  Supabase JWT managed by @supabase/supabase-js SDK
+//
+// The upskill_learners table is used as a profile/metadata table only.
+// No password hashing or custom session tokens are generated here.
+// ========================================================
 
 /**
  * GET /api/upskill/profile/:userId
  * Get learner profile
  */
-router.get('/profile/:userId', async (req, res) => {
+router.get('/profile/:userId', authenticateUser, async (req, res) => {
     try {
         const { userId } = req.params;
         const supabase = req.supabase;
+        const requestingUser = req.user; // From authenticateUser middleware
 
+        // Security check: Ensure user can only access their own profile (unless admin)
+        // Skip check if no requestingUser (e.g. dev mode fallback) or if explicit admin
+        if (requestingUser && requestingUser.id !== userId && requestingUser.role !== 'admin') {
+            return res.status(403).json({ error: 'Unauthorized access to this profile' });
+        }
+
+        // Fetch learner profile using user_id (linked to auth.users)
         const { data: learner, error } = await supabase
             .from('upskill_learners')
-            .select('id, full_name, email, phone, avatar_url, career_goal, experience_level, current_skills, interests, linkedin_url, is_verified, created_at')
-            .eq('id', userId)
+            .select('id, user_id, full_name, email, phone, avatar_url, career_goal, experience_level, current_skills, interests, linkedin_url, is_verified, created_at')
+            .eq('user_id', userId)
             .single();
 
         if (error || !learner) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'User profile not found' });
         }
 
         // Also fetch learning progress
@@ -1104,7 +961,7 @@ router.get('/profile/:userId', async (req, res) => {
  * PUT /api/upskill/profile/:userId
  * Update learner profile
  */
-router.put('/profile/:userId', async (req, res) => {
+router.put('/profile/:userId', authenticateUser, async (req, res) => {
     try {
         const { userId } = req.params;
         const { fullName, phone, careerGoal, experienceLevel, currentSkills, interests, linkedinUrl } = req.body;

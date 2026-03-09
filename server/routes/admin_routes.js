@@ -17,23 +17,10 @@ import express from 'express';
 export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decrypt, readLocalDb, writeLocalDb) {
 
     // ==================== ADMIN AUTH ====================
-    app.post('/api/admin/login', (req, res) => {
-        const { email, password } = req.body;
-        console.log('Login attempt:', email, password); // Debug log
-
-        const cleanEmail = email ? email.trim() : '';
-        const cleanPass = password ? password.trim() : '';
-
-        // Simple hardcoded check for demo purposes
-        if (cleanEmail === 'admin@hirego.com' && cleanPass === 'admin123') {
-            return res.json({
-                success: true,
-                token: 'mock-admin-token-secure-123',
-                user: { name: 'Super Admin', email: cleanEmail, role: 'admin' }
-            });
-        }
-        res.status(401).json({ error: 'Invalid credentials' });
-    });
+    // ==================== ADMIN AUTH ====================
+    // Admin login is now handled extensively by Supabase Auth on the frontend (AdminLogin.tsx).
+    // The backend middleware (authenticateUser) validates the Supabase JWT for all protected admin routes.
+    // No explicit login endpoint is required backend-side.
 
     // ==================== DASHBOARD STATISTICS ====================
 
@@ -1039,7 +1026,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      */
     app.post('/api/admin/ai-config', authenticateUser, async (req, res) => {
         try {
-            const { primaryProvider, fallbackProvider, features, weights, thresholds } = req.body;
+            const { primaryProvider, fallbackProvider, features, weights, thresholds, enabled_providers } = req.body;
 
             const configData = {
                 primaryProvider,
@@ -1047,6 +1034,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
                 features,
                 weights,
                 thresholds,
+                enabled_providers: enabled_providers || ['gemini', 'gpt4', 'deepseek'], // Save toggled providers
                 updated_at: new Date().toISOString()
             };
 
@@ -1118,6 +1106,96 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
         } catch (error) {
             console.error('Error triggering retrain:', error);
             res.status(500).json({ error: 'Failed to trigger AI retraining' });
+        }
+    });
+
+    /**
+     * Test AI Provider Reachability
+     * POST /api/admin/test-provider
+     */
+    app.post('/api/admin/test-provider', authenticateUser, async (req, res) => {
+        try {
+            const { provider, prompt } = req.body;
+            console.log(`[Admin] Testing AI Provider: ${provider}`);
+
+            // Fetch keys
+            let apiKeys = {};
+            if (supabaseAdmin) {
+                const { data: keys } = await supabaseAdmin.from('api_keys').select('*');
+                if (keys) {
+                    keys.forEach(k => { if (k.api_key) apiKeys[k.provider] = decrypt(k.api_key); });
+                }
+            }
+
+            if (!apiKeys[provider]) {
+                return res.status(400).json({ success: false, error: `API Key for ${provider} is missing.` });
+            }
+
+            const { generateAIResponse, getAIConfig } = await import('../agents/ai_utils.js');
+            const aiConfig = await getAIConfig(req.supabase);
+
+            // Temporarily Force our provider as primary for testing
+            const testConfig = { ...aiConfig, primaryProvider: provider, enabled_providers: [provider] };
+
+            const startTime = Date.now();
+            const aiRes = await generateAIResponse(
+                apiKeys,
+                prompt || "Hello, are you functional? Respond with 'YES' if you are alive.",
+                "You are a system diagnostic tool.",
+                testConfig
+            );
+
+            res.json({
+                success: true,
+                provider,
+                response: aiRes,
+                timeTaken: Date.now() - startTime
+            });
+
+        } catch (error) {
+            console.error(`[Admin] AI Test Failed for ${req.body.provider}:`, error.message);
+            res.status(500).json({
+                success: false,
+                error: error.message,
+                details: "Check your API keys and provider status."
+            });
+        }
+    });
+
+    /**
+     * Get AI System Health
+     * GET /api/admin/ai-health
+     */
+    app.get('/api/admin/ai-health', authenticateUser, async (req, res) => {
+        try {
+            const { checkAIHealth, getAIConfig } = await import('../agents/ai_utils.js');
+
+            // 1. Fetch live keys
+            let apiKeys = {};
+            if (supabaseAdmin) {
+                const { data: keys } = await supabaseAdmin.from('api_keys').select('*');
+                if (keys) {
+                    keys.forEach(k => { if (k.api_key) apiKeys[k.provider] = decrypt(k.api_key); });
+                }
+            }
+
+            // 2. Fetch current config
+            const config = await getAIConfig(req.supabase);
+            const enabledProviders = config.enabled_providers || ['gemini', 'gpt4'];
+
+            // 3. Run health check
+            const healthStatus = await checkAIHealth(apiKeys, enabledProviders);
+
+            res.json({
+                success: true,
+                config,
+                health: healthStatus,
+                timestamp: new Date().toISOString()
+            });
+
+        } catch (error) {
+            console.error('Error in AI health check:', error);
+            res.status(500).json({ error: 'System health check failed', details: error.message });
         }
     });
 

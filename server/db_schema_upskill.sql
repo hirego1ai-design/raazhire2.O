@@ -6,9 +6,9 @@
 -- Upskill Learners (Separate Registration for Upskill Portal)
 CREATE TABLE IF NOT EXISTS upskill_learners (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
+    email VARCHAR(255) NOT NULL, -- unique constraint might conflict if multiple profiles allowed, but likely 1:1
     phone VARCHAR(20),
     avatar_url TEXT,
     career_goal VARCHAR(255),
@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS upskill_learners (
     is_active BOOLEAN DEFAULT true,
     last_login TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_upskill_learners_email ON upskill_learners(email);

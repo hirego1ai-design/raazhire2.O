@@ -15,8 +15,7 @@ import {
     TrendingUp,
     Users
 } from 'lucide-react';
-
-const API_BASE = 'http://localhost:3000/api/upskill';
+import { supabase } from '../../lib/supabase';
 
 const UpskillRegistration = () => {
     const navigate = useNavigate();
@@ -42,39 +41,92 @@ const UpskillRegistration = () => {
             return;
         }
 
+        if (!supabase) {
+            setError('Authentication service is not configured.');
+            setIsLoading(false);
+            return;
+        }
+
         try {
-            const response = await fetch(`${API_BASE}/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    fullName: formData.fullName,
-                    email: formData.email,
-                    password: formData.password
-                })
+            // 1. Sign up with Supabase Auth
+            const { data, error: signUpError } = await supabase.auth.signUp({
+                email: formData.email,
+                password: formData.password,
+                options: {
+                    data: {
+                        full_name: formData.fullName,
+                        role: 'candidate'
+                    }
+                }
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                setError(data.error || 'Registration failed. Please try again.');
+            if (signUpError) {
+                setError(signUpError.message || 'Registration failed. Please try again.');
                 setIsLoading(false);
                 return;
             }
 
-            // Save user data to localStorage
-            localStorage.setItem('upskill_user', JSON.stringify(data.user));
-            localStorage.setItem('upskill_token', data.token);
+            if (data.user) {
+                // 1. Create public.users entry (Master Auth Table)
+                await supabase.from('users').insert([{
+                    id: data.user.id,
+                    email: formData.email.toLowerCase().trim(),
+                    name: formData.fullName.trim(),
+                    role: 'candidate',
+                    status: 'Active',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }]);
 
-            setSuccess(true);
+                // 2. Create upskill_learners profile (no password_hash)
+                await supabase.from('upskill_learners').insert([{
+                    user_id: data.user.id,
+                    full_name: formData.fullName.trim(),
+                    email: formData.email.toLowerCase().trim(),
+                    experience_level: 'beginner',
+                    current_skills: [],
+                    interests: [],
+                    is_active: true,
+                    last_login: new Date().toISOString(),
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }]);
 
-            // Navigate to dashboard after short delay
-            setTimeout(() => {
-                navigate('/upskill/dashboard');
-            }, 1500);
+                // 3. Initialize learning progress
+                await supabase.from('user_learning_progress').insert([{
+                    user_id: data.user.id,
+                    total_courses_enrolled: 0,
+                    courses_completed: 0,
+                    total_lessons_completed: 0,
+                    total_hours_learned: 0,
+                    current_streak_days: 0,
+                    longest_streak_days: 0,
+                    certificates_earned: 0,
+                    skills_acquired: [],
+                    skill_scores: {},
+                    xp_points: 0,
+                    level: 'Beginner Learner'
+                }]);
 
-        } catch (err) {
+                // Store user metadata in localStorage for dashboard
+                localStorage.setItem('upskill_user', JSON.stringify({
+                    id: data.user.id,
+                    email: data.user.email,
+                    full_name: formData.fullName,
+                    role: 'candidate'
+                }));
+
+                setSuccess(true);
+
+                // Navigate to dashboard after short delay
+                setTimeout(() => {
+                    navigate('/upskill/dashboard');
+                }, 1500);
+            }
+
+        } catch (err: any) {
             console.error('Registration error:', err);
-            setError('Could not connect to server. Please ensure the backend is running.');
+            setError(err.message || 'Registration failed. Please try again.');
             setIsLoading(false);
         }
     };
@@ -241,12 +293,12 @@ const UpskillRegistration = () => {
                                     <div
                                         key={i}
                                         className={`h-1 flex-1 rounded-full transition-colors ${formData.password.length >= i * 3
-                                                ? formData.password.length >= 12
-                                                    ? 'bg-green-400'
-                                                    : formData.password.length >= 8
-                                                        ? 'bg-yellow-400'
-                                                        : 'bg-red-400'
-                                                : 'bg-gray-200'
+                                            ? formData.password.length >= 12
+                                                ? 'bg-green-400'
+                                                : formData.password.length >= 8
+                                                    ? 'bg-yellow-400'
+                                                    : 'bg-red-400'
+                                            : 'bg-gray-200'
                                             }`}
                                     />
                                 ))}
@@ -284,7 +336,27 @@ const UpskillRegistration = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <button className="flex items-center justify-center gap-2.5 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-700">
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                if (!supabase) {
+                                    setError('Google sign-in is not configured.');
+                                    return;
+                                }
+                                try {
+                                    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                                        provider: 'google',
+                                        options: {
+                                            redirectTo: `${window.location.origin}/auth/callback`,
+                                        },
+                                    });
+                                    if (oauthError) throw oauthError;
+                                } catch (err: any) {
+                                    setError(err.message || 'Google sign-in failed.');
+                                }
+                            }}
+                            className="flex items-center justify-center gap-2.5 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-700"
+                        >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -293,7 +365,27 @@ const UpskillRegistration = () => {
                             </svg>
                             Google
                         </button>
-                        <button className="flex items-center justify-center gap-2.5 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-700">
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                if (!supabase) {
+                                    setError('LinkedIn sign-in is not configured.');
+                                    return;
+                                }
+                                try {
+                                    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                                        provider: 'linkedin_oidc',
+                                        options: {
+                                            redirectTo: `${window.location.origin}/auth/callback`,
+                                        },
+                                    });
+                                    if (oauthError) throw oauthError;
+                                } catch (err: any) {
+                                    setError(err.message || 'LinkedIn sign-in failed.');
+                                }
+                            }}
+                            className="flex items-center justify-center gap-2.5 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-700"
+                        >
                             <Linkedin className="w-5 h-5 text-[#0A66C2]" fill="currentColor" />
                             LinkedIn
                         </button>

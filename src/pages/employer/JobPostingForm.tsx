@@ -7,34 +7,13 @@ import {
     CreditCard, Star, Award, X, Loader, GraduationCap
 } from "lucide-react";
 import SearchableMultiSelect from "../../components/SearchableMultiSelect";
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
-import '../../styles/quill-custom.css';
+import RichTextEditor from '../../components/RichTextEditor';
 import { endpoints, API_BASE_URL } from '../../lib/api';
 
 // HireGoAI – Premium Multi-Step Job Posting Wizard
 // Features: Step-by-step navigation, high-contrast inputs, professional UI, Plan Selection.
 
-// Rich Text Editor Configuration
-const quillModules = {
-    toolbar: [
-        [{ 'header': [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'color': [] }, { 'background': [] }],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        [{ 'indent': '-1' }, { 'indent': '+1' }],
-        ['link'],
-        ['clean']
-    ],
-};
-
-const quillFormats = [
-    'header',
-    'bold', 'italic', 'underline', 'strike',
-    'color', 'background',
-    'list', 'bullet', 'indent',
-    'link'
-];
+// Rich Text Editor is now using the secure built-in RichTextEditor component
 
 export default function JobPostingForm() {
     const navigate = useNavigate();
@@ -682,12 +661,9 @@ export default function JobPostingForm() {
                             <div className="relative bg-[var(--bg-surface)] rounded-2xl overflow-hidden border border-[var(--border-subtle)] shadow-sm focus-within:border-indigo-600/50 transition-all">
                                 <div className="p-1">
                                     <div className="rich-text-editor-wrapper bg-[var(--bg-page)]/50 rounded-xl">
-                                        <ReactQuill
-                                            theme="snow"
+                                        <RichTextEditor
                                             value={form.jobDescription}
                                             onChange={(content) => setForm(s => ({ ...s, jobDescription: content }))}
-                                            modules={quillModules}
-                                            formats={quillFormats}
                                             placeholder="Start typing or click 'AI Generate JD' to create a professional job description..."
                                             className="job-description-editor"
                                             style={{ height: '400px' }}

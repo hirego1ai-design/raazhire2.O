@@ -17,7 +17,7 @@ export class YouTubeLiveAgent {
             this.oauth2Client = new google.auth.OAuth2(
                 this.decrypt(config.client_id),
                 this.decrypt(config.client_secret),
-                'http://localhost:3000/auth/callback'
+                process.env.YOUTUBE_OAUTH_REDIRECT_URI || 'http://localhost:3000/api/youtube/oauth/callback'
             );
 
             this.oauth2Client.setCredentials({

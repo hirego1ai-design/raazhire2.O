@@ -79,6 +79,52 @@ const UpskillRegister: React.FC = () => {
             if (signUpError) throw signUpError;
 
             if (data.user) {
+                // 1. Create public.users entry (Master Auth Table)
+                await supabase.from('users').insert([{
+                    id: data.user.id,
+                    email: formData.email.toLowerCase().trim(),
+                    name: formData.fullName.trim(),
+                    role: 'candidate',
+                    status: 'Active',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }]);
+
+                // 2. Create upskill_learners profile
+                const profileData = role === 'fresher'
+                    ? {
+                        experience_level: 'beginner',
+                        career_goal: formData.targetIndustry,
+                        current_skills: [formData.education], // Storing education as a skill/background for now
+                        interests: [formData.desiredSkill]
+                    }
+                    : {
+                        experience_level: 'intermediate', // Default for pros
+                        career_goal: formData.upgradeSkill,
+                        current_skills: [formData.currentRole],
+                        interests: [formData.upgradeSkill]
+                    };
+
+                await supabase.from('upskill_learners').insert([{
+                    user_id: data.user.id,
+                    full_name: formData.fullName.trim(),
+                    email: formData.email.toLowerCase().trim(),
+                    is_active: true,
+                    last_login: new Date().toISOString(),
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    ...profileData
+                }]);
+
+                // 3. Initialize learning progress
+                await supabase.from('user_learning_progress').insert([{
+                    user_id: data.user.id,
+                    level: 'Beginner Learner',
+                    xp_points: 0,
+                    total_courses_enrolled: 0,
+                    courses_completed: 0
+                }]);
+
                 // Success! Redirect to Upskill Dashboard
                 // In a real app, you might want to create a specific record in your 'candidates' table here too
                 navigate('/upskill/dashboard');

@@ -70,35 +70,37 @@ const CandidateAIReport: React.FC<AIReportProps> = ({ data }) => {
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="col-span-1 md:col-span-2 saas-card p-6 h-[280px]"
+                    className="col-span-1 md:col-span-2 saas-card p-6 min-h-[320px] flex flex-col"
                 >
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-2 mb-4 shrink-0">
                         <Target size={18} className="text-[var(--primary)]" />
                         <h3 className="font-bold text-sm">Competency DNA</h3>
                     </div>
-                    <ResponsiveContainer width="100%" height="80%">
-                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                            <PolarGrid stroke="var(--border-subtle)" />
-                            <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }} />
-                            <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-                            <Radar
-                                name="Score"
-                                dataKey="A"
-                                stroke="var(--primary)"
-                                strokeWidth={3}
-                                fill="var(--primary)"
-                                fillOpacity={0.15}
-                            />
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: 'var(--bg-surface)',
-                                    borderColor: 'var(--border-subtle)',
-                                    borderRadius: '12px',
-                                    fontSize: '12px'
-                                }}
-                            />
-                        </RadarChart>
-                    </ResponsiveContainer>
+                    <div className="flex-1 w-full min-h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                                <PolarGrid stroke="var(--border-subtle)" />
+                                <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }} />
+                                <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+                                <Radar
+                                    name="Score"
+                                    dataKey="A"
+                                    stroke="var(--primary)"
+                                    strokeWidth={3}
+                                    fill="var(--primary)"
+                                    fillOpacity={0.15}
+                                />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: 'var(--bg-surface)',
+                                        borderColor: 'var(--border-subtle)',
+                                        borderRadius: '12px',
+                                        fontSize: '12px'
+                                    }}
+                                />
+                            </RadarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </motion.div>
             </div>
 

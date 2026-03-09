@@ -14,13 +14,46 @@ import {
     ChevronDown,
     LayoutGrid,
     List,
-    Plus
+    Plus,
+    Loader2,
+    Check
 } from 'lucide-react';
-import { endpoints } from '../../lib/api';
+import { endpoints, getAuthHeaders, API_BASE_URL } from '../../lib/api';
 
 const Jobs: React.FC = () => {
     const [jobs, setJobs] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [applyingId, setApplyingId] = useState<number | null>(null);
+    const [appliedIds, setAppliedIds] = useState<Set<number>>(new Set());
+    const navigate = useNavigate();
+
+    const handleApply = async (jobId: number) => {
+        setApplyingId(jobId);
+        try {
+            const response = await fetch(endpoints.applications, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ job_id: jobId })
+            });
+            const data = await response.json();
+            if (response.ok && data.success) {
+                setAppliedIds(prev => new Set(prev).add(jobId));
+            } else if (response.status === 409) {
+                // Already applied
+                setAppliedIds(prev => new Set(prev).add(jobId));
+            } else if (response.status === 401) {
+                alert('Please sign in to apply for jobs.');
+                navigate('/auth');
+            } else {
+                alert(data.error || 'Failed to apply. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error applying:', error);
+            alert('Network error. Please try again.');
+        } finally {
+            setApplyingId(null);
+        }
+    };
 
     useEffect(() => {
         const fetchJobs = async () => {
@@ -148,7 +181,23 @@ const Jobs: React.FC = () => {
                                                 </span>
                                             )}
                                         </div>
-                                        <button className="btn-saas-primary text-xs px-6">Apply Now</button>
+                                        {appliedIds.has(job.id) ? (
+                                            <span className="inline-flex items-center gap-1.5 text-xs px-6 py-2 rounded-xl bg-emerald-50 text-emerald-600 font-bold">
+                                                <Check size={14} /> Applied
+                                            </span>
+                                        ) : (
+                                            <button
+                                                className="btn-saas-primary text-xs px-6"
+                                                onClick={() => handleApply(job.id)}
+                                                disabled={applyingId === job.id}
+                                            >
+                                                {applyingId === job.id ? (
+                                                    <><Loader2 size={14} className="animate-spin mr-1" /> Applying...</>
+                                                ) : (
+                                                    'Apply Now'
+                                                )}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

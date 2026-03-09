@@ -11,8 +11,7 @@ import {
     AlertCircle,
     CheckCircle2
 } from 'lucide-react';
-
-const API_BASE = 'http://localhost:3000/api/upskill';
+import { supabase } from '../../lib/supabase';
 
 const UpskillLogin = () => {
     const navigate = useNavigate();
@@ -30,38 +29,45 @@ const UpskillLogin = () => {
         setError('');
         setIsLoading(true);
 
+        if (!supabase) {
+            setError('Authentication service is not configured.');
+            setIsLoading(false);
+            return;
+        }
+
         try {
-            const response = await fetch(`${API_BASE}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: formData.email,
-                    password: formData.password
-                })
+            // Sign in via Supabase Auth
+            const { data, error: signInError } = await supabase.auth.signInWithPassword({
+                email: formData.email,
+                password: formData.password
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                setError(data.error || 'Login failed. Please check your credentials.');
+            if (signInError) {
+                setError(signInError.message || 'Login failed. Please check your credentials.');
                 setIsLoading(false);
                 return;
             }
 
-            // Save user data to localStorage
-            localStorage.setItem('upskill_user', JSON.stringify(data.user));
-            localStorage.setItem('upskill_token', data.token);
+            if (data.user) {
+                // Store user metadata in localStorage for dashboard
+                localStorage.setItem('upskill_user', JSON.stringify({
+                    id: data.user.id,
+                    email: data.user.email,
+                    full_name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || '',
+                    role: data.user.user_metadata?.role || 'candidate'
+                }));
 
-            setSuccess(true);
+                setSuccess(true);
 
-            // Navigate to dashboard
-            setTimeout(() => {
-                navigate('/upskill/dashboard');
-            }, 1000);
+                // Navigate to dashboard
+                setTimeout(() => {
+                    navigate('/upskill/dashboard');
+                }, 1000);
+            }
 
-        } catch (err) {
+        } catch (err: any) {
             console.error('Login error:', err);
-            setError('Could not connect to server. Please ensure the backend is running.');
+            setError(err.message || 'Login failed. Please try again.');
             setIsLoading(false);
         }
     };
@@ -220,7 +226,27 @@ const UpskillLogin = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <button className="flex items-center justify-center gap-2.5 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-700">
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                if (!supabase) {
+                                    setError('Google sign-in is not configured.');
+                                    return;
+                                }
+                                try {
+                                    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                                        provider: 'google',
+                                        options: {
+                                            redirectTo: `${window.location.origin}/auth/callback`,
+                                        },
+                                    });
+                                    if (oauthError) throw oauthError;
+                                } catch (err: any) {
+                                    setError(err.message || 'Google sign-in failed.');
+                                }
+                            }}
+                            className="flex items-center justify-center gap-2.5 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-700"
+                        >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -229,7 +255,27 @@ const UpskillLogin = () => {
                             </svg>
                             Google
                         </button>
-                        <button className="flex items-center justify-center gap-2.5 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-700">
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                if (!supabase) {
+                                    setError('LinkedIn sign-in is not configured.');
+                                    return;
+                                }
+                                try {
+                                    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                                        provider: 'linkedin_oidc',
+                                        options: {
+                                            redirectTo: `${window.location.origin}/auth/callback`,
+                                        },
+                                    });
+                                    if (oauthError) throw oauthError;
+                                } catch (err: any) {
+                                    setError(err.message || 'LinkedIn sign-in failed.');
+                                }
+                            }}
+                            className="flex items-center justify-center gap-2.5 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-700"
+                        >
                             <Linkedin className="w-5 h-5 text-[#0A66C2]" fill="currentColor" />
                             LinkedIn
                         </button>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, MapPin, Briefcase, ArrowRight, Users, ChevronRight } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, MapPin, Briefcase, ArrowRight, Users, ChevronRight, Brain, ShieldAlert } from 'lucide-react';
 import { endpoints, API_BASE_URL, getAuthHeaders } from '../../lib/api';
 import InterviewCard from '../../components/InterviewCard';
 
@@ -22,9 +22,10 @@ interface Interview {
 const CandidateDashboard: React.FC = () => {
     const [interviews, setInterviews] = React.useState<any[]>([]);
     const [recommendedJobs, setRecommendedJobs] = React.useState<any[]>([]);
+    const [fraudAlert, setFraudAlert] = React.useState(false);
     const [stats, setStats] = React.useState([
-        { label: 'Profile Completion', value: '85%', icon: TrendingUp, color: 'text-neon-cyan' },
-        { label: 'Pending Assessments', value: '0', icon: Clock, color: 'text-neon-purple' },
+        { label: 'Profile Completion', value: '0%', icon: TrendingUp, color: 'text-neon-cyan' },
+        { label: 'AI Score', value: 'N/A', icon: Brain, color: 'text-neon-purple' },
         { label: 'Jobs Applied', value: '0', icon: CheckCircle, color: 'text-green-400' },
         { label: 'Interviews', value: '0', icon: AlertCircle, color: 'text-neon-pink' },
     ]);
@@ -47,11 +48,24 @@ const CandidateDashboard: React.FC = () => {
                 if (statsData.success) {
                     const s = statsData.stats;
                     setStats(prev => prev.map(stat => {
-                        if (stat.label === 'Pending Assessments') return { ...stat, value: (s.assessments || 0).toString() };
                         if (stat.label === 'Jobs Applied') return { ...stat, value: (s.totalApplications || 0).toString() };
                         if (stat.label === 'Interviews') return { ...stat, value: (s.interviewsScheduled || 0).toString() };
                         return stat;
                     }));
+                }
+
+                // Fetch real profile data for AI scores
+                const profileResponse = await fetch(endpoints.profile, { headers: getAuthHeaders() });
+                const profileData = await profileResponse.json();
+
+                if (profileData.success && profileData.user) {
+                    const p = profileData.user;
+                    setStats(prev => prev.map(stat => {
+                        if (stat.label === 'Profile Completion') return { ...stat, value: `${p.profile_completeness_score || 0}%` };
+                        if (stat.label === 'AI Score') return { ...stat, value: p.ai_overall_score ? `${p.ai_overall_score}/100` : 'N/A' };
+                        return stat;
+                    }));
+                    if (p.fraud_detection_flag) setFraudAlert(true);
                 }
 
                 if (interviewsData.success && interviewsData.interviews && interviewsData.interviews.length > 0) {
@@ -95,6 +109,24 @@ const CandidateDashboard: React.FC = () => {
                     Your AI-powered career journey is on track.
                 </p>
             </motion.div>
+
+            {/* Fraud Alert Banner */}
+            {fraudAlert && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="p-4 rounded-xl bg-red-500/10 border border-red-500/50 flex items-start space-x-4"
+                >
+                    <ShieldAlert className="text-red-500 shrink-0" />
+                    <div>
+                        <h3 className="font-bold text-red-500">Account Flagged for Review</h3>
+                        <p className="text-sm text-red-200/70">
+                            Our AI security system has detected potential inconsistencies in your profile or activity.
+                            Your account is under review. This may affect your visibility to employers.
+                        </p>
+                    </div>
+                </motion.div>
+            )}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

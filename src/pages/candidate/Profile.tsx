@@ -4,7 +4,7 @@ import {
     User, Mail, Phone, MapPin, Briefcase, GraduationCap, Folder,
     Share2, Edit2, Camera, UserPlus, MessageSquare, Trophy, Star,
     Zap, Shield, Check, Github, Linkedin, Globe, Twitter, Play, Clock,
-    Video, Users, Award, TrendingUp, ChevronRight, Eye
+    Video, Users, Award, TrendingUp, ChevronRight, Eye, Brain, ShieldAlert
 } from 'lucide-react';
 import { endpoints } from '../../lib/api';
 
@@ -21,8 +21,18 @@ const Profile: React.FC = () => {
         return `https://www.youtube.com/embed/${id}?modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&controls=1`;
     };
 
-    // Mock completeness
-    const completeness = 85;
+    // Dynamic completeness
+    const completeness = (() => {
+        if (!profile) return 0;
+        let score = 0;
+        if (profile.name) score += 20;
+        if (profile.bio) score += 15;
+        if (profile.experience && profile.experience.length > 0) score += 20;
+        if (profile.skills && profile.skills.length > 0) score += 15;
+        if (profile.video_resume_url) score += 20;
+        if (profile.profile?.title) score += 10;
+        return Math.min(100, score);
+    })();
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -111,6 +121,20 @@ const Profile: React.FC = () => {
                 </div>
             </div>
 
+            {/* Fraud Alert Banner */}
+            {UserData.fraud_detection_flag && (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/50 flex items-start space-x-4">
+                    <ShieldAlert className="text-red-600 shrink-0" size={24} />
+                    <div>
+                        <h3 className="font-bold text-red-700">Account Flagged for Review</h3>
+                        <p className="text-sm text-red-600/80">
+                            Our AI security system has detected potential inconsistencies in your profile or activity.
+                            Your account is under review. This may affect your visibility to employers.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Left Column: Stats & Progress */}
                 {!isEmployerView && (
@@ -147,7 +171,7 @@ const Profile: React.FC = () => {
                                         preload="metadata"
                                     >
                                         <source
-                                            src={UserData.video_resume_url || "https://www.w3schools.com/html/mov_bbb.mp4"}
+                                            src={UserData.video_resume_url || ''}
                                             type="video/mp4"
                                         />
                                         Your browser does not support video.
@@ -174,16 +198,49 @@ const Profile: React.FC = () => {
                             </div>
 
                             {/* AI Analysis Stats */}
-                            <div className="p-4 bg-gray-50 grid grid-cols-2 gap-3">
+                            <div className="p-4 bg-gray-50 grid grid-cols-3 gap-2">
                                 <div className="text-center p-2 bg-white rounded-lg border border-[var(--border-subtle)]">
                                     <p className="text-[8px] font-black uppercase text-[var(--text-muted)]">Confidence</p>
-                                    <p className="text-lg font-black text-indigo-600">92%</p>
+                                    <p className="text-sm font-black text-indigo-600">{UserData.confidence_score ? `${UserData.confidence_score}%` : '—'}</p>
                                 </div>
                                 <div className="text-center p-2 bg-white rounded-lg border border-[var(--border-subtle)]">
-                                    <p className="text-[8px] font-black uppercase text-[var(--text-muted)]">Communication</p>
-                                    <p className="text-lg font-black text-emerald-600">A+</p>
+                                    <p className="text-[8px] font-black uppercase text-[var(--text-muted)]">Comm.</p>
+                                    <p className="text-sm font-black text-emerald-600">{UserData.communication_score ? `${UserData.communication_score}%` : '—'}</p>
+                                </div>
+                                <div className="text-center p-2 bg-white rounded-lg border border-[var(--border-subtle)]">
+                                    <p className="text-[8px] font-black uppercase text-[var(--text-muted)]">Knowledge</p>
+                                    <p className="text-sm font-black text-purple-600">{UserData.knowledge_score ? `${UserData.knowledge_score}%` : '—'}</p>
                                 </div>
                             </div>
+
+                            {/* AI Insights Section (New) */}
+                            {(UserData.ai_strengths?.length > 0 || UserData.ai_improvement_suggestions?.length > 0) && (
+                                <div className="p-4 border-t border-[var(--border-subtle)] bg-indigo-50/30 space-y-3">
+                                    <h4 className="text-xs font-bold text-indigo-900 flex items-center gap-2">
+                                        <Brain size={14} className="text-indigo-600" /> AI Insights
+                                    </h4>
+                                    {UserData.ai_strengths?.length > 0 && (
+                                        <div>
+                                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Strengths</span>
+                                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                                {UserData.ai_strengths.slice(0, 3).map((s: string) => (
+                                                    <span key={s} className="px-2 py-0.5 bg-white border border-emerald-100 text-[10px] font-medium text-emerald-700 rounded-full shadow-sm">{s}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {UserData.ai_improvement_suggestions?.length > 0 && (
+                                        <div className="pt-2 border-t border-indigo-100/50">
+                                            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">To Improve</span>
+                                            <ul className="list-disc list-inside text-[10px] text-gray-600 mt-1 space-y-1">
+                                                {UserData.ai_improvement_suggestions.slice(0, 2).map((s: string) => (
+                                                    <li key={s} className="line-clamp-1" title={s}>{s}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div className="saas-card p-6">
@@ -255,7 +312,7 @@ const Profile: React.FC = () => {
                                         preload="metadata"
                                     >
                                         <source
-                                            src={UserData.video_resume_url || "https://www.w3schools.com/html/mov_bbb.mp4"}
+                                            src={UserData.video_resume_url || ''}
                                             type="video/mp4"
                                         />
                                     </video>
@@ -265,19 +322,19 @@ const Profile: React.FC = () => {
                             <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 grid grid-cols-4 gap-2">
                                 <div className="text-center p-2 bg-white rounded-lg border border-[var(--border-subtle)]">
                                     <p className="text-[7px] font-black uppercase text-[var(--text-muted)]">Confidence</p>
-                                    <p className="text-base font-black text-indigo-600">92%</p>
+                                    <p className="text-base font-black text-indigo-600">{UserData.video_analysis?.confidence || '—'}</p>
                                 </div>
                                 <div className="text-center p-2 bg-white rounded-lg border border-[var(--border-subtle)]">
                                     <p className="text-[7px] font-black uppercase text-[var(--text-muted)]">Comm.</p>
-                                    <p className="text-base font-black text-emerald-600">A+</p>
+                                    <p className="text-base font-black text-emerald-600">{UserData.video_analysis?.communication || '—'}</p>
                                 </div>
                                 <div className="text-center p-2 bg-white rounded-lg border border-[var(--border-subtle)]">
                                     <p className="text-[7px] font-black uppercase text-[var(--text-muted)]">English</p>
-                                    <p className="text-base font-black text-purple-600">Pro</p>
+                                    <p className="text-base font-black text-purple-600">{UserData.video_analysis?.english || '—'}</p>
                                 </div>
                                 <div className="text-center p-2 bg-white rounded-lg border border-[var(--border-subtle)]">
                                     <p className="text-[7px] font-black uppercase text-[var(--text-muted)]">Body</p>
-                                    <p className="text-base font-black text-amber-600">88%</p>
+                                    <p className="text-base font-black text-amber-600">{UserData.video_analysis?.body || '—'}</p>
                                 </div>
                             </div>
                         </div>
