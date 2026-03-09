@@ -270,7 +270,7 @@ const Assessment: React.FC = () => {
                 const headers: Record<string, string> = {};
                 if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
 
-                const response = await fetch(`${endpoints.test.replace('/test', '')}/video-resume/upload`, {
+                const response = await fetch(endpoints.videoResume.upload, {
                     method: 'POST',
                     headers: headers,
                     body: formData

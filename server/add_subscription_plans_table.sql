@@ -156,3 +156,4 @@ CREATE POLICY "Public Access api_keys" ON api_keys FOR ALL USING (true) WITH CHE
 -- 7. system_logs            - Admin system logs
 -- 8. api_keys               - AI provider API keys
 -- ============================================================
+  

@@ -11,6 +11,27 @@
  */
 
 import express from 'express';
+import {
+    onApplicationSubmitted,
+    onJobCreated,
+    onCandidateProfileCreated,
+    logAudit
+} from '../engine/workflow_engine.js';
+
+// --- Phase 2: Role-based middleware ---
+function requireEmployer(req, res, next) {
+    if (!req.user || req.user.role !== 'employer') {
+        return res.status(403).json({ error: 'Employer access required' });
+    }
+    next();
+}
+
+function requireCandidate(req, res, next) {
+    if (!req.user || req.user.role !== 'candidate') {
+        return res.status(403).json({ error: 'Candidate access required' });
+    }
+    next();
+}
 
 export function setupPortalRoutes(app, supabase, authenticateUser) {
 
@@ -206,6 +227,14 @@ export function setupPortalRoutes(app, supabase, authenticateUser) {
                     .eq('user_id', employer_id)
                     .then(() => { });
             });
+
+            // [PHASE 6] Trigger AI screening criteria generation (async, non-blocking)
+            if (data && data[0]) {
+                onJobCreated(supabase, data[0].id, null).catch(e =>
+                    console.error('[Workflow] Job AI enhancement failed:', e.message)
+                );
+                await logAudit(supabase, 'employer', employer_id, 'job_created', 'employer_job_posts', data[0].id);
+            }
 
             res.json({
                 success: true,
@@ -531,6 +560,14 @@ export function setupPortalRoutes(app, supabase, authenticateUser) {
                 metadata: { job_title: job.title }
             }]).catch(() => { });
 
+            // [PHASE 5] Trigger autonomous screening pipeline (async, non-blocking)
+            if (data && data[0]) {
+                onApplicationSubmitted(supabase, data[0].id, null).catch(e =>
+                    console.error('[Workflow] Application automation failed:', e.message)
+                );
+                await logAudit(supabase, 'candidate', candidate_id, 'application_submitted', 'job_applications', data[0].id);
+            }
+
             res.json({
                 success: true,
                 application: data[0]
@@ -590,7 +627,18 @@ export function setupPortalRoutes(app, supabase, authenticateUser) {
                 video_resume_url: candidate?.video_resume_url || user.video_resume_url, // assuming consistent naming
                 experience: experience,
                 skills: skills ? skills.map(s => s.skill) : [],
-                skills_detailed: skills
+                skills_detailed: skills,
+                // [PHASE 7] New AI & Scoring Fields
+                ai_overall_score: candidate?.ai_overall_score || 0,
+                interview_readiness_score: candidate?.interview_readiness_score || 0,
+                profile_completeness_score: candidate?.profile_completeness_score || 0,
+                fraud_detection_flag: candidate?.fraud_detection_flag || false,
+                ai_strengths: candidate?.ai_strengths || [],
+                ai_weaknesses: candidate?.ai_weaknesses || [],
+                ai_improvement_suggestions: candidate?.ai_improvement_suggestions || [],
+                communication_score: candidate?.communication_score || 0,
+                skill_match_score: candidate?.skill_match_score || 0,
+                ai_evaluation_status: candidate?.ai_evaluation_status || 'pending'
             };
 
             res.json({
@@ -1237,12 +1285,12 @@ export function setupPortalRoutes(app, supabase, authenticateUser) {
             const candidate_id = req.user.id;
 
             const { count: totalApplications } = await supabase
-                .from('applications')
+                .from('job_applications')
                 .select('*', { count: 'exact', head: true })
                 .eq('candidate_id', candidate_id);
 
             const { count: shortlisted } = await supabase
-                .from('applications')
+                .from('job_applications')
                 .select('*', { count: 'exact', head: true })
                 .eq('candidate_id', candidate_id)
                 .eq('status', 'shortlisted');
@@ -1254,22 +1302,28 @@ export function setupPortalRoutes(app, supabase, authenticateUser) {
                 .eq('status', 'scheduled');
 
             const { count: offers } = await supabase
-                .from('applications')
+                .from('job_applications')
                 .select('*', { count: 'exact', head: true })
                 .eq('candidate_id', candidate_id)
                 .eq('status', 'offered');
 
             const { count: rejected } = await supabase
-                .from('applications')
+                .from('job_applications')
                 .select('*', { count: 'exact', head: true })
                 .eq('candidate_id', candidate_id)
                 .eq('status', 'rejected');
 
-            // Get assessments count
-            const { count: assessments } = await supabase
-                .from('assessment_results')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', candidate_id);
+            // Get assessments count (graceful if table doesn't exist yet)
+            let assessments = 0;
+            try {
+                const { count: assessmentCount } = await supabase
+                    .from('assessment_results')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', candidate_id);
+                assessments = assessmentCount || 0;
+            } catch (e) {
+                console.warn('assessment_results table may not exist:', e.message);
+            }
 
             res.json({
                 success: true,
@@ -1288,69 +1342,7 @@ export function setupPortalRoutes(app, supabase, authenticateUser) {
         }
     });
 
-    // ==================== PROFILE MANAGEMENT ====================
 
-    /**
-     * Get user profile
-     * GET /api/profile
-     */
-    app.get('/api/profile', authenticateUser, async (req, res) => {
-        try {
-            const user_id = req.user.id;
-
-            const { data: user, error: userError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', user_id)
-                .single();
-
-            if (userError) throw userError;
-
-            // Get extended profile
-            const { data: profile } = await supabase
-                .from('user_profiles')
-                .select('*')
-                .eq('user_id', user_id)
-                .single();
-
-            let roleData = {};
-
-            if (user.role === 'candidate') {
-                const { data: candidate } = await supabase
-                    .from('candidates')
-                    .select('*')
-                    .eq('user_id', user_id)
-                    .single();
-                roleData = candidate || {};
-            } else if (user.role === 'employer') {
-                const { data: employer } = await supabase
-                    .from('employers')
-                    .select('*')
-                    .eq('user_id', user_id)
-                    .single();
-                roleData = employer || {};
-            } else if (user.role === 'educator') {
-                const { data: educator } = await supabase
-                    .from('educators')
-                    .select('*')
-                    .eq('user_id', user_id)
-                    .single();
-                roleData = educator || {};
-            }
-
-            res.json({
-                success: true,
-                user: {
-                    ...user,
-                    profile: profile || {},
-                    role_data: roleData
-                }
-            });
-        } catch (error) {
-            console.error('Error fetching profile:', error);
-            res.status(500).json({ error: 'Failed to fetch profile' });
-        }
-    });
 
     /**
      * Update user profile

@@ -2,6 +2,7 @@ import express from 'express';
 import Stripe from 'stripe';
 import Razorpay from 'razorpay';
 import { createClient } from '@supabase/supabase-js';
+import { atomicWalletTransaction, getWalletBalance, getTransactionHistory } from '../services/wallet_service.js';
 
 export function setupPaymentRoutes(app, supabase, authenticateUser) {
 
@@ -48,6 +49,7 @@ export function setupPaymentRoutes(app, supabase, authenticateUser) {
     });
 
     // ==================== WALLET & CREDITS ====================
+    // SECURITY FIX: Using atomic wallet transactions to prevent race conditions
 
     /**
      * Get wallet balance
@@ -55,35 +57,14 @@ export function setupPaymentRoutes(app, supabase, authenticateUser) {
      */
     app.get('/api/wallet', authenticateUser, async (req, res) => {
         try {
-            // First try getting from dedicated wallet table
-            let { data: wallet, error } = await supabase
-                .from('wallet')
-                .select('balance, currency')
-                .eq('employer_id', req.user.id)
-                .single();
-
-            if (!wallet) {
-                // If no wallet exists, check user table or create one
-                const { data: user } = await supabase
-                    .from('users')
-                    .select('wallet_balance')
-                    .eq('id', req.user.id)
-                    .single();
-
-                // Return user balance or 0
-                return res.json({
-                    success: true,
-                    balance: user?.wallet_balance || 0,
-                    currency: 'INR'
-                });
-            }
+            const result = await getWalletBalance(req.user.id);
 
             res.json({
                 success: true,
-                balance: wallet.balance,
-                currency: wallet.currency
+                balance: result.balance,
+                currency: result.currency,
+                hasWallet: result.hasWallet
             });
-
         } catch (error) {
             console.error('Error fetching wallet:', error);
             res.status(500).json({ error: 'Failed to fetch wallet balance' });
@@ -91,85 +72,83 @@ export function setupPaymentRoutes(app, supabase, authenticateUser) {
     });
 
     /**
-     * Initialize Add Money Transaction (Razorpay)
+     * Get transaction history
+     * GET /api/wallet/transactions
+     */
+    app.get('/api/wallet/transactions', authenticateUser, async (req, res) => {
+        try {
+            const { limit = 50 } = req.query;
+            const result = await getTransactionHistory(req.user.id, parseInt(limit));
+
+            res.json({
+                success: true,
+                transactions: result.transactions,
+                count: result.count
+            });
+        } catch (error) {
+            console.error('Error fetching transactions:', error);
+            res.status(500).json({ error: 'Failed to fetch transaction history' });
+        }
+    });
+
+    /**
+     * Add money to wallet (Razorpay)
      * POST /api/wallet/add
+     * SECURITY FIX: Using atomic transactions to prevent race conditions
      */
     app.post('/api/wallet/add', authenticateUser, async (req, res) => {
         try {
             const { amount, currency = 'INR' } = req.body;
 
+            // Validate input
             if (!amount || amount <= 0) {
-                return res.status(400).json({ error: 'Invalid amount' });
+                return res.status(400).json({ error: 'Valid amount is required' });
             }
 
-            // Create Razorpay Order
-            if (razorpay) {
-                const options = {
-                    amount: amount * 100, // amount in paisa
-                    currency,
-                    receipt: `order_${Date.now()}`,
-                    payment_capture: 1
-                };
-                const order = await razorpay.orders.create(options);
+            if (amount < 10) {
+                return res.status(400).json({ error: 'Minimum amount is ₹10' });
+            }
 
-                // Log initiated transaction
-                await supabase.from('wallet_transactions').insert([{
-                    employer_id: req.user.id,
-                    amount: amount,
-                    type: 'credit',
-                    status: 'pending',
-                    reference_id: order.id,
-                    description: 'Wallet Top-up'
-                }]);
+            // Create Razorpay order
+            if (!razorpay) {
+                return res.status(503).json({ error: 'Payment gateway not configured' });
+            }
 
-                return res.json({
-                    success: true,
+            const options = {
+                amount: amount * 100, // Razorpay expects paise
+                currency: currency,
+                receipt: `receipt_${req.user.id}_${Date.now()}`
+            };
+
+            const order = await razorpay.orders.create(options);
+
+            // Create pending transaction record
+            const transactionResult = await atomicWalletTransaction(
+                req.user.id,
+                amount,
+                'credit',
+                {
+                    description: `Wallet top-up: ₹${amount}`,
+                    payment_method: 'razorpay',
                     order_id: order.id,
-                    amount: amount,
-                    currency,
-                    key_id: process.env.RAZORPAY_KEY_ID
-                });
-            }
-
-            // Mock response if no payment gateway
-            const mockOrderId = `mock_order_${Date.now()}`;
-
-            // Auto-complete needed for mock
-            await supabase.from('wallet_transactions').insert([{
-                employer_id: req.user.id,
-                amount: amount,
-                type: 'credit',
-                status: 'completed', // Auto-complete for mock
-                reference_id: mockOrderId,
-                description: 'Mock Wallet Top-up'
-            }]);
-
-            // Update balance for mock
-            const { data: user } = await supabase
-                .from('users')
-                .select('wallet_balance')
-                .eq('id', req.user.id)
-                .single();
-
-            await supabase
-                .from('users')
-                .update({ wallet_balance: (user?.wallet_balance || 0) + amount })
-                .eq('id', req.user.id);
+                    status: 'pending'
+                }
+            );
 
             res.json({
                 success: true,
-                is_mock: true,
-                message: 'Payment gateway not configured. Mock mode enabled - Balance updated.',
-                order_id: mockOrderId,
-                amount,
-                currency
+                order_id: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                transaction_id: transactionResult.transactionId
             });
 
         } catch (error) {
-            console.error('Error creating payment order:', error);
-            res.status(500).json({ error: 'Failed to create payment order' });
+            console.error('Error creating wallet top-up:', error);
+            res.status(500).json({ error: error.message || 'Failed to initiate payment' });
         }
     });
+
 
     /**
      * Verify Payment (Razorpay Webhook/Manual)

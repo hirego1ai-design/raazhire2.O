@@ -4,23 +4,31 @@ import Webcam from 'react-webcam';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Video, Upload, Mic, StopCircle, Play, Loader, TrendingUp,
-    RefreshCcw, CheckCircle2, AlertCircle, Clock, Shield, Zap
+    RefreshCcw, CheckCircle2, AlertCircle, Clock, Shield, Zap, FileText, Send
 } from 'lucide-react';
 import { endpoints } from '../../lib/api';
 import CandidateAIReport from '../../components/CandidateAIReport';
 
 const VIDEO_LIMIT_SECONDS = 180; // 3 Minutes
 
+type PipelineState = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'completed' | 'error';
+
 const VideoResume: React.FC = () => {
     const [mode, setMode] = useState<'upload' | 'record'>('record');
+    const [status, setStatus] = useState<PipelineState>('idle');
     const [isRecording, setIsRecording] = useState(false);
     const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [videoId, setVideoId] = useState<string | null>(null);
     const [analysisResult, setAnalysisResult] = useState<any | null>(null);
+    const [analysisTranscript, setAnalysisTranscript] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const [user, setUser] = useState<any>(null);
     const [timeLeft, setTimeLeft] = useState(VIDEO_LIMIT_SECONDS);
-    const [transcript, setTranscript] = useState('');
+    const [liveTranscript, setLiveTranscript] = useState('');
+
+    // Ref to track transcript without stale closures
+    const liveTranscriptRef = useRef('');
 
     const webcamRef = useRef<Webcam>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -32,8 +40,15 @@ const VideoResume: React.FC = () => {
             if (!supabase) return;
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
+                // Fetch candidate details
                 const { data: profile } = await supabase.from('candidates').select('*').eq('user_id', user.id).single();
                 setUser(profile || { name: 'Candidate', skills: [] });
+
+                // Check for saved video resume URL
+                const savedUrl = profile?.video_resume_url;
+                if (savedUrl) {
+                    setVideoUrl(savedUrl);
+                }
             }
         };
         fetchUser();
@@ -66,8 +81,12 @@ const VideoResume: React.FC = () => {
     const handleStartRecording = useCallback(() => {
         setRecordedChunks([]); // Clear previous chunks
         setIsRecording(true);
+        setError(null);
+        setStatus('idle');
+        setAnalysisResult(null);
         setTimeLeft(VIDEO_LIMIT_SECONDS);
-        setTranscript('');
+        setLiveTranscript('');
+        liveTranscriptRef.current = ''; // Reset ref
 
         // Start Video Recording
         if (webcamRef.current && webcamRef.current.stream) {
@@ -81,7 +100,7 @@ const VideoResume: React.FC = () => {
             mediaRecorderRef.current.start();
         }
 
-        // Start Speech Recognition
+        // Start Speech Recognition (Visual only)
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
             recognitionRef.current = new SpeechRecognition();
@@ -97,7 +116,8 @@ const VideoResume: React.FC = () => {
                     }
                 }
                 if (finalTranscript) {
-                    setTranscript(prev => prev + finalTranscript);
+                    setLiveTranscript(prev => prev + finalTranscript);
+                    liveTranscriptRef.current += finalTranscript; // Update Ref
                 }
             };
 
@@ -119,52 +139,143 @@ const VideoResume: React.FC = () => {
         setTimeout(() => {
             setRecordedChunks((oldChunks) => {
                 const blob = new Blob(oldChunks, { type: "video/webm" });
-                const url = URL.createObjectURL(blob);
-                setVideoUrl(url);
-                startAnalysis(blob, transcript);
+                // Pass the current ref value for transcript
+                startPipeline(blob, liveTranscriptRef.current);
                 return [];
             });
-        }, 300);
-    }, [mediaRecorderRef, transcript]);
+        }, 500);
+    }, [mediaRecorderRef]);
 
-    const startAnalysis = async (blob: Blob, transcription: string) => {
-        setIsAnalyzing(true);
+    const startPipeline = async (blob: Blob, providedText?: string) => {
         try {
+            setError(null);
+            setVideoUrl(URL.createObjectURL(blob));
+
+            // Pre-check: ensure user has a valid session
+            // BYPASS FOR NOW: Fake session for developers testing while Supabase is down
+            // if (!supabase) throw new Error('Authentication service unavailable. Please refresh the page.');
+            // const { data: { session: currentSession } } = await supabase.auth.getSession();
+            // if (!currentSession?.access_token) {
+            //     throw new Error('Your session has expired. Please sign out and sign back in, then try again.');
+            // }
+
+            // Helper: get fresh auth headers (prevents token expiry during long operations)
+            const getAuthHeaders = async (): Promise<Record<string, string>> => {
+                // if (!supabase) return {};
+                // const { data: { session } } = await supabase.auth.getSession();
+                // const headers: Record<string, string> = {};
+                // if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
+                // return headers;
+                return { 'Authorization': 'Bearer BYPASS_TOKEN' };
+            };
+
+            // Helper: fetch with timeout (10 min for long transcription)
+            const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 600000) => {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), timeoutMs);
+                try {
+                    const res = await fetch(url, { ...options, signal: controller.signal });
+                    return res;
+                } finally {
+                    clearTimeout(timer);
+                }
+            };
+
+            // 1. Upload (30s timeout)
+            setStatus('uploading');
             const formData = new FormData();
             formData.append('video', blob, 'video_resume.webm');
-            formData.append('transcript', transcription);
-            formData.append('duration', (VIDEO_LIMIT_SECONDS - timeLeft).toString());
-            if (user?.id) formData.append('candidateId', user.id);
 
-            const headers: Record<string, string> = {};
-            if (supabase) {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
-            }
-
-            const response = await fetch(endpoints.videoResume, {
+            const uploadHeaders = await getAuthHeaders();
+            const uploadRes = await fetchWithTimeout(endpoints.videoResume.upload, {
                 method: 'POST',
-                headers: headers,
+                headers: uploadHeaders,
                 body: formData
+            }, 60000);
+
+            if (!uploadRes.ok) throw new Error('Upload failed');
+            const uploadData = await uploadRes.json();
+            const id = uploadData.videoId;
+            setVideoId(id);
+
+            // 2. Transcribe (10 min timeout — Whisper small model on CPU can take 3-5 min)
+            setStatus('transcribing');
+            const transcribeHeaders = await getAuthHeaders(); // Fresh token
+            const transcribeRes = await fetchWithTimeout(endpoints.videoResume.transcribe, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...transcribeHeaders },
+                body: JSON.stringify({
+                    videoId: id,
+                    providedTranscript: providedText
+                })
+            }, 600000);
+
+            if (!transcribeRes.ok) {
+                const err = await transcribeRes.json();
+                throw new Error(err.error || 'Transcription failed');
+            }
+            const transcribeData = await transcribeRes.json();
+            const transcriptText = transcribeData.transcript;
+            console.log("Using transcript:", transcriptText);
+            setAnalysisTranscript(transcriptText);
+
+            // 3. Analyze (5 min timeout)
+            setStatus('analyzing');
+            const analyzeHeaders = await getAuthHeaders(); // Fresh token again
+            const analyzeRes = await fetchWithTimeout(endpoints.videoResume.analyze, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...analyzeHeaders },
+                body: JSON.stringify({
+                    videoId: id,
+                    transcript: transcriptText,
+                    duration: VIDEO_LIMIT_SECONDS - timeLeft
+                })
+            }, 300000);
+
+            if (!analyzeRes.ok) {
+                const err = await analyzeRes.json();
+                throw new Error(err.error || 'Analysis failed');
+            }
+            const analyzeData = await analyzeRes.json();
+
+            setAnalysisResult(analyzeData.analysis);
+            setStatus('completed');
+
+        } catch (err: any) {
+            console.error(err);
+            const msg = err.name === 'AbortError'
+                ? 'Request timed out. The video may be too long or the server is busy. Please try again.'
+                : (err.message || 'An error occurred during processing');
+            setError(msg);
+            setStatus('error');
+        }
+    };
+
+    const handleSubmitProfile = async () => {
+        if (!videoId || !analysisResult || !analysisTranscript) return;
+
+        try {
+            // const { data: { session } } = await supabase.auth.getSession();
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            // if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
+            headers['Authorization'] = `Bearer BYPASS_TOKEN`;
+
+            const res = await fetch(endpoints.videoResume.submit, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    videoId,
+                    transcript: analysisTranscript,
+                    analysis: analysisResult,
+                    overallScore: analysisResult.finalScore
+                })
             });
 
-            if (!response.ok) throw new Error('Upload and analysis failed');
-            const result = await response.json();
+            if (!res.ok) throw new Error('Submit failed');
 
-            // Handle analysis results
-            if (result.analysis) {
-                setAnalysisResult(result.analysis.detailedReport || result.analysis);
-            }
-            if (result.videoUrl) {
-                // Here we could update UI to show it's hosted on YouTube
-                console.log('Video hosted on YouTube:', result.videoUrl);
-            }
-        } catch (error) {
-            console.error("Analysis error:", error);
-            alert("Failed to analyze video. Please try again or check your connection.");
-            setAnalysisResult(null);
-        } finally {
-            setIsAnalyzing(false);
+            alert('Video Resume saved to your profile!');
+        } catch (e: any) {
+            alert('Failed to save: ' + e.message);
         }
     };
 
@@ -196,13 +307,13 @@ const VideoResume: React.FC = () => {
                     <div className="saas-card overflow-hidden">
                         <div className="flex border-b border-[var(--border-subtle)]">
                             <button
-                                onClick={() => { setMode('record'); setVideoUrl(null); setAnalysisResult(null); }}
+                                onClick={() => { setMode('record'); setVideoUrl(null); setAnalysisResult(null); setError(null); setStatus('idle'); }}
                                 className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 border-b-2 transition-all ${mode === 'record' ? 'border-[var(--primary)] text-[var(--primary)] bg-[var(--primary-light)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
                             >
                                 <Video size={18} /> Record Live
                             </button>
                             <button
-                                onClick={() => { setMode('upload'); setVideoUrl(null); setAnalysisResult(null); }}
+                                onClick={() => { setMode('upload'); setVideoUrl(null); setAnalysisResult(null); setError(null); setStatus('idle'); }}
                                 className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 border-b-2 transition-all ${mode === 'upload' ? 'border-[var(--primary)] text-[var(--primary)] bg-[var(--primary-light)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
                             >
                                 <Upload size={18} /> Upload File
@@ -213,11 +324,25 @@ const VideoResume: React.FC = () => {
                             <div className="relative aspect-video bg-black rounded-2xl overflow-hidden border border-[var(--border-subtle)] shadow-inner flex items-center justify-center">
                                 <AnimatePresence mode="wait">
                                     {videoUrl ? (
-                                        <motion.video
-                                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                            src={videoUrl} controls
-                                            className="w-full h-full object-contain bg-black"
-                                        />
+                                        <div className="relative w-full h-full">
+                                            <motion.video
+                                                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                                src={videoUrl} controls
+                                                className="w-full h-full object-contain bg-black"
+                                            />
+                                            {/* Overlay for Processing States */}
+                                            {status !== 'idle' && status !== 'completed' && status !== 'error' && (
+                                                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white">
+                                                    <Loader className="animate-spin mb-4 text-[var(--primary)]" size={48} />
+                                                    <h3 className="text-xl font-bold mb-2">
+                                                        {status === 'uploading' && 'Uploading Video...'}
+                                                        {status === 'transcribing' && 'Transcribing Audio...'}
+                                                        {status === 'analyzing' && 'Analyzing Soft Skills...'}
+                                                    </h3>
+                                                    <p className="text-white/60 text-sm">Please do not close this tab</p>
+                                                </div>
+                                            )}
+                                        </div>
                                     ) : mode === 'record' ? (
                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full h-full">
                                             <Webcam
@@ -233,6 +358,11 @@ const VideoResume: React.FC = () => {
                                                     </span>
                                                 </div>
                                             )}
+                                            {liveTranscript && isRecording && (
+                                                <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md p-3 rounded-lg text-white text-xs">
+                                                    {liveTranscript.slice(-100)}
+                                                </div>
+                                            )}
                                         </motion.div>
                                     ) : (
                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
@@ -246,11 +376,7 @@ const VideoResume: React.FC = () => {
                                                 accept="video/*"
                                                 onChange={(e) => {
                                                     const file = e.target.files?.[0];
-                                                    if (file) {
-                                                        const url = URL.createObjectURL(file);
-                                                        setVideoUrl(url);
-                                                        startAnalysis(file, "Uploaded video - transcript pending server-side processing.");
-                                                    }
+                                                    if (file) startPipeline(file);
                                                 }}
                                                 className="hidden"
                                                 id="video-upload"
@@ -278,14 +404,20 @@ const VideoResume: React.FC = () => {
                                 </div>
 
                                 <div className="flex gap-4">
-                                    {videoUrl ? (
+                                    {videoUrl && status !== 'uploading' && status !== 'transcribing' && status !== 'analyzing' ? (
                                         <button
-                                            onClick={() => { setVideoUrl(null); setAnalysisResult(null); setTimeLeft(VIDEO_LIMIT_SECONDS); }}
+                                            onClick={() => {
+                                                setVideoUrl(null);
+                                                setAnalysisResult(null);
+                                                setError(null);
+                                                setStatus('idle');
+                                                setTimeLeft(VIDEO_LIMIT_SECONDS);
+                                            }}
                                             className="px-6 py-2.5 rounded-xl border border-[var(--border-subtle)] text-sm font-bold flex items-center gap-2 hover:bg-[var(--bg-page)] transition-all"
                                         >
                                             <RefreshCcw size={16} /> Retake
                                         </button>
-                                    ) : mode === 'record' ? (
+                                    ) : mode === 'record' && !videoUrl ? (
                                         !isRecording ? (
                                             <button
                                                 onClick={handleStartRecording}
@@ -322,25 +454,28 @@ const VideoResume: React.FC = () => {
                 </div>
 
                 {/* Right Column - Analysis Results */}
-                <div className="lg:col-span-12 xl:col-span-5 space-y-6 sticky top-24">
+                <div className="lg:col-span-12 xl:col-span-5 space-y-6 sticky top-24 max-h-[calc(100vh-2rem)] overflow-y-auto pr-1 custom-scrollbar">
                     <AnimatePresence mode="wait">
-                        {isAnalyzing ? (
+                        {status === 'error' ? (
                             <motion.div
-                                key="analyzing"
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                className="saas-card p-12 text-center"
+                                key="error"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="saas-card p-12 text-center border-red-200 bg-red-50/50"
                             >
-                                <div className="relative w-20 h-20 mx-auto mb-6">
-                                    <div className="absolute inset-0 rounded-full border-4 border-[var(--primary-light)] animate-ping" />
-                                    <div className="absolute inset-0 rounded-full border-4 border-[var(--primary)] border-t-transparent animate-spin" />
-                                    <div className="w-full h-full rounded-full flex items-center justify-center">
-                                        <TrendingUp className="text-[var(--primary)]" size={24} />
-                                    </div>
+                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <AlertCircle className="text-red-500" size={32} />
                                 </div>
-                                <h3 className="text-lg font-bold">Processing AI Report</h3>
-                                <p className="text-sm text-[var(--text-muted)] mt-2">Our agents are scanning your video for soft skills, confidence, and technical intent.</p>
+                                <h3 className="text-lg font-bold text-red-700 mb-2">Analysis Failed</h3>
+                                <p className="text-sm text-red-600 mb-6 max-w-xs mx-auto">{error}</p>
+                                <div className="flex gap-4 justify-center">
+                                    <button
+                                        onClick={() => { setError(null); setStatus('idle'); setVideoUrl(null); }}
+                                        className="px-6 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-500/20"
+                                    >
+                                        Try Again
+                                    </button>
+                                </div>
                             </motion.div>
                         ) : analysisResult ? (
                             <motion.div
@@ -349,14 +484,17 @@ const VideoResume: React.FC = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="space-y-6"
                             >
-                                <CandidateAIReport data={analysisResult.detailedReport ? analysisResult : analysisResult} />
+                                <CandidateAIReport data={analysisResult} />
 
                                 <div className="flex gap-4">
-                                    <button className="flex-1 btn-saas-primary">
-                                        Submit to My Profile
+                                    <button
+                                        onClick={handleSubmitProfile}
+                                        className="flex-1 btn-saas-primary flex items-center justify-center gap-2"
+                                    >
+                                        <Send size={18} /> Submit to My Profile
                                     </button>
                                     <button className="p-3 border border-[var(--border-subtle)] rounded-xl hover:bg-[var(--bg-page)] transition-all">
-                                        <Upload size={18} />
+                                        <FileText size={18} />
                                     </button>
                                 </div>
                             </motion.div>

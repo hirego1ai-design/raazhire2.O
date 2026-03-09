@@ -4,9 +4,13 @@ export const endpoints = {
     health: `${API_BASE_URL}/health`,
     test: `${API_BASE_URL}/api/test`,
     logs: `${API_BASE_URL}/api/logs`,
-    analyzeVideo: `${API_BASE_URL}/api/analyze-video`,
     generateJobDescription: `${API_BASE_URL}/api/generate-job-description`,
-    videoResume: `${API_BASE_URL}/api/video-resume/upload`,
+    videoResume: {
+        upload: `${API_BASE_URL}/api/video-resume/upload`,
+        transcribe: `${API_BASE_URL}/api/video-resume/transcribe`,
+        analyze: `${API_BASE_URL}/api/video-resume/analyze`,
+        submit: `${API_BASE_URL}/api/video-resume/submit`
+    },
     generateQuestions: `${API_BASE_URL}/api/generate-questions`,
     uploadLiveAssessment: `${API_BASE_URL}/api/live-assessment/upload`,
 
@@ -32,8 +36,8 @@ export const endpoints = {
 
     // Interview Endpoints
     interviews: {
-        candidate: `${API_BASE_URL}/api/interviews`,
-        employer: `${API_BASE_URL}/api/interviews`,
+        candidate: `${API_BASE_URL}/api/interviews/candidate`,
+        employer: `${API_BASE_URL}/api/interviews/employer`,
         base: `${API_BASE_URL}/api/interviews`,
     },
 
@@ -60,6 +64,11 @@ export const endpoints = {
         aiConfig: `${API_BASE_URL}/api/admin/ai-config`,
         youtubeConfig: `${API_BASE_URL}/api/admin/youtube-config`,
         youtubeUploadTest: `${API_BASE_URL}/api/admin/youtube-upload-test`,
+        youtubeOAuth: {
+            authorize: `${API_BASE_URL}/api/youtube/oauth/authorize`,
+            callback: `${API_BASE_URL}/api/youtube/oauth/callback`,
+            status: `${API_BASE_URL}/api/youtube/oauth/status`,
+        },
         emailConfig: `${API_BASE_URL}/api/admin/email-config`,
         creditConfig: `${API_BASE_URL}/api/admin/credit-config`,
         jobPricing: `${API_BASE_URL}/api/admin/job-pricing`,

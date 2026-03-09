@@ -88,10 +88,12 @@ This guide will walk you through setting up YouTube API access for video storage
    - Click **"+ ADD URI"**
    - Add these URIs (one at a time):
      ```
+     http://localhost:3000/api/youtube/oauth/callback
      https://developers.google.com/oauthplayground
      http://localhost:3000/auth/callback
      http://localhost:5179/auth/callback
      ```
+   - ⭐ **The first URI above is the primary redirect** used by the new OAuth flow
    - Click **"ADD URI"** for each
 
 5. Click **"CREATE"**

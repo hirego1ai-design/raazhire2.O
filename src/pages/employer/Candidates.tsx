@@ -5,7 +5,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
     Search, Filter, Plus, Download, Briefcase, Users, ArrowLeft,
     ChevronRight, MapPin, DollarSign, Clock, Star, Play,
-    Mail, Phone, Calendar, CheckCircle, MessageSquare, Menu
+    Mail, Phone, Calendar, CheckCircle, MessageSquare, Menu, Brain, ShieldAlert
 } from 'lucide-react';
 import CandidateCard, { type Candidate as CardCandidate } from '../../components/CandidateCard';
 import { API_BASE_URL } from '../../lib/api';
@@ -16,7 +16,10 @@ type RecommendationType = 'applied' | 'ai_recommended' | 'top_talent';
 interface ExtendedCandidate extends CardCandidate {
     recommendationType?: RecommendationType;
     aiMatchScore?: number;
-    // Additional Profile Fields (optional if not in CardCandidate)
+    // Additional Profile Fields
+    fraudFlag?: boolean;
+    aiStrengths?: string[];
+    interviewReadiness?: number;
 }
 
 const Candidates: React.FC = () => {
@@ -112,7 +115,10 @@ const Candidates: React.FC = () => {
                     aiScore: app.ai_screening_score || 0,
                     status: (app.status || 'applied') as CardCandidate['status'],
                     recommendationType: 'applied' as RecommendationType,
-                    aiMatchScore: app.ai_screening_score || 0
+                    aiMatchScore: app.ai_screening_score || 0,
+                    fraudFlag: app.candidate?.fraud_detection_flag || false,
+                    aiStrengths: app.candidate?.ai_strengths || [],
+                    interviewReadiness: app.candidate?.interview_readiness_score || 0
                 }));
             }
 
@@ -174,7 +180,10 @@ const Candidates: React.FC = () => {
             skills: Array.isArray(raw.skills)
                 ? raw.skills.map((s: any) => typeof s === 'string' ? s : s.skill)
                 : [],
-            recommendationType: raw.recommendationType || 'applied'
+            recommendationType: raw.recommendationType || 'applied',
+            fraudFlag: raw.fraudFlag,
+            aiStrengths: raw.aiStrengths,
+            interviewReadiness: raw.interviewReadiness
         };
     }, [candidates, aiRecommendedCandidates, selectedCandidateId]);
 
@@ -435,6 +444,14 @@ const Candidates: React.FC = () => {
                                     <h2 className="text-2xl font-black text-[var(--text-main)] mt-4">{normalizedSelectedCandidate.name}</h2>
                                     <p className="text-indigo-600 font-black text-sm uppercase tracking-wide">{normalizedSelectedCandidate.appliedJobTitle}</p>
 
+                                    {/* Fraud Alert */}
+                                    {normalizedSelectedCandidate.fraudFlag && (
+                                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-left">
+                                            <ShieldAlert size={16} className="text-red-500 shrink-0" />
+                                            <p className="text-xs font-bold text-red-600 leading-tight">AI Warning: Potential fraud/cheating detected in video interview.</p>
+                                        </div>
+                                    )}
+
                                     <div className="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-[var(--border-subtle)]">
                                         <div className="text-center">
                                             <p className="text-xl font-black text-indigo-600">{normalizedSelectedCandidate.experienceYears}+</p>
@@ -473,6 +490,39 @@ const Candidates: React.FC = () => {
                                             </span>
                                         ))}
                                     </div>
+                                </div>
+
+                                {/* AI Insights Card (New) */}
+                                <div className="saas-card p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100">
+                                    <h4 className="flex items-center gap-2 text-sm font-black uppercase text-indigo-900 mb-4 tracking-widest">
+                                        <Brain size={16} className="text-indigo-600" /> AI Insights
+                                    </h4>
+
+                                    <div className="mb-4">
+                                        <div className="flex justify-between items-end mb-1">
+                                            <span className="text-xs font-bold text-indigo-700">Interview Readiness</span>
+                                            <span className="text-lg font-black text-indigo-600">{normalizedSelectedCandidate.interviewReadiness || 0}%</span>
+                                        </div>
+                                        <div className="w-full bg-white h-1.5 rounded-full overflow-hidden">
+                                            <div
+                                                className="bg-indigo-600 h-full rounded-full"
+                                                style={{ width: `${normalizedSelectedCandidate.interviewReadiness || 0}%` }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {normalizedSelectedCandidate.aiStrengths && normalizedSelectedCandidate.aiStrengths.length > 0 && (
+                                        <div>
+                                            <span className="text-[10px] font-bold text-emerald-600 uppercase mb-2 block">Top Strengths</span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {normalizedSelectedCandidate.aiStrengths.slice(0, 4).map((s: string, i: number) => (
+                                                    <span key={i} className="px-2 py-0.5 bg-white border border-emerald-100 text-[10px] font-bold text-emerald-700 rounded-md shadow-sm">
+                                                        {s}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -568,7 +618,7 @@ const Candidates: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
 

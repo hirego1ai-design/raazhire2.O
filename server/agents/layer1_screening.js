@@ -3,7 +3,7 @@ import { generateAIResponse } from './ai_utils.js';
 // Layer 1: Screening Agent
 // Role: Rapidly filters candidates based on fundamental criteria and profile analysis.
 
-export async function analyzeScreening(candidateData, apiKeys) {
+export async function analyzeScreening(candidateData, apiKeys, aiConfig = {}) {
     console.log(`[Layer 1] Starting AI Screening for: ${candidateData.name || 'Unknown'}`);
 
     // System Instruction for the AI
@@ -33,7 +33,7 @@ export async function analyzeScreening(candidateData, apiKeys) {
             apiKeys,
             "Screen this candidate profile.",
             systemPrompt,
-            'gemini' // Use Gemini for fast, cost-effective screening
+            aiConfig
         );
 
         if (!aiResponse) throw new Error("AI returned empty response");

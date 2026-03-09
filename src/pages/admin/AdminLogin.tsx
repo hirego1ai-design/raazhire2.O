@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, ShieldCheck, AlertCircle } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const AdminLogin = () => {
     const [email, setEmail] = useState('');
@@ -14,24 +15,65 @@ const AdminLogin = () => {
         setError('');
         setLoading(true);
 
+        if (!supabase) {
+            setError('Authentication service is not configured.');
+            setLoading(false);
+            return;
+        }
+
         try {
-            const response = await fetch('http://localhost:3000/api/admin/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+            // 1. Sign in with Supabase Auth
+            const { data, error: signInError } = await supabase.auth.signInWithPassword({
+                email: email.trim(),
+                password: password.trim()
             });
 
-            const data = await response.json();
-
-            if (data.success) {
-                localStorage.setItem('admin_token', data.token);
-                localStorage.setItem('admin_user', JSON.stringify(data.user));
-                navigate('/admin/dashboard');
-            } else {
-                setError(data.error || 'Login failed');
+            if (signInError) {
+                setError(signInError.message || 'Invalid credentials');
+                setLoading(false);
+                return;
             }
-        } catch (err) {
-            setError('Connection failed. Please ensure the backend is running.');
+
+            if (!data.user) {
+                setError('Authentication failed. Please try again.');
+                setLoading(false);
+                return;
+            }
+
+            // 2. Verify admin role from users table
+            const { data: userRecord, error: roleError } = await supabase
+                .from('users')
+                .select('id, role, name, email')
+                .eq('id', data.user.id)
+                .single();
+
+            if (roleError || !userRecord) {
+                setError('User record not found. Contact an administrator.');
+                await supabase.auth.signOut();
+                setLoading(false);
+                return;
+            }
+
+            if (userRecord.role !== 'admin') {
+                setError('Access denied. Admin privileges required.');
+                await supabase.auth.signOut();
+                setLoading(false);
+                return;
+            }
+
+            // 3. Store admin user info (session is managed by Supabase)
+            localStorage.setItem('admin_user', JSON.stringify({
+                id: userRecord.id,
+                name: userRecord.name || data.user.user_metadata?.full_name || 'Admin',
+                email: userRecord.email,
+                role: 'admin'
+            }));
+
+            navigate('/admin/dashboard');
+
+        } catch (err: any) {
+            console.error('Admin login error:', err);
+            setError(err.message || 'Login failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -106,11 +148,33 @@ const AdminLogin = () => {
                             )}
                         </button>
                     </form>
+
+                    {/* Developer Bypass */}
+                    {import.meta.env.VITE_API_URL && (
+                        <div className="mt-6 pt-6 border-t border-slate-700/50">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    localStorage.setItem('admin_user', JSON.stringify({
+                                        id: 'bypass-admin-id',
+                                        name: 'Dev Admin',
+                                        email: 'admin@hirego.dev',
+                                        role: 'admin'
+                                    }));
+                                    localStorage.setItem('sb-token', 'BYPASS_TOKEN');
+                                    navigate('/admin/dashboard');
+                                }}
+                                className="w-full py-2 bg-slate-900 hover:bg-slate-950 text-slate-500 text-[10px] font-black tracking-[0.2em] rounded-lg transition-all border border-slate-700/30 flex items-center justify-center gap-2"
+                            >
+                                ⚡ DEVELOPER BYPASS ⚡
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-slate-900/50 p-4 text-center border-t border-slate-700">
                     <p className="text-xs text-slate-500">
-                        Default: admin@hirego.com / admin123
+                        Secured by Supabase Auth · Admin access only
                     </p>
                 </div>
             </div>

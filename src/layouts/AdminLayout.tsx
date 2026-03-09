@@ -20,18 +20,37 @@ import {
     GraduationCap,
     FileText
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import '../styles/premium-dark-theme.css';
 
 const AdminLayout: React.FC = () => {
     const [isSidebarOpen, setSidebarOpen] = React.useState(true);
     const navigate = useNavigate();
 
-    // Force dark background for admin pages & Check Auth
+    // Force dark background for admin pages & Check Auth via Supabase
     React.useEffect(() => {
-        const token = localStorage.getItem('admin_token');
-        if (!token) {
-            navigate('/admin/login');
-        }
+        const checkAuth = async () => {
+            if (!supabase) {
+                navigate('/admin/login');
+                return;
+            }
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                navigate('/admin/login');
+                return;
+            }
+            // Optionally verify admin role
+            const { data: userRecord } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', session.user.id)
+                .single();
+            if (!userRecord || userRecord.role !== 'admin') {
+                await supabase.auth.signOut();
+                navigate('/admin/login');
+            }
+        };
+        checkAuth();
 
         document.body.style.background = '#0a0a0f';
         document.body.style.color = '#ffffff';
@@ -45,8 +64,10 @@ const AdminLayout: React.FC = () => {
 
     const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
-    const handleLogout = () => {
-        localStorage.removeItem('admin_token');
+    const handleLogout = async () => {
+        if (supabase) {
+            await supabase.auth.signOut();
+        }
         localStorage.removeItem('admin_user');
         navigate('/admin/login');
     };

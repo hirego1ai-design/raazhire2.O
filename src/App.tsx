@@ -89,6 +89,7 @@ import PrivacyPage from './pages/Privacy';
 import ContactPage from './pages/Contact';
 import PageEditor from './pages/admin/PageEditor';
 import AdminLogin from './pages/admin/AdminLogin';
+import AuthCallback from './pages/AuthCallback';
 
 function App() {
   const [showLogin, setShowLogin] = React.useState(false);
@@ -107,7 +108,8 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
     location.pathname.startsWith('/candidate') ||
     location.pathname.startsWith('/educator') ||
     location.pathname.startsWith('/register/upskill') ||
-    location.pathname.startsWith('/upskill/login');
+    location.pathname.startsWith('/upskill/login') ||
+    location.pathname.startsWith('/auth/callback');
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-outfit">
@@ -155,6 +157,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
         <Route path="/register/upskill" element={<UpskillRegistration />} />
         <Route path="/upskill/login" element={<UpskillLogin />} />
         <Route path="/create-account" element={<CreateAccount />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         {/* Candidate Routes */}
         <Route path="/candidate" element={<DashboardLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />

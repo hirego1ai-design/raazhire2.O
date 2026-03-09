@@ -276,6 +276,23 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ userType }) => {
 
             const userId = authData.user.id;
 
+            // SECURITY FIX: Create unified public.users record FIRST
+            // This prevents orphaned accounts and ensures admin panel visibility
+            const { error: usersError } = await supabase.from('users').upsert({
+                id: userId,
+                email: formData.email,
+                name: formData.fullName,
+                role: selectedRole,
+                phone: formData.phone || null,
+                status: 'Active',
+                created_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+
+            if (usersError) {
+                console.error('public.users insert error:', usersError);
+                // Don't throw — the auth user exists, continue with role-specific profile
+            }
+
             // Save candidate profile data
             if (selectedRole === 'candidate') {
                 const { error: profileError } = await supabase.from('candidates').insert({
@@ -333,60 +350,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ userType }) => {
             console.error('Registration error:', error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 
-            if (errorMessage.includes('rate limit')) {
-                // Try backend bypass
-                try {
-                    console.log('Client rate limit hit. Attempting backend bypass...');
-                    const response = await fetch('http://localhost:3000/api/auth/register', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            email: formData.email,
-                            password: formData.password
-                        })
-                    });
-
-                    const result = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(result.error || 'Backend registration failed');
-                    }
-
-                    // Backend creation successful, now sign in
-                    if (!supabase) throw new Error('Supabase client not initialized');
-
-                    const { error: signInError } = await supabase.auth.signInWithPassword({
-                        email: formData.email,
-                        password: formData.password
-                    });
-
-                    if (signInError) throw signInError;
-
-                    // Call supabase again to get the user ID we just signed in with
-                    const { data: { user: signedInUser } } = await supabase.auth.getUser();
-                    if (!signedInUser) throw new Error('Login failed after creation');
-
-                    // Profile creation logic is below, but userId is different variable scope.
-                    // Instead of duplicating logic, let's just alert and redirect or reload to sign in?
-                    // No, we want seamless.
-                    // Let's force a reload which will check auth state? No.
-
-                    // We will just let the function continnue? No, the original try/catch block failed.
-                    // We are in the catch block.
-
-                    alert('Registration successful via alternate route! Please Login now.');
-                    navigate('/auth');
-                    return;
-
-                } catch (bypassError: any) {
-                    console.error('Bypass failed:', bypassError);
-                    alert(`Supabase Rate Limit Exceeded.\n\nEven the backend bypass failed: ${bypassError.message}.\n\nPlease wait or try a different email.`);
-                }
-            } else if (errorMessage.toLowerCase().includes('already registered') || errorMessage.toLowerCase().includes('user already exists')) {
+            if (errorMessage.toLowerCase().includes('already registered') || errorMessage.toLowerCase().includes('user already exists')) {
                 const shouldLogin = confirm('This email is already registered. Would you like to sign in instead?');
                 if (shouldLogin) {
                     navigate('/auth');
                 }
+            } else if (errorMessage.includes('rate limit')) {
+                alert('Registration rate limit reached. Please wait a moment and try again, or contact support.');
             } else {
                 alert(`Registration failed: ${errorMessage}. Please check your connection and try again.`);
             }
