@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import DOMPurify from 'dompurify';
 import { Shield, Globe, Users, TrendingUp, Lock, CheckCircle, Server, FileText, Zap, Layout, Headphones } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { API_BASE_URL } from '../lib/api';
@@ -12,7 +13,7 @@ const EnterprisePage = () => {
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.page && data.page.content) {
-                    setDbContent(data.page.content);
+                    setDbContent(DOMPurify.sanitize(data.page.content));
                 }
             })
             .catch(err => console.error(err));

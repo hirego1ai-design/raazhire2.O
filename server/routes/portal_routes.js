@@ -12,6 +12,7 @@
 
 import express from 'express';
 import { requireRole } from '../middleware/auth.js';
+import { sanitizeSearchParam } from '../utils/security.js';
 import {
     onApplicationSubmitted,
     onJobCreated,
@@ -44,7 +45,8 @@ export function setupPortalRoutes(app, supabase, authenticateUser) {
                 .eq('status', 'active');
 
             if (search) {
-                query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,location.ilike.%${search}%`);
+                const safeSearch = sanitizeSearchParam(search);
+                if (safeSearch) query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%,location.ilike.%${safeSearch}%`);
             }
             if (location) query = query.ilike('location', `%${location}%`);
             if (work_mode) query = query.eq('work_mode', work_mode);

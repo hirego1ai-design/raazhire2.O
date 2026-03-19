@@ -191,6 +191,22 @@ export function sanitizeInput(input) {
         .substring(0, 1000);
 }
 
+/**
+ * Sanitizes a search string for safe use in Supabase PostgREST `.or()` filter expressions.
+ * Strips characters that could manipulate the filter syntax (e.g. commas, parens, dots used as operators).
+ */
+export function sanitizeSearchParam(input) {
+    if (typeof input !== 'string') return '';
+    return input
+        .trim()
+        .replace(/\0/g, '')
+        // Remove PostgREST filter metacharacters that could break .or() expressions
+        // Includes parens, commas, dots, asterisks, backslashes, semicolons,
+        // angle brackets, equals, pipes, colons, and curly braces
+        .replace(/[(),.*\\;=|<>:{}[\]]/g, '')
+        .substring(0, 200);
+}
+
 // ==================== AUDIT LOGGING ====================
 
 /**
@@ -220,5 +236,6 @@ export const security = {
     createSecureCORSConfig,
     createRateLimiter,
     sanitizeInput,
+    sanitizeSearchParam,
     logSecurityEvent
 };

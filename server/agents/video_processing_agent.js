@@ -1,18 +1,27 @@
 import { generateAIResponse } from './ai_utils.js';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const TRANSCRIBE_SCRIPT = path.resolve(__dirname, '../services/transcribe.py');
 
-// Robust Python detection
-const LOCAL_PYTHON = "C:\\Users\\RaAz\\AppData\\Local\\Programs\\Python\\Python311\\python.exe";
-const PYTHON_CMD = fs.existsSync(LOCAL_PYTHON) ? `"${LOCAL_PYTHON}"` : "python";
+// SECURITY FIX: Use environment variable for Python path instead of hardcoded local path
+// Validate that the path doesn't contain suspicious characters
+function validateExecPath(envVar, defaultPath) {
+    const cmdPath = process.env[envVar] || defaultPath;
+    // Only allow alphanumeric, path separators, dots, hyphens, and underscores
+    if (!/^[a-zA-Z0-9/_.\-\\: ]+$/.test(cmdPath)) {
+        console.error(`⚠️ Invalid ${envVar} path: contains disallowed characters. Using default.`);
+        return defaultPath;
+    }
+    return cmdPath;
+}
+const PYTHON_CMD = validateExecPath('PYTHON_PATH', 'python3');
 
 /**
  * Video Processing & Transcription Agent
@@ -135,20 +144,20 @@ async function extractAudio(videoUrl) {
 
         const outputPath = path.join(outputDir, outputFilename);
 
-        // Try to find ffmpeg
-        let ffmpegCmd = 'ffmpeg';
+        // SECURITY FIX: Use execFile with array arguments to prevent command injection
+        let ffmpegCmd = validateExecPath('FFMPEG_PATH', 'ffmpeg');
         const localFfmpeg = path.join(process.env.LOCALAPPDATA || '', 'ffmpeg', 'bin', 'ffmpeg.exe');
 
         if (fs.existsSync(localFfmpeg)) {
-            ffmpegCmd = `"${localFfmpeg}"`;
+            ffmpegCmd = localFfmpeg;
         } else {
             // Fallback: Check if we can get it from python imageio-ffmpeg
             try {
                 const ffmpegPathScript = path.resolve(__dirname, '../services/get_ffmpeg_path.py');
-                const { stdout } = await execAsync(`${PYTHON_CMD} "${ffmpegPathScript}"`);
+                const { stdout } = await execFileAsync(PYTHON_CMD, [ffmpegPathScript], { timeout: 30000 });
                 const pyFfmpegPath = stdout.trim();
                 if (pyFfmpegPath && fs.existsSync(pyFfmpegPath)) {
-                    ffmpegCmd = `"${pyFfmpegPath}"`;
+                    ffmpegCmd = pyFfmpegPath;
                     console.log('[Video Processing Agent] Found FFmpeg via Python:', ffmpegCmd);
                 }
             } catch (e) {
@@ -157,9 +166,9 @@ async function extractAudio(videoUrl) {
         }
 
         // Run extraction: -y (overwrite), -vn (no video), -acodec libmp3lame (mp3)
-        // Note: Using a timeout to prevent hanging
-        console.log(`[Video Processing Agent] Running: ${ffmpegCmd} -i "${absoluteVideoPath}" ...`);
-        await execAsync(`${ffmpegCmd} -i "${absoluteVideoPath}" -vn -acodec libmp3lame -q:a 2 -y "${outputPath}"`, { timeout: 60000 });
+        // SECURITY: Using execFile with array arguments to prevent shell injection
+        console.log(`[Video Processing Agent] Running ffmpeg audio extraction...`);
+        await execFileAsync(ffmpegCmd, ['-i', absoluteVideoPath, '-vn', '-acodec', 'libmp3lame', '-q:a', '2', '-y', outputPath], { timeout: 60000 });
 
         if (fs.existsSync(outputPath)) {
             console.log('[Video Processing Agent] Audio extracted to:', outputPath);
@@ -191,11 +200,9 @@ async function transcribeAudio(audioData, apiKeys) {
     try {
         console.log(`[Video Processing Agent] Running Whisper (small model) on: ${audioData.path}`);
 
-        // Run python script: python transcribe.py <path> small
-        const cmd = `${PYTHON_CMD} "${TRANSCRIBE_SCRIPT}" "${audioData.path}" small`;
-
+        // SECURITY FIX: Use execFile with array arguments to prevent command injection
         // 10 minute timeout for slower local machines
-        const { stdout, stderr } = await execAsync(cmd, { timeout: 600000 });
+        const { stdout, stderr } = await execFileAsync(PYTHON_CMD, [TRANSCRIBE_SCRIPT, audioData.path, 'small'], { timeout: 600000 });
 
         // Check for python script errors in stderr first
         if (stderr && stderr.includes('Traceback')) {

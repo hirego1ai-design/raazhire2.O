@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import DOMPurify from 'dompurify';
 import { Mail, CheckCircle, ShieldAlert, Scale, FileText } from 'lucide-react';
 import { API_BASE_URL } from '../lib/api';
 
@@ -11,7 +12,7 @@ const TermsPage = () => {
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.page && data.page.content) {
-                    setDbContent(data.page.content);
+                    setDbContent(DOMPurify.sanitize(data.page.content));
                 }
             })
             .catch(err => console.error(err));

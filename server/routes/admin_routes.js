@@ -13,6 +13,7 @@
                                 */
 
 import express from 'express';
+import { sanitizeSearchParam } from '../utils/security.js';
 
 export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, encrypt, decrypt, readLocalDb, writeLocalDb) {
 
@@ -118,7 +119,9 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
     app.get('/api/admin/users', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { role, status, search, page = 1, limit = 20 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const safePage = Math.max(parseInt(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+            const offset = (safePage - 1) * safeLimit;
 
             let query = supabase
                 .from('users')
@@ -127,12 +130,13 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
             if (role) query = query.eq('role', role);
             if (status) query = query.eq('status', status);
             if (search) {
-                query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+                const safeSearch = sanitizeSearchParam(search);
+                if (safeSearch) query = query.or(`name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`);
             }
 
             const { data, count, error } = await query
                 .order('created_at', { ascending: false })
-                .range(offset, offset + parseInt(limit) - 1);
+                .range(offset, offset + safeLimit - 1);
 
             if (error) throw error;
 
@@ -140,8 +144,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
                 success: true,
                 users: data || [],
                 total: count || 0,
-                page: parseInt(page),
-                totalPages: Math.ceil((count || 0) / parseInt(limit))
+                page: safePage,
+                totalPages: Math.ceil((count || 0) / safeLimit)
             });
 
         } catch (error) {
@@ -863,7 +867,9 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
     app.get('/api/admin/interviews', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { status, jobId, date, page = 1, limit = 20 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const safePage = Math.max(parseInt(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+            const offset = (safePage - 1) * safeLimit;
 
             let query = supabase
                 .from('interviews')
@@ -879,7 +885,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
 
             const { data, count, error } = await query
                 .order('scheduled_date', { ascending: false })
-                .range(offset, offset + parseInt(limit) - 1);
+                .range(offset, offset + safeLimit - 1);
 
             if (error) throw error;
 
@@ -887,8 +893,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
                 success: true,
                 interviews: data || [],
                 total: count || 0,
-                page: parseInt(page),
-                totalPages: Math.ceil((count || 0) / parseInt(limit))
+                page: safePage,
+                totalPages: Math.ceil((count || 0) / safeLimit)
             });
 
         } catch (error) {
@@ -1208,7 +1214,9 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
     app.get('/api/admin/system-logs', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { level, source, startDate, endDate, page = 1, limit = 50 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const safePage = Math.max(parseInt(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
+            const offset = (safePage - 1) * safeLimit;
 
             let query = supabase
                 .from('system_logs')
@@ -1221,7 +1229,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
 
             const { data, count, error } = await query
                 .order('created_at', { ascending: false })
-                .range(offset, offset + parseInt(limit) - 1);
+                .range(offset, offset + safeLimit - 1);
 
             if (error) throw error;
 
@@ -1229,8 +1237,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
                 success: true,
                 logs: data || [],
                 total: count || 0,
-                page: parseInt(page),
-                totalPages: Math.ceil((count || 0) / parseInt(limit))
+                page: safePage,
+                totalPages: Math.ceil((count || 0) / safeLimit)
             });
 
         } catch (error) {
@@ -1289,7 +1297,9 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
     app.get('/api/admin/upskill/courses', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { status, category, search, page = 1, limit = 20 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const safePage = Math.max(parseInt(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+            const offset = (safePage - 1) * safeLimit;
 
             let courses = [];
             let total = 0;
@@ -1302,12 +1312,13 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
                 if (status) query = query.eq('status', status);
                 if (category) query = query.eq('category', category);
                 if (search) {
-                    query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+                    const safeSearch = sanitizeSearchParam(search);
+                    if (safeSearch) query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`);
                 }
 
                 const { data, count, error } = await query
                     .order('created_at', { ascending: false })
-                    .range(offset, offset + parseInt(limit) - 1);
+                    .range(offset, offset + safeLimit - 1);
 
                 if (!error) {
                     courses = data || [];
@@ -1329,8 +1340,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
                 success: true,
                 courses,
                 total,
-                page: parseInt(page),
-                totalPages: Math.ceil(total / parseInt(limit))
+                page: safePage,
+                totalPages: Math.ceil(total / safeLimit)
             });
 
         } catch (error) {
@@ -1464,7 +1475,9 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
     app.get('/api/admin/upskill/learners', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { search, page = 1, limit = 20 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const safePage = Math.max(parseInt(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+            const offset = (safePage - 1) * safeLimit;
 
             let learners = [];
             let total = 0;
@@ -1478,12 +1491,13 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
                     `, { count: 'exact' });
 
                 if (search) {
-                    query = query.or(`user.name.ilike.%${search}%,user.email.ilike.%${search}%`);
+                    const safeSearch = sanitizeSearchParam(search);
+                    if (safeSearch) query = query.or(`user.name.ilike.%${safeSearch}%,user.email.ilike.%${safeSearch}%`);
                 }
 
                 const { data, count, error } = await query
                     .order('total_xp', { ascending: false })
-                    .range(offset, offset + parseInt(limit) - 1);
+                    .range(offset, offset + safeLimit - 1);
 
                 if (!error) {
                     learners = data || [];
@@ -1505,8 +1519,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
                 success: true,
                 learners,
                 total,
-                page: parseInt(page),
-                totalPages: Math.ceil(total / parseInt(limit))
+                page: safePage,
+                totalPages: Math.ceil(total / safeLimit)
             });
 
         } catch (error) {

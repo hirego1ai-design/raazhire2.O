@@ -85,7 +85,7 @@ export function decrypt(text) {
         decrypted += decipher.final('utf8');
         return decrypted;
     } catch (error) {
-        // console.error('Decryption failed (possibly not encrypted or wrong key):', error.message);
+        console.warn('[encryption] Decryption failed — returning original value. Possible wrong key or unencrypted data.');
         return text; // Return original if decryption fails (fallback for legacy/plain data)
     }
 }
