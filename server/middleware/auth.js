@@ -1,17 +1,53 @@
 import { createLogger, format, transports } from 'winston';
 import { supabase, supabaseAdmin, createScopedClient } from '../utils/supabaseClient.js';
 
-// ==================== STRUCTURED LOGGER ====================
-const logger = createLogger({
-    level: process.env.NODE_ENV === 'production' ? 'warn' : 'info',
-    format: format.combine(
-        format.timestamp(),
-        format.json()
-    ),
-    transports: [new transports.Console()]
-});
 
 // ==================== AUTH MIDDLEWARE ====================
+
+// ==================== RATE LIMITING ====================
+// Per-IP failed auth attempt tracking (5 failures per 15 minutes → 429)
+// Note: This in-memory store is suitable for single-instance deployments.
+// For multi-instance / load-balanced environments, replace with a shared store (e.g. Redis).
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_MAX_FAILURES = 5;
+const failedAttempts = new Map(); // IP → { count, windowStart }
+
+// Periodic cleanup to prevent unbounded memory growth
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of failedAttempts) {
+        if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+            failedAttempts.delete(ip);
+        }
+    }
+}, RATE_LIMIT_WINDOW_MS);
+
+function isRateLimited(ip) {
+    const now = Date.now();
+    const entry = failedAttempts.get(ip);
+    if (!entry) return false;
+    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+        failedAttempts.delete(ip);
+        return false;
+    }
+    return entry.count >= RATE_LIMIT_MAX_FAILURES;
+}
+
+function recordFailedAttempt(ip) {
+    const now = Date.now();
+    const entry = failedAttempts.get(ip);
+    if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+        failedAttempts.set(ip, { count: 1, windowStart: now });
+    } else {
+        entry.count += 1;
+    }
+}
+
+function clearFailedAttempts(ip) {
+    failedAttempts.delete(ip);
+}
+
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 /**
  * Middleware: Authenticates the user via Supabase JWT.
@@ -22,18 +58,20 @@ const logger = createLogger({
  * - No bypass paths, no magic tokens, no mock users.
  */
 export const authenticateUser = async (req, res, next) => {
-    const clientIP = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+
+
+    // Rate limit check before processing any auth
+    if (isRateLimited(clientIP)) {
+        return res.status(429).json({ error: 'Too many failed authentication attempts. Please try again later.' });
+    }
 
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        logger.warn('Auth failed: missing Authorization header', { ip: clientIP, path: req.path });
-        const isProd = process.env.NODE_ENV === 'production';
-        return res.status(401).json({ error: isProd ? 'Authentication required' : 'Missing or malformed Authorization header' });
+
     }
 
     const token = authHeader.slice(7); // Remove "Bearer " prefix
     if (!token) {
-        return res.status(401).json({ error: process.env.NODE_ENV === 'production' ? 'Authentication required' : 'Missing Bearer token' });
+
     }
 
     try {
@@ -46,39 +84,26 @@ export const authenticateUser = async (req, res, next) => {
         const { data: { user }, error } = await clientForAuth.auth.getUser(token);
 
         if (error || !user) {
-            logger.warn('Auth failed: invalid or expired token', { ip: clientIP, path: req.path });
-            return res.status(401).json({ error: process.env.NODE_ENV === 'production' ? 'Authentication required' : 'Invalid or expired token' });
-        }
 
-        req.user = user;
-        // Create a scoped client so all DB queries from this request respect RLS
         req.supabase = createScopedClient(token);
         // req.supabaseAdmin is intentionally NOT set here; only requireAdmin attaches it
 
         next();
     } catch (err) {
-        logger.error('Auth middleware exception', { path: req.path, message: err.message });
-        return res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Authentication required' : 'Internal authentication error' });
+
     }
 };
 
 /**
  * Middleware: Ensures the authenticated user has 'admin' role.
- * - Requires authenticateUser to run first.
- * - Always verifies role against the public.users database table (never trusts user_metadata).
- * - Only after DB verification does it attach req.supabaseAdmin for use in admin routes.
+
  */
 export const requireAdmin = async (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (!supabaseAdmin) {
-        logger.error('requireAdmin: supabaseAdmin not available — missing SUPABASE_SERVICE_ROLE_KEY');
-        return res.status(503).json({ error: 'Admin verification unavailable' });
-    }
 
-    try {
         const { data: userData, error } = await supabaseAdmin
             .from('users')
             .select('role')
@@ -140,7 +165,5 @@ export const requireRole = (...allowedRoles) => async (req, res, next) => {
         req.userRole = userRole;
         next();
     } catch (err) {
-        logger.error('requireRole exception', { userId: req.user?.id, message: err.message });
-        return res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Access denied' : 'Failed to verify user role' });
-    }
+<
 };
