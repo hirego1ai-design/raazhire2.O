@@ -48,12 +48,15 @@ if (process.env.NODE_ENV === 'production') {
 export function encrypt(text) {
     if (!text) return null;
     try {
+        const salt = crypto.randomBytes(16);
+        const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
         const iv = crypto.randomBytes(16);
-        const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
         const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
-        return iv.toString('hex') + ':' + encrypted;
+        // Format: salt(32 hex chars):iv(32 hex chars):encrypted
+        // Both the new format and the legacy 2-part (iv:encrypted) format are supported on decrypt.
+        return salt.toString('hex') + ':' + iv.toString('hex') + ':' + encrypted;
     } catch (error) {
         console.error('Encryption failed:', error.message);
         return null;
@@ -64,11 +67,23 @@ export function decrypt(text) {
     if (!text) return null;
     try {
         const parts = text.split(':');
-        const iv = Buffer.from(parts.shift(), 'hex');
-        const encryptedText = parts.join(':');
-        const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+
+        // Support legacy format (iv:encrypted with static salt)
+        if (parts.length === 2) {
+            const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+            const iv = Buffer.from(parts[0], 'hex');
+            const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+            let decrypted = decipher.update(parts[1], 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        }
+
+        // New format: salt:iv:encrypted
+        const salt = Buffer.from(parts[0], 'hex');
+        const iv = Buffer.from(parts[1], 'hex');
+        const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
         const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-        let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+        let decrypted = decipher.update(parts[2], 'hex', 'utf8');
         decrypted += decipher.final('utf8');
         return decrypted;
     } catch (error) {

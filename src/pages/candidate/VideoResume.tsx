@@ -152,21 +152,19 @@ const VideoResume: React.FC = () => {
             setVideoUrl(URL.createObjectURL(blob));
 
             // Pre-check: ensure user has a valid session
-            // BYPASS FOR NOW: Fake session for developers testing while Supabase is down
-            // if (!supabase) throw new Error('Authentication service unavailable. Please refresh the page.');
-            // const { data: { session: currentSession } } = await supabase.auth.getSession();
-            // if (!currentSession?.access_token) {
-            //     throw new Error('Your session has expired. Please sign out and sign back in, then try again.');
-            // }
+            if (!supabase) throw new Error('Authentication service unavailable. Please refresh the page.');
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            if (!currentSession?.access_token) {
+                throw new Error('Your session has expired. Please sign out and sign back in, then try again.');
+            }
 
             // Helper: get fresh auth headers (prevents token expiry during long operations)
             const getAuthHeaders = async (): Promise<Record<string, string>> => {
-                // if (!supabase) return {};
-                // const { data: { session } } = await supabase.auth.getSession();
-                // const headers: Record<string, string> = {};
-                // if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
-                // return headers;
-                return { 'Authorization': 'Bearer BYPASS_TOKEN' };
+                if (!supabase) return {};
+                const { data: { session } } = await supabase.auth.getSession();
+                const headers: Record<string, string> = {};
+                if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
+                return headers;
             };
 
             // Helper: fetch with timeout (10 min for long transcription)

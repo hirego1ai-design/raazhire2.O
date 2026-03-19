@@ -14,7 +14,7 @@ import Stripe from 'stripe';
 import Razorpay from 'razorpay';
 import { supabase, supabaseAdmin } from './utils/supabaseClient.js';
 import { encrypt, decrypt, ENCRYPTION_KEY } from './utils/encryption.js';
-import { authenticateUser, requireAdmin } from './middleware/auth.js';
+import { authenticateUser, requireAdmin, requireRole } from './middleware/auth.js';
 import { validateProductionEnvironment, createSecureCORSConfig, createRateLimiter } from './utils/security.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { setupAIRoutes } from './routes/ai_routes.js';
@@ -79,10 +79,10 @@ const strictLimiter = createRateLimiter({
 // SECURITY FIX: Restrict CORS to known frontend origins
 const corsConfig = createSecureCORSConfig();
 app.use(cors(corsConfig));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(join(__dirname, 'public')));
-app.use('/uploads', express.static(UPLOAD_DIR));
+app.use('/uploads', authenticateUser, express.static(UPLOAD_DIR));
 
 // ==================== SUPABASE CLIENTS ====================
 // Imported from utils/supabaseClient.js to ensure consistent state and RLS handling
@@ -120,7 +120,7 @@ async function writeLocalDb(data) {
 
 // ==================== AUTH MIDDLEWARE ====================
 // Imported from middleware/auth.js
-// Includes authenticateUser, requireAdmin, and ALLOW_DEV_BYPASS constant
+// Includes authenticateUser, requireAdmin, and requireRole
 // ==================== AUTHENTICATION API (SECURE REGISTRATION) ====================
 // SECURITY FIX: Protected with authenticateUser + requireAdmin middleware
 // Enhanced security: Added rate limiting, input validation, and audit logging
@@ -564,7 +564,17 @@ async function getYouTubeAgent() {
 }
 
 import multer from 'multer';
-const upload = multer({ dest: UPLOAD_DIR });
+const upload = multer({
+    dest: UPLOAD_DIR,
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('video/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only video files are allowed'), false);
+        }
+    }
+});
 
 // Video Resume Upload & Analysis
 // Video Resume Step 1: Upload (Just saves the file)
@@ -1415,6 +1425,9 @@ app.post('/api/create-checkout-session', authenticateUser, async (req, res) => {
 // ==================== EXISTING ROUTES ====================
 
 app.get('/health', (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+        return res.json({ status: 'ok' });
+    }
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
