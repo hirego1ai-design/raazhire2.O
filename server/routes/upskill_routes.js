@@ -9,32 +9,16 @@ import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { DeepSeekAgent } from '../agents/deepseek_agent.js';
 import { YouTubeLiveAgent } from '../agents/youtube_live_agent.js';
-import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { authenticateUser } from '../middleware/auth.js';
+import { decrypt } from '../utils/encryption.js';
+import { sanitizeSearchParam } from '../utils/security.js';
 import { supabaseAdmin } from '../utils/supabaseClient.js';
 
 const router = express.Router();
 
 // ==================== CONFIG & UTILS ====================
-
-// Decryption helper
-const decrypt = (text) => {
-    if (!text) return null;
-    try {
-        const textParts = text.split(':');
-        const iv = Buffer.from(textParts.shift(), 'hex');
-        const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-        const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production'), iv);
-        let decrypted = decipher.update(encryptedText);
-        decrypted = Buffer.concat([decrypted, decipher.final()]);
-        return decrypted.toString();
-    } catch (error) {
-        console.error('Decryption error:', error);
-        return text; // Return original if decryption fails (fallback)
-    }
-};
 
 // Helper to get API keys
 const getApiKey = async (provider) => {
@@ -84,7 +68,8 @@ router.get('/courses', async (req, res) => {
         }
         if (search) {
             // Search in title, description, or instructor
-            query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,instructor.ilike.%${search}%`);
+            const safeSearch = sanitizeSearchParam(search);
+            if (safeSearch) query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%,instructor.ilike.%${safeSearch}%`);
         }
         if (featured === 'true') {
             query = query.eq('is_featured', true);
@@ -256,7 +241,7 @@ router.post('/enroll', authenticateUser, async (req, res) => {
  * GET /api/upskill/enrollments/:userId
  * Get all enrollments for a user
  */
-router.get('/enrollments/:userId', async (req, res) => {
+router.get('/enrollments/:userId', authenticateUser, async (req, res) => {
     try {
         const { userId } = req.params;
         const supabase = req.supabase;
@@ -415,7 +400,7 @@ router.post('/lesson/complete', authenticateUser, async (req, res) => {
  * GET /api/upskill/progress/:userId
  * Get overall learning progress for a user
  */
-router.get('/progress/:userId', async (req, res) => {
+router.get('/progress/:userId', authenticateUser, async (req, res) => {
     try {
         const { userId } = req.params;
         const supabase = req.supabase;
@@ -475,7 +460,7 @@ router.get('/progress/:userId', async (req, res) => {
  * GET /api/upskill/progress/:userId/course/:courseId
  * Get progress for a specific course
  */
-router.get('/progress/:userId/course/:courseId', async (req, res) => {
+router.get('/progress/:userId/course/:courseId', authenticateUser, async (req, res) => {
     try {
         const { userId, courseId } = req.params;
         const supabase = req.supabase;
@@ -689,7 +674,7 @@ router.post('/assessment/submit', authenticateUser, async (req, res) => {
  * GET /api/upskill/recommendations/:userId
  * Get AI-powered course recommendations using DeepSeek
  */
-router.get('/recommendations/:userId', async (req, res) => {
+router.get('/recommendations/:userId', authenticateUser, async (req, res) => {
     try {
         const { userId } = req.params;
         const supabase = req.supabase; // Assuming middleware adds this
@@ -750,7 +735,7 @@ router.get('/recommendations/:userId', async (req, res) => {
  * GET /api/upskill/insights/:userId
  * Get AI learning insights using DeepSeek
  */
-router.get('/insights/:userId', async (req, res) => {
+router.get('/insights/:userId', authenticateUser, async (req, res) => {
     try {
         const { userId } = req.params;
         const supabase = req.supabase;
@@ -777,77 +762,6 @@ router.get('/insights/:userId', async (req, res) => {
     } catch (error) {
         console.error('Error generating insights:', error);
         res.status(500).json({ error: 'Failed to generate insights' });
-    }
-});
-
-/**
- * GET /api/upskill/gamification
- * Get current user's gamification stats
- */
-router.get('/gamification', async (req, res) => {
-    try {
-        const supabase = req.supabase;
-        let userId = null;
-
-        // Manually check auth since this router isn't protected by default middleware
-        const authHeader = req.headers.authorization;
-        if (authHeader) {
-            const token = authHeader.split(' ')[1];
-            const { data: { user } } = await supabase.auth.getUser(token);
-            if (user) userId = user.id;
-        }
-
-        if (!userId) {
-            // Check current dev environment for mock user fallback if not prod
-            if (process.env.NODE_ENV !== 'production') {
-                // userId = 'demo-candidate-001'; 
-                // Actually, better to enforce auth or return 401. 
-                // Let's return 401 to force frontend to handle it or login.
-            }
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
-
-        const { data: stats } = await supabase
-            .from('gamification_stats')
-            .select('*')
-            .eq('user_id', userId)
-            .single();
-
-        // Default stats if none exist
-        const safeStats = stats || {
-            level: 'Bronze',
-            points: 0,
-            next_level_points: 1000,
-            global_rank: 0,
-            total_candidates: 100, // Minimal social proof
-            skill_mastery: 0,
-            correct_rate: 0,
-            challenges_completed: 0,
-            total_attempts: 0,
-            streak: 0
-        };
-
-        // CamelCase conversion for frontend
-        const frontendStats = {
-            level: safeStats.level,
-            points: safeStats.points,
-            nextLevelPoints: safeStats.next_level_points,
-            globalRank: safeStats.global_rank,
-            totalCandidates: safeStats.total_candidates,
-            skillMastery: safeStats.skill_mastery,
-            correctRate: safeStats.correct_rate,
-            challengesCompleted: safeStats.challenges_completed,
-            totalAttempts: safeStats.total_attempts,
-            streak: safeStats.streak
-        };
-
-        res.json({
-            success: true,
-            stats: frontendStats
-        });
-    } catch (error) {
-        console.error('Error fetching gamification stats:', error);
-        res.status(500).json({ error: 'Failed to fetch gamification stats' });
     }
 });
 
@@ -1002,24 +916,10 @@ router.put('/profile/:userId', authenticateUser, async (req, res) => {
  * GET /api/upskill/gamification
  * Get user gamification statistics
  */
-router.get('/gamification', async (req, res) => {
+router.get('/gamification', authenticateUser, async (req, res) => {
     try {
-        // Authenticate
-        const authHeader = req.headers.authorization;
         const supabase = req.supabase;
-
-        if (!authHeader) {
-            return res.status(401).json({ error: 'Missing Authorization header' });
-        }
-
-        const token = authHeader.split(' ')[1];
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-        if (authError || !user) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
-
-        const userId = user.id;
+        const userId = req.user.id;
 
         // 1. Get User Progress
         let { data: progress } = await supabase

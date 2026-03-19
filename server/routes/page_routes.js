@@ -1,5 +1,6 @@
 
 import express from 'express';
+import { requireAdmin } from '../middleware/auth.js';
 
 export function setupPageRoutes(app, supabase, authenticateUser, readLocalDb, writeLocalDb) {
     // Helper to get page from DB or Local
@@ -37,7 +38,7 @@ export function setupPageRoutes(app, supabase, authenticateUser, readLocalDb, wr
 
     // UPDATE Page Content (Admin Only)
     // In a real app, check for admin role in authenticateUser
-    app.put('/api/pages/:slug', authenticateUser, async (req, res) => {
+    app.put('/api/pages/:slug', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { slug } = req.params;
             const { title, content } = req.body;

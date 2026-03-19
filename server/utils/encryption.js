@@ -67,27 +67,27 @@ export function decrypt(text) {
     if (!text) return null;
     try {
         const parts = text.split(':');
-
-        // Support legacy format (iv:encrypted with static salt)
-        if (parts.length === 2) {
+        if (parts.length < 3) {
+            // Legacy format (no salt): iv:ciphertext — re-encrypt with random salt when updating
+            console.warn('[encryption] Decrypting legacy format (hardcoded salt). Re-encrypt this value to use per-operation random salts.');
+            const iv = Buffer.from(parts.shift(), 'hex');
+            const encryptedText = parts.join(':');
             const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
-            const iv = Buffer.from(parts[0], 'hex');
             const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-            let decrypted = decipher.update(parts[1], 'hex', 'utf8');
+            let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
             decrypted += decipher.final('utf8');
             return decrypted;
         }
-
-        // New format: salt:iv:encrypted
-        const salt = Buffer.from(parts[0], 'hex');
-        const iv = Buffer.from(parts[1], 'hex');
+        const salt = Buffer.from(parts.shift(), 'hex');
+        const iv = Buffer.from(parts.shift(), 'hex');
+        const encryptedText = parts.join(':');
         const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
         const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-        let decrypted = decipher.update(parts[2], 'hex', 'utf8');
+        let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
         return decrypted;
     } catch (error) {
-        // console.error('Decryption failed (possibly not encrypted or wrong key):', error.message);
+        console.warn('[encryption] Decryption failed — returning original value. Possible wrong key or unencrypted data.');
         return text; // Return original if decryption fails (fallback for legacy/plain data)
     }
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Shield, Globe, Zap, Users, Target, ArrowRight, CheckCircle2 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import Navbar from '../components/Navbar';
 import { API_BASE_URL } from '../lib/api';
 
@@ -12,7 +13,7 @@ const AboutPage = () => {
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.page && data.page.content) {
-                    setDbContent(data.page.content);
+                    setDbContent(DOMPurify.sanitize(data.page.content));
                 }
             })
             .catch(err => console.error(err));

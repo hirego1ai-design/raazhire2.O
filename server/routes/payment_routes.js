@@ -36,15 +36,7 @@ export function setupPaymentRoutes(app, supabase, authenticateUser) {
             });
         } catch (error) {
             console.error('Error fetching plans:', error);
-            // Mock plans if DB is empty for demo purposes
-            res.json({
-                success: true,
-                plans: [
-                    { id: 1, name: 'Free', price_inr: 0, job_posts_limit: 1, description: 'Basic access', features: ['1 Job Post', 'Basic Support'] },
-                    { id: 2, name: 'Pro', price_inr: 2999, job_posts_limit: 10, description: 'Growing teams', features: ['10 Job Posts', 'Priority Support', 'AI Screening'] },
-                    { id: 3, name: 'Enterprise', price_inr: 9999, job_posts_limit: 100, description: 'Scale', features: ['Unlimited', 'Dedicated Manager', 'API Access'] }
-                ]
-            });
+            res.status(500).json({ error: 'Failed to fetch subscription plans' });
         }
     });
 

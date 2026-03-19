@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import DOMPurify from "dompurify";
 import {
     Briefcase, MapPin, DollarSign, CheckCircle,
     ChevronRight, ChevronLeft, Calendar, Globe, User, Sparkles, Plus,
@@ -871,7 +872,7 @@ export default function JobPostingForm() {
                                 <h3 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-6">Briefing Document</h3>
                                 <div
                                     className="prose prose-invert max-w-none text-sm text-[var(--text-muted)] bg-[var(--bg-page)]/50 p-6 rounded-xl border border-[var(--border-subtle)]/50 max-h-[300px] overflow-y-auto"
-                                    dangerouslySetInnerHTML={{ __html: form.jobDescription || '<p class="text-gray-500">No job description provided</p>' }}
+                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.jobDescription || '<p class="text-gray-500">No job description provided</p>') }}
                                 />
                             </div>
 

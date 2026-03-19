@@ -13,8 +13,9 @@
                                 */
 
 import express from 'express';
+import { sanitizeSearchParam } from '../utils/security.js';
 
-export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decrypt, readLocalDb, writeLocalDb) {
+export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, encrypt, decrypt, readLocalDb, writeLocalDb) {
 
     // ==================== ADMIN AUTH ====================
     // ==================== ADMIN AUTH ====================
@@ -28,7 +29,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get admin dashboard statistics
      * GET /api/admin/dashboard/stats
      */
-    app.get('/api/admin/dashboard/stats', authenticateUser, async (req, res) => {
+    app.get('/api/admin/dashboard/stats', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let stats = {
                 totalUsers: 0,
@@ -115,10 +116,12 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get all users with pagination and filtering
      * GET /api/admin/users
      */
-    app.get('/api/admin/users', authenticateUser, async (req, res) => {
+    app.get('/api/admin/users', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { role, status, search, page = 1, limit = 20 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const safePage = Math.max(parseInt(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+            const offset = (safePage - 1) * safeLimit;
 
             let query = supabase
                 .from('users')
@@ -127,12 +130,13 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
             if (role) query = query.eq('role', role);
             if (status) query = query.eq('status', status);
             if (search) {
-                query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+                const safeSearch = sanitizeSearchParam(search);
+                if (safeSearch) query = query.or(`name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`);
             }
 
             const { data, count, error } = await query
                 .order('created_at', { ascending: false })
-                .range(offset, offset + parseInt(limit) - 1);
+                .range(offset, offset + safeLimit - 1);
 
             if (error) throw error;
 
@@ -140,8 +144,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
                 success: true,
                 users: data || [],
                 total: count || 0,
-                page: parseInt(page),
-                totalPages: Math.ceil((count || 0) / parseInt(limit))
+                page: safePage,
+                totalPages: Math.ceil((count || 0) / safeLimit)
             });
 
         } catch (error) {
@@ -154,7 +158,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get single user details
      * GET /api/admin/users/:id
      */
-    app.get('/api/admin/users/:id', authenticateUser, async (req, res) => {
+    app.get('/api/admin/users/:id', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
 
@@ -200,7 +204,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Update user status
      * PATCH /api/admin/users/:id/status
      */
-    app.patch('/api/admin/users/:id/status', authenticateUser, async (req, res) => {
+    app.patch('/api/admin/users/:id/status', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
             const { status } = req.body;
@@ -232,7 +236,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Update user details
      * PUT /api/admin/users/:id
      */
-    app.put('/api/admin/users/:id', authenticateUser, async (req, res) => {
+    app.put('/api/admin/users/:id', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
             const { name, email, phone, location, role, status, wallet_balance, plan } = req.body;
@@ -272,7 +276,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Delete user
      * DELETE /api/admin/users/:id
      */
-    app.delete('/api/admin/users/:id', authenticateUser, async (req, res) => {
+    app.delete('/api/admin/users/:id', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
 
@@ -298,7 +302,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Reset user password (send reset email)
      * POST /api/admin/users/:id/reset-password
      */
-    app.post('/api/admin/users/:id/reset-password', authenticateUser, async (req, res) => {
+    app.post('/api/admin/users/:id/reset-password', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
 
@@ -333,7 +337,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get email configuration
      * GET /api/admin/email-config
      */
-    app.get('/api/admin/email-config', authenticateUser, async (req, res) => {
+    app.get('/api/admin/email-config', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let config = null;
 
@@ -381,7 +385,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Save email configuration
      * POST /api/admin/email-config
      */
-    app.post('/api/admin/email-config', authenticateUser, async (req, res) => {
+    app.post('/api/admin/email-config', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const {
                 provider, // 'smtp' | 'sendgrid' | 'mailgun' | 'ses'
@@ -458,7 +462,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Test email configuration
      * POST /api/admin/email-config/test
      */
-    app.post('/api/admin/email-config/test', authenticateUser, async (req, res) => {
+    app.post('/api/admin/email-config/test', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { testEmail } = req.body;
 
@@ -484,7 +488,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get credit system configuration
      * GET /api/admin/credit-config
      */
-    app.get('/api/admin/credit-config', authenticateUser, async (req, res) => {
+    app.get('/api/admin/credit-config', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let config = null;
 
@@ -528,7 +532,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Save credit system configuration
      * POST /api/admin/credit-config
      */
-    app.post('/api/admin/credit-config', authenticateUser, async (req, res) => {
+    app.post('/api/admin/credit-config', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { packages, creditCosts } = req.body;
 
@@ -586,7 +590,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Adjust user credits manually
      * POST /api/admin/users/:id/credits
      */
-    app.post('/api/admin/users/:id/credits', authenticateUser, async (req, res) => {
+    app.post('/api/admin/users/:id/credits', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
             const { amount, reason, type = 'adjustment' } = req.body;
@@ -639,7 +643,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get job pricing configuration
      * GET /api/admin/job-pricing
      */
-    app.get('/api/admin/job-pricing', authenticateUser, async (req, res) => {
+    app.get('/api/admin/job-pricing', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let config = null;
 
@@ -688,7 +692,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Save job pricing configuration
      * POST /api/admin/job-pricing
      */
-    app.post('/api/admin/job-pricing', authenticateUser, async (req, res) => {
+    app.post('/api/admin/job-pricing', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { basePricing, addons, discounts, customRules } = req.body;
 
@@ -750,7 +754,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get proctoring configuration
      * GET /api/admin/proctoring-config
      */
-    app.get('/api/admin/proctoring-config', authenticateUser, async (req, res) => {
+    app.get('/api/admin/proctoring-config', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let config = null;
 
@@ -799,7 +803,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Save proctoring configuration
      * POST /api/admin/proctoring-config
      */
-    app.post('/api/admin/proctoring-config', authenticateUser, async (req, res) => {
+    app.post('/api/admin/proctoring-config', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { enabled, settings, violationActions } = req.body;
 
@@ -860,10 +864,12 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get all interviews with filters
      * GET /api/admin/interviews
      */
-    app.get('/api/admin/interviews', authenticateUser, async (req, res) => {
+    app.get('/api/admin/interviews', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { status, jobId, date, page = 1, limit = 20 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const safePage = Math.max(parseInt(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+            const offset = (safePage - 1) * safeLimit;
 
             let query = supabase
                 .from('interviews')
@@ -879,7 +885,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
 
             const { data, count, error } = await query
                 .order('scheduled_date', { ascending: false })
-                .range(offset, offset + parseInt(limit) - 1);
+                .range(offset, offset + safeLimit - 1);
 
             if (error) throw error;
 
@@ -887,8 +893,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
                 success: true,
                 interviews: data || [],
                 total: count || 0,
-                page: parseInt(page),
-                totalPages: Math.ceil((count || 0) / parseInt(limit))
+                page: safePage,
+                totalPages: Math.ceil((count || 0) / safeLimit)
             });
 
         } catch (error) {
@@ -901,7 +907,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get interview details
      * GET /api/admin/interviews/:id
      */
-    app.get('/api/admin/interviews/:id', authenticateUser, async (req, res) => {
+    app.get('/api/admin/interviews/:id', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
 
@@ -933,7 +939,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Update interview status/details
      * PATCH /api/admin/interviews/:id
      */
-    app.patch('/api/admin/interviews/:id', authenticateUser, async (req, res) => {
+    app.patch('/api/admin/interviews/:id', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
             const { status, notes, score, decision } = req.body;
@@ -971,7 +977,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get AI system configuration
      * GET /api/admin/ai-config
      */
-    app.get('/api/admin/ai-config', authenticateUser, async (req, res) => {
+    app.get('/api/admin/ai-config', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let config = null;
 
@@ -1024,7 +1030,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Save AI system configuration
      * POST /api/admin/ai-config
      */
-    app.post('/api/admin/ai-config', authenticateUser, async (req, res) => {
+    app.post('/api/admin/ai-config', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { primaryProvider, fallbackProvider, features, weights, thresholds, enabled_providers } = req.body;
 
@@ -1086,7 +1092,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Trigger AI model retraining
      * POST /api/admin/ai-config/retrain
      */
-    app.post('/api/admin/ai-config/retrain', authenticateUser, async (req, res) => {
+    app.post('/api/admin/ai-config/retrain', authenticateUser, requireAdmin, async (req, res) => {
         try {
             // Log the retraining request
             if (supabase) {
@@ -1113,7 +1119,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Test AI Provider Reachability
      * POST /api/admin/test-provider
      */
-    app.post('/api/admin/test-provider', authenticateUser, async (req, res) => {
+    app.post('/api/admin/test-provider', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { provider, prompt } = req.body;
             console.log(`[Admin] Testing AI Provider: ${provider}`);
@@ -1166,7 +1172,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get AI System Health
      * GET /api/admin/ai-health
      */
-    app.get('/api/admin/ai-health', authenticateUser, async (req, res) => {
+    app.get('/api/admin/ai-health', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { checkAIHealth, getAIConfig } = await import('../agents/ai_utils.js');
 
@@ -1205,10 +1211,12 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get system logs with filtering
      * GET /api/admin/system-logs
      */
-    app.get('/api/admin/system-logs', authenticateUser, async (req, res) => {
+    app.get('/api/admin/system-logs', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { level, source, startDate, endDate, page = 1, limit = 50 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const safePage = Math.max(parseInt(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
+            const offset = (safePage - 1) * safeLimit;
 
             let query = supabase
                 .from('system_logs')
@@ -1221,7 +1229,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
 
             const { data, count, error } = await query
                 .order('created_at', { ascending: false })
-                .range(offset, offset + parseInt(limit) - 1);
+                .range(offset, offset + safeLimit - 1);
 
             if (error) throw error;
 
@@ -1229,8 +1237,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
                 success: true,
                 logs: data || [],
                 total: count || 0,
-                page: parseInt(page),
-                totalPages: Math.ceil((count || 0) / parseInt(limit))
+                page: safePage,
+                totalPages: Math.ceil((count || 0) / safeLimit)
             });
 
         } catch (error) {
@@ -1243,7 +1251,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Export system logs
      * GET /api/admin/system-logs/export
      */
-    app.get('/api/admin/system-logs/export', authenticateUser, async (req, res) => {
+    app.get('/api/admin/system-logs/export', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { format = 'json', startDate, endDate } = req.query;
 
@@ -1286,10 +1294,12 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get all upskill courses (admin)
      * GET /api/admin/upskill/courses
      */
-    app.get('/api/admin/upskill/courses', authenticateUser, async (req, res) => {
+    app.get('/api/admin/upskill/courses', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { status, category, search, page = 1, limit = 20 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const safePage = Math.max(parseInt(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+            const offset = (safePage - 1) * safeLimit;
 
             let courses = [];
             let total = 0;
@@ -1302,12 +1312,13 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
                 if (status) query = query.eq('status', status);
                 if (category) query = query.eq('category', category);
                 if (search) {
-                    query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+                    const safeSearch = sanitizeSearchParam(search);
+                    if (safeSearch) query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`);
                 }
 
                 const { data, count, error } = await query
                     .order('created_at', { ascending: false })
-                    .range(offset, offset + parseInt(limit) - 1);
+                    .range(offset, offset + safeLimit - 1);
 
                 if (!error) {
                     courses = data || [];
@@ -1329,8 +1340,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
                 success: true,
                 courses,
                 total,
-                page: parseInt(page),
-                totalPages: Math.ceil(total / parseInt(limit))
+                page: safePage,
+                totalPages: Math.ceil(total / safeLimit)
             });
 
         } catch (error) {
@@ -1343,7 +1354,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Create/Update upskill course (admin)
      * POST /api/admin/upskill/courses
      */
-    app.post('/api/admin/upskill/courses', authenticateUser, async (req, res) => {
+    app.post('/api/admin/upskill/courses', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id, title, description, category, level, duration, instructor, price, isFree, status, thumbnail } = req.body;
 
@@ -1397,7 +1408,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Delete upskill course (admin)
      * DELETE /api/admin/upskill/courses/:id
      */
-    app.delete('/api/admin/upskill/courses/:id', authenticateUser, async (req, res) => {
+    app.delete('/api/admin/upskill/courses/:id', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
 
@@ -1425,7 +1436,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Toggle course status (Publish/Unpublish)
      * PATCH /api/admin/upskill/courses/:id/status
      */
-    app.patch('/api/admin/upskill/courses/:id/status', authenticateUser, async (req, res) => {
+    app.patch('/api/admin/upskill/courses/:id/status', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
             const { status } = req.body;
@@ -1461,10 +1472,12 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get upskill learner progress (admin)
      * GET /api/admin/upskill/learners
      */
-    app.get('/api/admin/upskill/learners', authenticateUser, async (req, res) => {
+    app.get('/api/admin/upskill/learners', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { search, page = 1, limit = 20 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const safePage = Math.max(parseInt(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+            const offset = (safePage - 1) * safeLimit;
 
             let learners = [];
             let total = 0;
@@ -1478,12 +1491,13 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
                     `, { count: 'exact' });
 
                 if (search) {
-                    query = query.or(`user.name.ilike.%${search}%,user.email.ilike.%${search}%`);
+                    const safeSearch = sanitizeSearchParam(search);
+                    if (safeSearch) query = query.or(`user.name.ilike.%${safeSearch}%,user.email.ilike.%${safeSearch}%`);
                 }
 
                 const { data, count, error } = await query
                     .order('total_xp', { ascending: false })
-                    .range(offset, offset + parseInt(limit) - 1);
+                    .range(offset, offset + safeLimit - 1);
 
                 if (!error) {
                     learners = data || [];
@@ -1505,8 +1519,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
                 success: true,
                 learners,
                 total,
-                page: parseInt(page),
-                totalPages: Math.ceil(total / parseInt(limit))
+                page: safePage,
+                totalPages: Math.ceil(total / safeLimit)
             });
 
         } catch (error) {
@@ -1519,7 +1533,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get learner detail with certificates and badges
      * GET /api/admin/upskill/learners/:id
      */
-    app.get('/api/admin/upskill/learners/:id', authenticateUser, async (req, res) => {
+    app.get('/api/admin/upskill/learners/:id', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
 
@@ -1576,7 +1590,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get/Set gamification settings
      * GET /api/admin/upskill/gamification
      */
-    app.get('/api/admin/upskill/gamification', authenticateUser, async (req, res) => {
+    app.get('/api/admin/upskill/gamification', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let settings = null;
 
@@ -1614,7 +1628,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Update gamification settings
      * POST /api/admin/upskill/gamification
      */
-    app.post('/api/admin/upskill/gamification', authenticateUser, async (req, res) => {
+    app.post('/api/admin/upskill/gamification', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { xpPerLessonComplete, xpPerCourseComplete, xpPerBadgeEarned, streakBonusMultiplier, levelUpXpThreshold } = req.body;
 
@@ -1675,7 +1689,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get all badges (admin)
      * GET /api/admin/upskill/badges
      */
-    app.get('/api/admin/upskill/badges', authenticateUser, async (req, res) => {
+    app.get('/api/admin/upskill/badges', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let badges = [];
 
@@ -1710,57 +1724,10 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
     });
 
     /**
-     * Create/Update badge
-     * POST /api/admin/upskill/badges
-     */
-    app.post('/api/admin/upskill/badges', authenticateUser, async (req, res) => {
-        try {
-            const { id, name, description, icon, color, criteria } = req.body;
-
-            const badgeData = {
-                name,
-                description,
-                icon,
-                color,
-                criteria,
-                updated_at: new Date().toISOString()
-            };
-
-            let result;
-
-            if (supabase) {
-                if (id) {
-                    const { data, error } = await supabase
-                        .from('badges')
-                        .update(badgeData)
-                        .eq('id', id)
-                        .select();
-                    if (!error) result = data[0];
-                } else {
-                    const { data, error } = await supabase
-                        .from('badges')
-                        .insert([{ ...badgeData, created_at: new Date().toISOString() }])
-                        .select();
-                    if (!error) result = data[0];
-                }
-            }
-
-            res.json({
-                success: true,
-                badge: result || { id: `B${Date.now()}`, ...badgeData }
-            });
-
-        } catch (error) {
-            console.error('Error saving badge:', error);
-            res.status(500).json({ error: 'Failed to save badge' });
-        }
-    });
-
-    /**
      * Get certificate settings
      * GET /api/admin/upskill/certificate-settings
      */
-    app.get('/api/admin/upskill/certificate-settings', authenticateUser, async (req, res) => {
+    app.get('/api/admin/upskill/certificate-settings', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let settings = null;
 
@@ -1792,7 +1759,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Update certificate settings
      * POST /api/admin/upskill/certificate-settings
      */
-    app.post('/api/admin/upskill/certificate-settings', authenticateUser, async (req, res) => {
+    app.post('/api/admin/upskill/certificate-settings', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { autoIssue, minimumScore, includeGrade, templateUrl } = req.body;
 
@@ -1843,7 +1810,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Issue certificate manually
      * POST /api/admin/upskill/certificates/issue
      */
-    app.post('/api/admin/upskill/certificates/issue', authenticateUser, async (req, res) => {
+    app.post('/api/admin/upskill/certificates/issue', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { userId, courseId, grade } = req.body;
 
@@ -1880,7 +1847,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get upskill analytics/dashboard stats
      * GET /api/admin/upskill/stats
      */
-    app.get('/api/admin/upskill/stats', authenticateUser, async (req, res) => {
+    app.get('/api/admin/upskill/stats', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let stats = {
                 totalCourses: 0,
@@ -1956,7 +1923,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Create new badge
      * POST /api/admin/upskill/badges
      */
-    app.post('/api/admin/upskill/badges', authenticateUser, async (req, res) => {
+    app.post('/api/admin/upskill/badges', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { name, description, icon, color, criteria } = req.body;
 
@@ -2010,7 +1977,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Update badge
      * PUT /api/admin/upskill/badges/:id
      */
-    app.put('/api/admin/upskill/badges/:id', authenticateUser, async (req, res) => {
+    app.put('/api/admin/upskill/badges/:id', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
             const { name, description, icon, color, criteria } = req.body;
@@ -2070,7 +2037,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Delete badge
      * DELETE /api/admin/upskill/badges/:id
      */
-    app.delete('/api/admin/upskill/badges/:id', authenticateUser, async (req, res) => {
+    app.delete('/api/admin/upskill/badges/:id', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { id } = req.params;
 
@@ -2110,7 +2077,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Award badge to learner
      * POST /api/admin/upskill/learners/:learnerId/award-badge
      */
-    app.post('/api/admin/upskill/learners/:learnerId/award-badge', authenticateUser, async (req, res) => {
+    app.post('/api/admin/upskill/learners/:learnerId/award-badge', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { learnerId } = req.params;
             const { badgeId } = req.body;
@@ -2164,7 +2131,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Get YouTube configuration
      * GET /api/admin/youtube-config
      */
-    app.get('/api/admin/youtube-config', authenticateUser, async (req, res) => {
+    app.get('/api/admin/youtube-config', authenticateUser, requireAdmin, async (req, res) => {
         try {
             let config = null;
             if (supabase) {
@@ -2197,7 +2164,7 @@ export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decry
      * Save YouTube configuration
      * POST /api/admin/youtube-config
      */
-    app.post('/api/admin/youtube-config', authenticateUser, async (req, res) => {
+    app.post('/api/admin/youtube-config', authenticateUser, requireAdmin, async (req, res) => {
         try {
             const { api_key, client_id, client_secret, access_token, channel_id, privacy_status, auto_upload } = req.body;
 
