@@ -24,6 +24,8 @@ import {
     Sparkles,
     Youtube
 } from 'lucide-react';
+import { API_BASE_URL } from '../../lib/api';
+
 
 // ============================================
 // TYPES
@@ -221,7 +223,7 @@ const UpskillDashboard = () => {
                 const userId = 'user-1';
 
                 // 1. Fetch My Courses (Enrollments)
-                const enrollRes = await fetch(`http://localhost:3000/api/upskill/enrollments/${userId}`);
+                const enrollRes = await fetch(`${API_BASE_URL}/api/upskill/enrollments/${userId}`);
                 const enrollData = await enrollRes.json();
                 if (enrollData.success) {
                     setMyCourses(enrollData.enrollments.map((e: any) => ({
@@ -237,14 +239,14 @@ const UpskillDashboard = () => {
                 }
 
                 // 2. Fetch Live Classes (YouTube)
-                const liveRes = await fetch('http://localhost:3000/api/upskill/live-classes');
+                const liveRes = await fetch(`${API_BASE_URL}/api/upskill/live-classes`);
                 const liveData = await liveRes.json();
                 if (liveData.success) {
                     setLiveClasses(liveData.classes);
                 }
 
                 // 3. Fetch Recommendations (DeepSeek)
-                const recRes = await fetch(`http://localhost:3000/api/upskill/recommendations/${userId}`);
+                const recRes = await fetch(`${API_BASE_URL}/api/upskill/recommendations/${userId}`);
                 const recData = await recRes.json();
 
                 // If the deepseek route fails or returns empty, fallback/mock is handled in backend usually

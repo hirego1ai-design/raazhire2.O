@@ -2,12 +2,14 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Shield, Globe, Zap, Users, Target, ArrowRight, CheckCircle2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import { API_BASE_URL } from '../lib/api';
+
 
 const AboutPage = () => {
     const [dbContent, setDbContent] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        fetch('http://localhost:3000/api/pages/about')
+        fetch(`${API_BASE_URL}/api/pages/about`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.page && data.page.content) {

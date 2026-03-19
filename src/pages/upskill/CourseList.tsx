@@ -17,6 +17,8 @@ import {
     Database,
     Lightbulb
 } from 'lucide-react';
+import { API_BASE_URL } from '../../lib/api';
+
 
 // ============================================
 // PREMIUM COURSE CARD
@@ -157,7 +159,7 @@ const CourseList: React.FC = () => {
                 if (selectedCategory !== 'All') params.append('category', selectedCategory);
                 if (searchQuery) params.append('search', searchQuery);
 
-                const response = await fetch(`http://localhost:3000/api/upskill/courses?${params.toString()}`);
+                const response = await fetch(`${API_BASE_URL}/api/upskill/courses?${params.toString()}`);
 
                 if (!response.ok) throw new Error('Network response was not ok');
 
@@ -188,14 +190,14 @@ const CourseList: React.FC = () => {
         const fetchData = async () => {
             try {
                 // Fetch AI Recommendations
-                const recParams = await fetch('http://localhost:3000/api/upskill/recommendations/1');
+                const recParams = await fetch(`${API_BASE_URL}/api/upskill/recommendations/1`);
                 const recData = await recParams.json();
                 if (recData.success && recData.data?.recommendations) {
                     setRecommendations(recData.data.recommendations);
                 }
 
                 // Fetch Live Classes
-                const liveParams = await fetch('http://localhost:3000/api/upskill/live-classes');
+                const liveParams = await fetch(`${API_BASE_URL}/api/upskill/live-classes`);
                 const liveData = await liveParams.json();
                 if (liveData.success) {
                     setLiveClasses(liveData.classes);

@@ -2,12 +2,14 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Globe, Users, TrendingUp, Lock, CheckCircle, Server, FileText, Zap, Layout, Headphones } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { API_BASE_URL } from '../lib/api';
+
 
 const EnterprisePage = () => {
     const [dbContent, setDbContent] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        fetch('http://localhost:3000/api/pages/enterprise')
+        fetch(`${API_BASE_URL}/api/pages/enterprise`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.page && data.page.content) {
