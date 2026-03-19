@@ -14,7 +14,7 @@ import Stripe from 'stripe';
 import Razorpay from 'razorpay';
 import { supabase, supabaseAdmin } from './utils/supabaseClient.js';
 import { encrypt, decrypt, ENCRYPTION_KEY } from './utils/encryption.js';
-import { authenticateUser, requireAdmin } from './middleware/auth.js';
+import { authenticateUser, requireAdmin, requireRole } from './middleware/auth.js';
 import { validateProductionEnvironment, createSecureCORSConfig, createRateLimiter, validatePassword, validateEmail } from './utils/security.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { sanitizeRequest } from './middleware/inputValidator.js';
@@ -89,6 +89,7 @@ app.use(express.urlencoded({ extended: true }));
 // SECURITY: Sanitize all incoming request data (body, query, params)
 app.use(sanitizeRequest);
 app.use(express.static(join(__dirname, 'public')));
+app.use('/uploads', authenticateUser, express.static(UPLOAD_DIR));
 
 // ==================== SUPABASE CLIENTS ====================
 // Imported from utils/supabaseClient.js to ensure consistent state and RLS handling
@@ -126,7 +127,7 @@ async function writeLocalDb(data) {
 
 // ==================== AUTH MIDDLEWARE ====================
 // Imported from middleware/auth.js
-// Includes authenticateUser, requireAdmin, and ALLOW_DEV_BYPASS constant
+// Includes authenticateUser, requireAdmin, and requireRole
 // ==================== AUTHENTICATION API (SECURE REGISTRATION) ====================
 // SECURITY FIX: Protected with authenticateUser + requireAdmin middleware
 // Enhanced security: Added rate limiting, input validation, and audit logging
@@ -584,7 +585,7 @@ async function getYouTubeAgent() {
 import multer from 'multer';
 const upload = multer({
     dest: UPLOAD_DIR,
-    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
     fileFilter: (req, file, cb) => {
         const allowed = ['video/mp4', 'video/webm', 'video/quicktime'];
         if (allowed.includes(file.mimetype)) {
@@ -1464,6 +1465,9 @@ app.post('/api/create-checkout-session', authenticateUser, async (req, res) => {
 // ==================== EXISTING ROUTES ====================
 
 app.get('/health', (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+        return res.json({ status: 'ok' });
+    }
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString()

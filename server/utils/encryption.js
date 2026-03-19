@@ -49,11 +49,13 @@ export function encrypt(text) {
     if (!text) return null;
     try {
         const salt = crypto.randomBytes(16);
-        const iv = crypto.randomBytes(16);
         const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
+        const iv = crypto.randomBytes(16);
         const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
+        // Format: salt(32 hex chars):iv(32 hex chars):encrypted
+        // Both the new format and the legacy 2-part (iv:encrypted) format are supported on decrypt.
         return salt.toString('hex') + ':' + iv.toString('hex') + ':' + encrypted;
     } catch (error) {
         console.error('Encryption failed:', error.message);
