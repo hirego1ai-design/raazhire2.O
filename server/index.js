@@ -17,6 +17,7 @@ import { encrypt, decrypt, ENCRYPTION_KEY } from './utils/encryption.js';
 import { authenticateUser, requireAdmin } from './middleware/auth.js';
 import { validateProductionEnvironment, createSecureCORSConfig, createRateLimiter, validatePassword, validateEmail } from './utils/security.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { sanitizeRequest } from './middleware/inputValidator.js';
 import { setupAIRoutes } from './routes/ai_routes.js';
 import { setupAdminRoutes } from './routes/admin_routes.js';
 import { setupPortalRoutes } from './routes/portal_routes.js';
@@ -85,6 +86,8 @@ const corsConfig = createSecureCORSConfig();
 app.use(cors(corsConfig));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+// SECURITY: Sanitize all incoming request data (body, query, params)
+app.use(sanitizeRequest);
 app.use(express.static(join(__dirname, 'public')));
 
 // ==================== SUPABASE CLIENTS ====================

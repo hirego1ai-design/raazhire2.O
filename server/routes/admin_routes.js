@@ -13,6 +13,7 @@
                                 */
 
 import express from 'express';
+import { sanitizeSearchParam } from '../utils/security.js';
 
 export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, encrypt, decrypt, readLocalDb, writeLocalDb) {
 
@@ -129,7 +130,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
             if (role) query = query.eq('role', role);
             if (status) query = query.eq('status', status);
             if (search) {
-                query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+                const safeSearch = sanitizeSearchParam(search);
+                if (safeSearch) query = query.or(`name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`);
             }
 
             const { data, count, error } = await query
@@ -1310,7 +1312,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
                 if (status) query = query.eq('status', status);
                 if (category) query = query.eq('category', category);
                 if (search) {
-                    query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+                    const safeSearch = sanitizeSearchParam(search);
+                    if (safeSearch) query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`);
                 }
 
                 const { data, count, error } = await query
@@ -1488,7 +1491,8 @@ export function setupAdminRoutes(app, supabase, authenticateUser, requireAdmin, 
                     `, { count: 'exact' });
 
                 if (search) {
-                    query = query.or(`user.name.ilike.%${search}%,user.email.ilike.%${search}%`);
+                    const safeSearch = sanitizeSearchParam(search);
+                    if (safeSearch) query = query.or(`user.name.ilike.%${safeSearch}%,user.email.ilike.%${safeSearch}%`);
                 }
 
                 const { data, count, error } = await query

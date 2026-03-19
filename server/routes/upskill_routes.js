@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import { authenticateUser } from '../middleware/auth.js';
 import { decrypt } from '../utils/encryption.js';
+import { sanitizeSearchParam } from '../utils/security.js';
 import { supabaseAdmin } from '../utils/supabaseClient.js';
 
 const router = express.Router();
@@ -67,7 +68,8 @@ router.get('/courses', async (req, res) => {
         }
         if (search) {
             // Search in title, description, or instructor
-            query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,instructor.ilike.%${search}%`);
+            const safeSearch = sanitizeSearchParam(search);
+            if (safeSearch) query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%,instructor.ilike.%${safeSearch}%`);
         }
         if (featured === 'true') {
             query = query.eq('is_featured', true);
