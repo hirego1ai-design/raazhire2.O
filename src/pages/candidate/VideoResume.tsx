@@ -152,21 +152,21 @@ const VideoResume: React.FC = () => {
             setVideoUrl(URL.createObjectURL(blob));
 
             // Pre-check: ensure user has a valid session
-            // BYPASS FOR NOW: Fake session for developers testing while Supabase is down
-            // if (!supabase) throw new Error('Authentication service unavailable. Please refresh the page.');
-            // const { data: { session: currentSession } } = await supabase.auth.getSession();
-            // if (!currentSession?.access_token) {
-            //     throw new Error('Your session has expired. Please sign out and sign back in, then try again.');
-            // }
+            if (!supabase) throw new Error('Authentication service unavailable. Please refresh the page.');
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            if (!currentSession?.access_token) {
+                throw new Error('Your session has expired. Please sign out and sign back in, then try again.');
+            }
 
             // Helper: get fresh auth headers (prevents token expiry during long operations)
             const getAuthHeaders = async (): Promise<Record<string, string>> => {
-                // if (!supabase) return {};
-                // const { data: { session } } = await supabase.auth.getSession();
-                // const headers: Record<string, string> = {};
-                // if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
-                // return headers;
-                return { 'Authorization': 'Bearer BYPASS_TOKEN' };
+                if (!supabase) throw new Error('Auth service not configured');
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) throw new Error('Not authenticated');
+                return {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                };
             };
 
             // Helper: fetch with timeout (10 min for long transcription)
@@ -186,7 +186,7 @@ const VideoResume: React.FC = () => {
             const formData = new FormData();
             formData.append('video', blob, 'video_resume.webm');
 
-            const uploadHeaders = await getAuthHeaders();
+            const { 'Content-Type': _ct, ...uploadHeaders } = await getAuthHeaders();
             const uploadRes = await fetchWithTimeout(endpoints.videoResume.upload, {
                 method: 'POST',
                 headers: uploadHeaders,
@@ -203,7 +203,7 @@ const VideoResume: React.FC = () => {
             const transcribeHeaders = await getAuthHeaders(); // Fresh token
             const transcribeRes = await fetchWithTimeout(endpoints.videoResume.transcribe, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...transcribeHeaders },
+                headers: transcribeHeaders,
                 body: JSON.stringify({
                     videoId: id,
                     providedTranscript: providedText
@@ -224,7 +224,7 @@ const VideoResume: React.FC = () => {
             const analyzeHeaders = await getAuthHeaders(); // Fresh token again
             const analyzeRes = await fetchWithTimeout(endpoints.videoResume.analyze, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...analyzeHeaders },
+                headers: analyzeHeaders,
                 body: JSON.stringify({
                     videoId: id,
                     transcript: transcriptText,
@@ -255,10 +255,13 @@ const VideoResume: React.FC = () => {
         if (!videoId || !analysisResult || !analysisTranscript) return;
 
         try {
-            // const { data: { session } } = await supabase.auth.getSession();
-            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-            // if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
-            headers['Authorization'] = `Bearer BYPASS_TOKEN`;
+            if (!supabase) throw new Error('Auth service not configured');
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) throw new Error('Not authenticated');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+            };
 
             const res = await fetch(endpoints.videoResume.submit, {
                 method: 'POST',

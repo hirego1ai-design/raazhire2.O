@@ -48,12 +48,13 @@ if (process.env.NODE_ENV === 'production') {
 export function encrypt(text) {
     if (!text) return null;
     try {
+        const salt = crypto.randomBytes(16);
         const iv = crypto.randomBytes(16);
-        const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+        const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
         const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
-        return iv.toString('hex') + ':' + encrypted;
+        return salt.toString('hex') + ':' + iv.toString('hex') + ':' + encrypted;
     } catch (error) {
         console.error('Encryption failed:', error.message);
         return null;
@@ -64,9 +65,21 @@ export function decrypt(text) {
     if (!text) return null;
     try {
         const parts = text.split(':');
+        if (parts.length < 3) {
+            // Legacy format (no salt): iv:ciphertext — re-encrypt with random salt when updating
+            console.warn('[encryption] Decrypting legacy format (hardcoded salt). Re-encrypt this value to use per-operation random salts.');
+            const iv = Buffer.from(parts.shift(), 'hex');
+            const encryptedText = parts.join(':');
+            const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+            const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+            let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        }
+        const salt = Buffer.from(parts.shift(), 'hex');
         const iv = Buffer.from(parts.shift(), 'hex');
         const encryptedText = parts.join(':');
-        const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+        const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
         const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
         let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
