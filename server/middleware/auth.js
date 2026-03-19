@@ -30,7 +30,7 @@ setInterval(() => {
             failedAttempts.delete(ip);
         }
     }
-}, RATE_LIMIT_WINDOW_MS);
+}, RATE_LIMIT_WINDOW_MS).unref();
 
 function isRateLimited(ip) {
     const now = Date.now();

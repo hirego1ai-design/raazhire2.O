@@ -79,10 +79,9 @@ const strictLimiter = createRateLimiter({
 // SECURITY FIX: Restrict CORS to known frontend origins
 const corsConfig = createSecureCORSConfig();
 app.use(cors(corsConfig));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(join(__dirname, 'public')));
-app.use('/uploads', express.static(UPLOAD_DIR));
 
 // ==================== SUPABASE CLIENTS ====================
 // Imported from utils/supabaseClient.js to ensure consistent state and RLS handling
@@ -564,7 +563,18 @@ async function getYouTubeAgent() {
 }
 
 import multer from 'multer';
-const upload = multer({ dest: UPLOAD_DIR });
+const upload = multer({
+    dest: UPLOAD_DIR,
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
+    fileFilter: (req, file, cb) => {
+        const allowed = ['video/mp4', 'video/webm', 'video/quicktime'];
+        if (allowed.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only MP4, WebM, and QuickTime videos are allowed.'));
+        }
+    }
+});
 
 // Video Resume Upload & Analysis
 // Video Resume Step 1: Upload (Just saves the file)
@@ -1417,11 +1427,7 @@ app.post('/api/create-checkout-session', authenticateUser, async (req, res) => {
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
-        timestamp: new Date().toISOString(),
-        services: {
-            database: supabase ? 'configured' : 'missing_credentials',
-            encryption: ENCRYPTION_KEY !== 'default-encryption-key-change-in-production' ? 'configured' : 'using_default'
-        }
+        timestamp: new Date().toISOString()
     });
 });
 
@@ -1485,7 +1491,7 @@ app.post('/api/generate-job-description', authenticateUser, (req, res) => {
 setupAIRoutes(app, supabase, decrypt, authenticateUser);
 
 // Setup Admin Routes (pass both supabase clients + requireAdmin)
-setupAdminRoutes(app, supabaseAdmin || supabase, authenticateUser, encrypt, decrypt, readLocalDb, writeLocalDb);
+setupAdminRoutes(app, supabaseAdmin || supabase, authenticateUser, requireAdmin, encrypt, decrypt, readLocalDb, writeLocalDb);
 
 // Setup Portal Routes
 setupPortalRoutes(app, supabase, authenticateUser);

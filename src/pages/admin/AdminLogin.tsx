@@ -149,27 +149,6 @@ const AdminLogin = () => {
                         </button>
                     </form>
 
-                    {/* Developer Bypass */}
-                    {import.meta.env.VITE_API_URL && (
-                        <div className="mt-6 pt-6 border-t border-slate-700/50">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    localStorage.setItem('admin_user', JSON.stringify({
-                                        id: 'bypass-admin-id',
-                                        name: 'Dev Admin',
-                                        email: 'admin@hirego.dev',
-                                        role: 'admin'
-                                    }));
-                                    localStorage.setItem('sb-token', 'BYPASS_TOKEN');
-                                    navigate('/admin/dashboard');
-                                }}
-                                className="w-full py-2 bg-slate-900 hover:bg-slate-950 text-slate-500 text-[10px] font-black tracking-[0.2em] rounded-lg transition-all border border-slate-700/30 flex items-center justify-center gap-2"
-                            >
-                                ⚡ DEVELOPER BYPASS ⚡
-                            </button>
-                        </div>
-                    )}
                 </div>
 
                 <div className="bg-slate-900/50 p-4 text-center border-t border-slate-700">

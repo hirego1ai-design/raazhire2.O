@@ -11,6 +11,7 @@
  */
 
 import express from 'express';
+import { requireRole } from '../middleware/auth.js';
 import {
     onApplicationSubmitted,
     onJobCreated,
@@ -18,20 +19,8 @@ import {
     logAudit
 } from '../engine/workflow_engine.js';
 
-// --- Phase 2: Role-based middleware ---
-function requireEmployer(req, res, next) {
-    if (!req.user || req.user.role !== 'employer') {
-        return res.status(403).json({ error: 'Employer access required' });
-    }
-    next();
-}
-
-function requireCandidate(req, res, next) {
-    if (!req.user || req.user.role !== 'candidate') {
-        return res.status(403).json({ error: 'Candidate access required' });
-    }
-    next();
-}
+const requireEmployer = requireRole('employer');
+const requireCandidate = requireRole('candidate');
 
 export function setupPortalRoutes(app, supabase, authenticateUser) {
 
