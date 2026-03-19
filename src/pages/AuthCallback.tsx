@@ -74,7 +74,7 @@ const AuthCallback = () => {
     };
 
     const handleRoleSelect = async (role: 'candidate' | 'employer') => {
-        if (!sessionUser) return;
+        if (!sessionUser || !supabase) return;
         setStatus('loading');
 
         try {
