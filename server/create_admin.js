@@ -1,5 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -19,8 +20,20 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 async function createAdmin() {
-    const email = 'admin@hirego.com';
-    const password = 'AdminPassword123!';
+    const email = process.env.ADMIN_EMAIL;
+    const password = process.env.ADMIN_PASSWORD;
+
+    if (!email || !password) {
+        console.error("❌ ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required.");
+        console.error("   Usage: ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=<secure_password> node create_admin.js");
+        process.exit(1);
+    }
+
+    // Validate password strength
+    if (password.length < 12) {
+        console.error("❌ Password must be at least 12 characters long.");
+        process.exit(1);
+    }
 
     console.log(`Attempting to create/update admin user: ${email}`);
 
@@ -69,7 +82,6 @@ async function createAdmin() {
         console.log("------------------------------------------");
         console.log("✅ ADMIN USER CREATED/UPDATED SUCCESSFULLY");
         console.log(`Email: ${email}`);
-        console.log(`Password: ${password}`);
         console.log("------------------------------------------");
     }
 }

@@ -1,4 +1,4 @@
-import { exec, execSync } from 'child_process';
+import { execFile, execFileSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -14,7 +14,7 @@ const MAX_BUFFER = 10 * 1024 * 1024;
 
 let pyCmd = 'python3';
 try {
-    execSync('python3 --version', { stdio: 'ignore' });
+    execFileSync('python3', ['--version'], { stdio: 'ignore' });
 } catch (e) {
     pyCmd = 'python';
 }
@@ -22,13 +22,13 @@ try {
 /**
  * Runs the transcription Python script and returns JSON output.
  * Handles errors with detailed context for the frontend.
+ * SECURITY: Uses execFile() with array arguments to prevent command injection.
  */
 const runPythonScript = (scriptPath, args) => {
     return new Promise((resolve, reject) => {
-        const command = `${pyCmd} "${scriptPath}" ${args.map(a => `"${a}"`).join(' ')}`;
-        console.log(`[Video Service] Running: ${command}`);
+        console.log(`[Video Service] Running: ${pyCmd} ${scriptPath} [${args.length} args]`);
 
-        exec(command, { timeout: PYTHON_TIMEOUT_MS, maxBuffer: MAX_BUFFER }, (error, stdout, stderr) => {
+        execFile(pyCmd, [scriptPath, ...args], { timeout: PYTHON_TIMEOUT_MS, maxBuffer: MAX_BUFFER }, (error, stdout, stderr) => {
             const stderr_snippet = stderr ? stderr.substring(0, 1000) : '';
 
             if (error) {

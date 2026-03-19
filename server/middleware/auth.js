@@ -68,7 +68,7 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
  * - No bypass paths, no magic tokens, no mock users.
  */
 export const authenticateUser = async (req, res, next) => {
-    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const clientIP = req.ip || req.connection.remoteAddress;
 
     // Rate limit check before processing any auth
     if (isRateLimited(clientIP)) {

@@ -15,7 +15,7 @@ import Razorpay from 'razorpay';
 import { supabase, supabaseAdmin } from './utils/supabaseClient.js';
 import { encrypt, decrypt, ENCRYPTION_KEY } from './utils/encryption.js';
 import { authenticateUser, requireAdmin } from './middleware/auth.js';
-import { validateProductionEnvironment, createSecureCORSConfig, createRateLimiter } from './utils/security.js';
+import { validateProductionEnvironment, createSecureCORSConfig, createRateLimiter, validatePassword, validateEmail } from './utils/security.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { setupAIRoutes } from './routes/ai_routes.js';
 import { setupAdminRoutes } from './routes/admin_routes.js';
@@ -43,6 +43,10 @@ validateProductionEnvironment();
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// SECURITY: Enable trusted proxy for correct IP detection behind reverse proxies
+// This ensures req.ip uses X-Forwarded-For only from trusted proxies
+app.set('trust proxy', parseInt(process.env.TRUSTED_PROXY_COUNT, 10) || 1);
 
 // Security & Logging Middleware
 app.use(helmet({
@@ -146,9 +150,10 @@ app.post('/api/auth/register', strictLimiter, authenticateUser, requireAdmin, as
             return res.status(400).json({ error: 'Invalid email format' });
         }
 
-        // Validate password strength
-        if (password.length < 8) {
-            return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        // Validate password strength using security utility
+        const passwordCheck = validatePassword(password);
+        if (!passwordCheck.valid) {
+            return res.status(400).json({ error: passwordCheck.message });
         }
 
         // Admin Create User (Bypasses Rate Limits & Email Verification)
@@ -348,17 +353,28 @@ app.post('/api/admin/api-keys', authenticateUser, requireAdmin, async (req, res)
         res.json({ success: true, data: result });
     } catch (error) {
         console.error('Error saving API keys:', error);
-        res.status(500).json({ error: `Failed to save API keys: ${error.message}` });
+        const message = process.env.NODE_ENV === 'production' ? 'Failed to save API keys' : `Failed to save API keys: ${error.message}`;
+        res.status(500).json({ error: message });
     }
 });
 
 // Test API connection
-app.post('/api/admin/test-api-key', authenticateUser, async (req, res) => {
+app.post('/api/admin/test-api-key', authenticateUser, requireAdmin, async (req, res) => {
     try {
         const { provider, api_key } = req.body;
 
         if (!provider || !api_key) {
             return res.status(400).json({ error: 'Provider and API key are required' });
+        }
+
+        // SECURITY: Validate API key format and length to prevent injection
+        if (typeof api_key !== 'string' || api_key.length > 256 || api_key.length < 10) {
+            return res.status(400).json({ error: 'Invalid API key format' });
+        }
+
+        const validProviders = ['gemini', 'gpt4', 'claude', 'deepseek'];
+        if (!validProviders.includes(provider)) {
+            return res.status(400).json({ error: 'Unsupported provider' });
         }
 
         // Trim whitespace from API key
@@ -438,7 +454,7 @@ app.post('/api/admin/test-api-key', authenticateUser, async (req, res) => {
 // ==================== YOUTUBE CONFIG MANAGEMENT ====================
 
 // Get YouTube configuration
-app.get('/api/admin/youtube-config', async (req, res) => {
+app.get('/api/admin/youtube-config', authenticateUser, requireAdmin, async (req, res) => {
     try {
         let data = null;
 
@@ -478,7 +494,7 @@ app.get('/api/admin/youtube-config', async (req, res) => {
 });
 
 // Save YouTube configuration
-app.post('/api/admin/youtube-config', async (req, res) => {
+app.post('/api/admin/youtube-config', authenticateUser, requireAdmin, async (req, res) => {
     try {
         const { api_key, client_id, client_secret, access_token, channel_id, privacy_status, auto_upload } = req.body;
 
@@ -539,7 +555,7 @@ app.post('/api/admin/youtube-config', async (req, res) => {
         res.json({ success: true, data: result });
     } catch (error) {
         console.error('Error saving YouTube config:', error);
-        res.status(500).json({ error: 'Failed to save YouTube configuration', details: error.message });
+        res.status(500).json({ error: 'Failed to save YouTube configuration', details: process.env.NODE_ENV === 'production' ? undefined : error.message });
     }
 });
 
@@ -660,12 +676,13 @@ app.post('/api/video-resume/transcribe', authenticateUser, async (req, res) => {
     } catch (error) {
         console.error('[Transcribe] Error:', error);
         // Support both Error objects and thrown structured objects
+        const isProduction = process.env.NODE_ENV === 'production';
         const responseError = {
             success: false,
-            error: error.message || (typeof error === 'string' ? error : 'Transcription failed'),
+            error: isProduction ? 'Transcription failed' : (error.message || (typeof error === 'string' ? error : 'Transcription failed')),
             error_code: error.error_code || 'TRANSCRIBE_ERROR',
-            details: error.message || error.details || 'Internal server error during transcription',
-            stderr_snippet: error.stderr_snippet || null
+            details: isProduction ? 'Internal server error during transcription' : (error.message || error.details || 'Internal server error during transcription'),
+            stderr_snippet: isProduction ? null : (error.stderr_snippet || null)
         };
         res.status(502).json(responseError);
     }
@@ -765,7 +782,7 @@ app.post('/api/video-resume/analyze', authenticateUser, async (req, res) => {
         res.status(502).json({
             error: 'AI Analysis failed',
             error_code: 'AI_SERVICE_ERROR',
-            details: error.message || 'The AI service encountered an error processing your request.'
+            details: process.env.NODE_ENV === 'production' ? 'The AI service encountered an error processing your request.' : (error.message || 'The AI service encountered an error processing your request.')
         });
     }
 });
@@ -820,7 +837,7 @@ app.post('/api/video-resume/submit', authenticateUser, async (req, res) => {
         res.status(500).json({
             error: 'Database save failed',
             error_code: 'DB_SAVE_ERROR',
-            details: error.message
+            details: process.env.NODE_ENV === 'production' ? undefined : error.message
         });
     }
 });
@@ -883,7 +900,7 @@ app.post('/api/live-assessment/upload', authenticateUser, upload.single('video')
 
     } catch (error) {
         console.error('Live assessment upload error:', error);
-        res.status(500).json({ error: 'Failed to upload assessment video', details: error.message });
+        res.status(500).json({ error: 'Failed to upload assessment video', details: process.env.NODE_ENV === 'production' ? undefined : error.message });
     }
 });
 
@@ -914,7 +931,7 @@ app.post('/api/admin/upskill/lessons/upload-video', authenticateUser, upload.sin
         res.json({ success: true, videoUrl: result.url, videoId: result.id });
     } catch (error) {
         console.error('Lesson upload failed:', error);
-        res.status(500).json({ error: 'Upload failed', details: error.message });
+        res.status(500).json({ error: 'Upload failed', details: process.env.NODE_ENV === 'production' ? undefined : error.message });
     }
 });
 // Test YouTube Upload
@@ -945,7 +962,7 @@ app.post('/api/admin/youtube-upload-test', authenticateUser, upload.single('vide
         res.json({ success: true, videoUrl: result.url, videoId: result.id });
     } catch (error) {
         console.error('Test upload failed:', error);
-        res.status(500).json({ error: 'Upload failed', details: error.message });
+        res.status(500).json({ error: 'Upload failed', details: process.env.NODE_ENV === 'production' ? undefined : error.message });
     }
 });
 
@@ -954,6 +971,23 @@ app.post('/api/admin/youtube-upload-test', authenticateUser, upload.single('vide
 // Consistent redirect URI for OAuth flow — must match Google Cloud Console config
 const YOUTUBE_OAUTH_REDIRECT_URI = process.env.YOUTUBE_OAUTH_REDIRECT_URI
     || `http://localhost:${port}/api/youtube/oauth/callback`;
+
+// SECURITY: Allowlist of valid return URLs to prevent open redirect attacks
+const ALLOWED_RETURN_URLS = [
+    '/candidate/video-resume',
+    '/candidate/dashboard',
+    '/candidate/profile',
+    '/dashboard',
+    '/admin/video-storage'
+];
+
+function sanitizeReturnUrl(url) {
+    if (!url || typeof url !== 'string') return '/candidate/video-resume';
+    // Only allow relative paths that start with / and are in the allowlist
+    const normalized = url.split('?')[0].split('#')[0]; // Strip query params and fragments
+    if (ALLOWED_RETURN_URLS.includes(normalized)) return normalized;
+    return '/candidate/video-resume';
+}
 
 /**
  * GET /api/youtube/oauth/authorize
@@ -996,7 +1030,7 @@ app.get('/api/youtube/oauth/authorize', authenticateUser, async (req, res) => {
 
         // 3. Build state parameter (carries context + CSRF protection)
         const statePayload = {
-            returnUrl: req.query.returnUrl || '/candidate/video-resume',
+            returnUrl: sanitizeReturnUrl(req.query.returnUrl),
             userId: req.user?.id || null,
             nonce: crypto.randomBytes(16).toString('hex')
         };
@@ -1024,7 +1058,7 @@ app.get('/api/youtube/oauth/authorize', authenticateUser, async (req, res) => {
         });
     } catch (error) {
         console.error('YouTube OAuth authorize error:', error);
-        res.status(500).json({ error: 'Failed to generate authorization URL', details: error.message });
+        res.status(500).json({ error: 'Failed to generate authorization URL', details: process.env.NODE_ENV === 'production' ? undefined : error.message });
     }
 });
 
@@ -1046,7 +1080,7 @@ app.get('/api/youtube/oauth/callback', async (req, res) => {
         // ---- Handle OAuth Errors (user denied, etc.) ----
         if (oauthError) {
             console.warn('⚠️ YouTube OAuth callback received error:', oauthError);
-            const returnUrl = state ? JSON.parse(Buffer.from(state, 'base64url').toString()).returnUrl : '/candidate/video-resume';
+            const returnUrl = state ? sanitizeReturnUrl(JSON.parse(Buffer.from(state, 'base64url').toString()).returnUrl) : '/candidate/video-resume';
             return res.redirect(
                 `${FRONTEND_BASE}${returnUrl}?oauth_error=${encodeURIComponent(oauthError)}&provider=youtube`
             );
@@ -1060,7 +1094,8 @@ app.get('/api/youtube/oauth/callback', async (req, res) => {
         let stateData = { returnUrl: '/candidate/video-resume', userId: null };
         if (state) {
             try {
-                stateData = JSON.parse(Buffer.from(state, 'base64url').toString());
+                const parsed = JSON.parse(Buffer.from(state, 'base64url').toString());
+                stateData = { ...parsed, returnUrl: sanitizeReturnUrl(parsed.returnUrl) };
             } catch (e) {
                 console.warn('Failed to parse state parameter:', e.message);
             }
@@ -1097,8 +1132,8 @@ app.get('/api/youtube/oauth/callback', async (req, res) => {
         console.log('🔄 YouTube OAuth: Exchanging authorization code for tokens...');
         const { tokens } = await oauth2Client.getToken(code);
         console.log('✅ YouTube OAuth: Tokens obtained successfully');
-        console.log(`   → Access Token:  ${tokens.access_token ? tokens.access_token.substring(0, 15) + '...' : 'N/A'}`);
-        console.log(`   → Refresh Token: ${tokens.refresh_token ? tokens.refresh_token.substring(0, 10) + '...' : 'N/A (not returned — already granted?)'}`);
+        console.log(`   → Access Token:  ${tokens.access_token ? 'received' : 'not received'}`);
+        console.log(`   → Refresh Token: ${tokens.refresh_token ? 'received' : 'not received'}`);
         console.log(`   → Expires In:    ${tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : 'N/A'}`);
 
         // ---- Persist the refresh token (encrypted) in youtube_config ----
@@ -1157,8 +1192,9 @@ app.get('/api/youtube/oauth/callback', async (req, res) => {
     } catch (error) {
         console.error('❌ YouTube OAuth callback error:', error);
         const FRONTEND_BASE_FALLBACK = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const errorMsg = process.env.NODE_ENV === 'production' ? 'OAuth authorization failed' : error.message;
         res.redirect(
-            `${FRONTEND_BASE_FALLBACK}/candidate/video-resume?oauth_error=${encodeURIComponent(error.message)}&provider=youtube`
+            `${FRONTEND_BASE_FALLBACK}/candidate/video-resume?oauth_error=${encodeURIComponent(errorMsg)}&provider=youtube`
         );
     }
 });
@@ -1348,7 +1384,7 @@ app.post('/api/admin/payment-config', authenticateUser, async (req, res) => {
         res.json({ success: true, data: result });
     } catch (error) {
         console.error('Error saving Payment config:', error);
-        res.status(500).json({ error: 'Failed to save Payment configuration', details: error.message });
+        res.status(500).json({ error: 'Failed to save Payment configuration', details: process.env.NODE_ENV === 'production' ? undefined : error.message });
     }
 });
 
