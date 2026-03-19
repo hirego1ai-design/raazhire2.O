@@ -368,7 +368,7 @@ app.post('/api/admin/test-api-key', authenticateUser, requireAdmin, async (req, 
         }
 
         // SECURITY: Validate API key format and length to prevent injection
-        if (typeof api_key !== 'string' || api_key.length > 256 || api_key.length < 10) {
+        if (typeof api_key !== 'string' || api_key.length > 256 || api_key.length < 8) {
             return res.status(400).json({ error: 'Invalid API key format' });
         }
 
