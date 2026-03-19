@@ -36,22 +36,49 @@ const VideoResume: React.FC = () => {
     const timerRef = useRef<any>(null);
 
     useEffect(() => {
-        const fetchUser = async () => {
-            if (!supabase) return;
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                // Fetch candidate details
-                const { data: profile } = await supabase.from('candidates').select('*').eq('user_id', user.id).single();
-                setUser(profile || { name: 'Candidate', skills: [] });
+        const fetchUserData = async () => {
+            try {
+                // Use backend API rather than raw Supabase auth to support Developer Bypass sessions perfectly
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/profile`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.user) {
+                        setUser(data.user);
+                        
+                        const savedUrl = data.user.video_resume_url;
+                        if (savedUrl) {
+                            // Fetch the detailed report directly via API or Supabase client
+                            if (supabase) {
+                                const { data: records } = await supabase
+                                    .from('video_resumes')
+                                    .select('*')
+                                    .eq('user_id', data.user.id)
+                                    .order('created_at', { ascending: false })
+                                    .limit(1);
 
-                // Check for saved video resume URL
-                const savedUrl = profile?.video_resume_url;
-                if (savedUrl) {
-                    setVideoUrl(savedUrl);
+                                if (records && records.length > 0) {
+                                    setVideoUrl(records[0].video_url || savedUrl);
+                                    setVideoId(records[0].id);
+                                    if (records[0].analysis_json) setAnalysisResult(records[0].analysis_json);
+                                    if (records[0].transcript) setAnalysisTranscript(records[0].transcript);
+                                    if (records[0].analysis_json) setStatus('completed');
+                                } else {
+                                    setVideoUrl(savedUrl);
+                                }
+                            } else {
+                                setVideoUrl(savedUrl);
+                            }
+                        }
+                    }
                 }
+            } catch (err) {
+                console.error("Failed to load user video profile", err);
             }
         };
-        fetchUser();
+        fetchUserData();
     }, []);
 
     // Timer logic
@@ -161,12 +188,8 @@ const VideoResume: React.FC = () => {
 
             // Helper: get fresh auth headers (prevents token expiry during long operations)
             const getAuthHeaders = async (): Promise<Record<string, string>> => {
-                // if (!supabase) return {};
-                // const { data: { session } } = await supabase.auth.getSession();
-                // const headers: Record<string, string> = {};
-                // if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
-                // return headers;
-                return { 'Authorization': 'Bearer BYPASS_TOKEN' };
+                const token = localStorage.getItem('sb-token');
+                return token ? { 'Authorization': `Bearer ${token}` } : {};
             };
 
             // Helper: fetch with timeout (10 min for long transcription)
@@ -255,10 +278,11 @@ const VideoResume: React.FC = () => {
         if (!videoId || !analysisResult || !analysisTranscript) return;
 
         try {
-            // const { data: { session } } = await supabase.auth.getSession();
-            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-            // if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
-            headers['Authorization'] = `Bearer BYPASS_TOKEN`;
+            const token = localStorage.getItem('sb-token');
+            const headers: Record<string, string> = { 
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            };
 
             const res = await fetch(endpoints.videoResume.submit, {
                 method: 'POST',

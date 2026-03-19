@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, MapPin, Briefcase, ArrowRight, Users, ChevronRight, Brain, ShieldAlert } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { TrendingUp, Clock, CheckCircle, AlertCircle, Calendar, MapPin, Briefcase, ArrowRight, Users, ChevronRight, Brain, ShieldAlert, RefreshCw } from 'lucide-react';
 import { endpoints, API_BASE_URL, getAuthHeaders } from '../../lib/api';
 import InterviewCard from '../../components/InterviewCard';
 
@@ -20,10 +21,13 @@ interface Interview {
 }
 
 const CandidateDashboard: React.FC = () => {
+    const navigate = useNavigate();
     const [interviews, setInterviews] = React.useState<any[]>([]);
     const [recommendedJobs, setRecommendedJobs] = React.useState<any[]>([]);
     const [fraudAlert, setFraudAlert] = React.useState(false);
-    const [stats, setStats] = React.useState([
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
+    const [stats, setStats] = useState([
         { label: 'Profile Completion', value: '0%', icon: TrendingUp, color: 'text-neon-cyan' },
         { label: 'AI Score', value: 'N/A', icon: Brain, color: 'text-neon-purple' },
         { label: 'Jobs Applied', value: '0', icon: CheckCircle, color: 'text-green-400' },
@@ -31,12 +35,32 @@ const CandidateDashboard: React.FC = () => {
     ]);
 
     React.useEffect(() => {
+        // SECURITY: Authentication check
+        const token = localStorage.getItem('sb-token');
+        const userStr = localStorage.getItem('sb-user');
+        
+        if (!token || !userStr) {
+            console.warn('[Candidate Dashboard] No authentication found, redirecting to signin');
+            navigate('/signin', { replace: true });
+            return;
+        }
+
         const fetchDashboardData = async () => {
+            setIsLoading(true);
+            setError(null);
+            
             try {
                 // Fetch candidate stats
                 const statsResponse = await fetch(endpoints.candidate.stats, {
                     headers: getAuthHeaders()
                 });
+                
+                if (!statsResponse.ok) {
+                    if (statsResponse.status === 401 || statsResponse.status === 403) {
+                        throw new Error('Authentication failed');
+                    }
+                }
+                
                 const statsData = await statsResponse.json();
 
                 // Fetch interviews
@@ -47,11 +71,16 @@ const CandidateDashboard: React.FC = () => {
 
                 if (statsData.success) {
                     const s = statsData.stats;
-                    setStats(prev => prev.map(stat => {
-                        if (stat.label === 'Jobs Applied') return { ...stat, value: (s.totalApplications || 0).toString() };
-                        if (stat.label === 'Interviews') return { ...stat, value: (s.interviewsScheduled || 0).toString() };
-                        return stat;
-                    }));
+                    setStats(prev => {
+                        const newStats = [...prev];
+                        const jobsAppliedIndex = newStats.findIndex(stat => stat.label === 'Jobs Applied');
+                        const interviewsIndex = newStats.findIndex(stat => stat.label === 'Interviews');
+                        
+                        if (jobsAppliedIndex >= 0) newStats[jobsAppliedIndex].value = (s.totalApplications || 0).toString();
+                        if (interviewsIndex >= 0) newStats[interviewsIndex].value = (s.interviewsScheduled || 0).toString();
+                        
+                        return newStats;
+                    });
                 }
 
                 // Fetch real profile data for AI scores
@@ -60,43 +89,97 @@ const CandidateDashboard: React.FC = () => {
 
                 if (profileData.success && profileData.user) {
                     const p = profileData.user;
-                    setStats(prev => prev.map(stat => {
-                        if (stat.label === 'Profile Completion') return { ...stat, value: `${p.profile_completeness_score || 0}%` };
-                        if (stat.label === 'AI Score') return { ...stat, value: p.ai_overall_score ? `${p.ai_overall_score}/100` : 'N/A' };
-                        return stat;
-                    }));
-                    if (p.fraud_detection_flag) setFraudAlert(true);
+                    setStats(prev => {
+                        const newStats = [...prev];
+                        const completionIndex = newStats.findIndex(stat => stat.label === 'Profile Completion');
+                        const aiScoreIndex = newStats.findIndex(stat => stat.label === 'AI Score');
+                        
+                        if (completionIndex >= 0) newStats[completionIndex].value = `${p.profile_completeness_score || 0}%`;
+                        if (aiScoreIndex >= 0) newStats[aiScoreIndex].value = p.ai_overall_score ? `${p.ai_overall_score}/100` : 'N/A';
+                        
+                        return newStats;
+                    });
+                    
+                    if (p.fraud_detection_flag) {
+                        setFraudAlert(true);
+                    } else {
+                        setFraudAlert(false);
+                    }
                 }
 
                 if (interviewsData.success && interviewsData.interviews && interviewsData.interviews.length > 0) {
                     setInterviews(interviewsData.interviews);
                 }
 
-                // Fetch recommended jobs
+                // Fetch recommended jobs with null safety
                 const jobsResponse = await fetch(endpoints.jobs);
                 const jobsData = await jobsResponse.json();
-                if (jobsData.success) {
+                if (jobsData.success && jobsData.jobs) {
                     setRecommendedJobs(jobsData.jobs.slice(0, 3).map((job: any) => ({
                         id: job.id,
                         title: job.title,
                         company: job.employer?.name || 'Top Company',
                         location: job.location,
                         salary: job.salary_min && job.salary_max ? `$${(job.salary_min / 1000).toFixed(0)}k - $${(job.salary_max / 1000).toFixed(0)}k` : 'Competitive',
-                        match: job.ai_match_percentage || 0 // Use real score if available
+                        match: job.ai_match_percentage || 85
                     })));
                 }
 
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
+                const errorMessage = error instanceof Error ? error.message : 'Failed to load dashboard';
+                setError(errorMessage);
+                
+                // Redirect on auth errors
+                if (errorMessage.includes('Authentication')) {
+                    navigate('/signin', { replace: true });
+                }
+            } finally {
+                setIsLoading(false);
             }
         };
 
         fetchDashboardData();
-    }, []);
+    }, [navigate]);
 
     return (
         <div className="space-y-8 bg-space-dark p-6 rounded-2xl border border-white/10 backdrop-blur-xl">
-            {/* Welcome Section */}
+            {/* Error Banner */}
+            {error && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="p-4 rounded-xl bg-red-500/10 border border-red-500/50 flex items-center justify-between"
+                >
+                    <div className="flex items-start space-x-3">
+                        <ShieldAlert className="text-red-500 shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="font-bold text-red-500">Error Loading Dashboard</h3>
+                            <p className="text-sm text-red-200/70">{error}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                    >
+                        <RefreshCw size={14} /> Retry
+                    </button>
+                </motion.div>
+            )}
+
+            {/* Loading State */}
+            {isLoading && (
+                <div className="flex items-center justify-center py-20">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-cyan mx-auto mb-4"></div>
+                        <p className="text-gray-400">Loading your dashboard...</p>
+                    </div>
+                </div>
+            )}
+
+            {!isLoading && (
+                <>
+                    {/* Welcome Section */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -207,6 +290,8 @@ const CandidateDashboard: React.FC = () => {
                     </div>
                 </motion.div>
             </div>
+                </>
+            )}
         </div>
     );
 };

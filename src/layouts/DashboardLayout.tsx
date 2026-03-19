@@ -58,6 +58,7 @@ const DashboardLayout: React.FC = () => {
         { icon: FileText, label: 'Applications', path: '/candidate/applications' },
         { icon: MessageSquare, label: 'Messages', path: '/candidate/messages' },
         { icon: UserCircle, label: 'Profile', path: '/candidate/profile' },
+        { icon: Users, label: 'Referrals', path: '/candidate/referrals' },
         { icon: SettingsIcon, label: 'Settings', path: '/candidate/settings' },
     ];
 

@@ -87,6 +87,7 @@ const AdminLayout: React.FC = () => {
         { icon: Mail, label: 'Email Configuration', path: '/admin/email-config' },
         { icon: Youtube, label: 'Video Storage', path: '/admin/video-storage' },
         { icon: Users, label: 'User Management', path: '/admin/users' },
+        { icon: Users, label: 'Referral Operations', path: '/admin/referrals' },
         { icon: Database, label: 'System Logs', path: '/admin/logs' },
     ];
 

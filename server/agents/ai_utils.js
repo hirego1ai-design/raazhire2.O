@@ -300,3 +300,24 @@ export function safeParseJSON(text) {
         return null; // Return null if parsing fails, but the caller should handle it
     }
 }
+
+/**
+ * Validates that a transcript is present and meets minimum quality standards
+ * before sending to AI for analysis.
+ */
+export function validateTranscript(transcription) {
+    if (!transcription || typeof transcription !== 'string') {
+        return { valid: false, reason: 'No transcription provided' };
+    }
+
+    const trimmed = transcription.trim();
+    if (trimmed.length === 0) {
+        return { valid: false, reason: 'Transcription is empty' };
+    }
+
+    if (trimmed.length < 50) {
+        return { valid: false, reason: `Transcription too short (${trimmed.length} chars, minimum 50 required)` };
+    }
+
+    return { valid: true, reason: null };
+}

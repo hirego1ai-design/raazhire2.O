@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
     Users, Briefcase, Calendar, DollarSign, FileText, CreditCard,
     Plus, CheckCircle, Eye, ChevronRight, Search, Filter, Clock,
-    TrendingUp, Activity, ArrowUpRight, Zap, Target
+    TrendingUp, Activity, ArrowUpRight, Zap, Target, ShieldAlert, RefreshCw
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL, endpoints } from '../../lib/api';
 
 type PricingModel = 'subscription' | 'pph';
@@ -13,6 +13,8 @@ type PricingModel = 'subscription' | 'pph';
 const EmployerDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [pricingModel, setPricingModel] = useState<PricingModel>('subscription');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [stats, setStats] = useState({
         totalCandidates: 0,
         activeJobs: 0,
@@ -25,48 +27,112 @@ const EmployerDashboard: React.FC = () => {
     const [recentApplicants, setRecentApplicants] = useState<any[]>([]);
 
     useEffect(() => {
+        // SECURITY: Authentication check
+        const token = localStorage.getItem('sb-token');
+        
+        if (!token) {
+            console.warn('[Employer Dashboard] No authentication found, redirecting to signin');
+            navigate('/signin', { replace: true });
+            return;
+        }
+
         const fetchDashboardData = async () => {
+            setIsLoading(true);
+            setError(null);
+            
             try {
-                // Fetch Stats
+                // Fetch Stats with error handling
                 const response = await fetch(endpoints.employer.stats, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        setStats(prev => ({
-                            ...prev, ...data.stats,
-                            due: (data.stats.hired || 0) * 50000 // Example calculation
-                        }));
+                
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('Authentication failed - please sign in again');
                     }
+                    throw new Error(`Failed to fetch stats: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                if (data.success) {
+                    setStats(prev => ({
+                        ...prev,
+                        ...data.stats,
+                        due: (data.stats.hires || 0) * 50000 // Configurable PPH calculation
+                    }));
                 }
 
-                // Fetch Recent Applicants
+                // Fetch Recent Applicants with null safety
                 const appsResponse = await fetch(`${API_BASE_URL}/api/applications/employer?limit=5`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
+                
                 if (appsResponse.ok) {
                     const appsData = await appsResponse.json();
                     if (appsData.success && Array.isArray(appsData.applications)) {
                         setRecentApplicants(appsData.applications.map((app: any) => ({
-                            name: app.candidate?.name || 'Unknown Candidate',
+                            name: app.candidate?.name || app.candidate?.full_name || 'Unknown Candidate',
                             role: app.job?.title || 'Unknown Role',
-                            score: app.ai_screening_score || 0,
-                            status: app.status.charAt(0).toUpperCase() + app.status.slice(1).replace('_', ' '),
-                            isPremium: false // Placeholder as premium status isn't in backend yet
+                            score: app.ai_screening_score || app.ai_score || 0,
+                            status: app.status ? app.status.charAt(0).toUpperCase() + app.status.slice(1).replace('_', ' ') : 'Pending',
+                            isPremium: app.candidate?.is_premium || false
                         })));
                     }
                 }
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
-                // Keep default zero state or show error notification
+                const errorMessage = error instanceof Error ? error.message : 'Failed to load dashboard';
+                setError(errorMessage);
+                
+                // Redirect on auth errors
+                if (errorMessage.includes('Authentication')) {
+                    navigate('/signin', { replace: true });
+                }
+            } finally {
+                setIsLoading(false);
             }
         };
+        
         fetchDashboardData();
-    }, []);
+    }, [navigate]);
 
     return (
         <div className="space-y-8">
+            {/* Error Banner */}
+            {error && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="p-4 rounded-xl bg-red-500/10 border border-red-500/50 flex items-center justify-between"
+                >
+                    <div className="flex items-start space-x-3">
+                        <ShieldAlert className="text-red-500 shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="font-bold text-red-500">Dashboard Error</h3>
+                            <p className="text-sm text-red-200/70">{error}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                    >
+                        <RefreshCw size={14} /> Retry
+                    </button>
+                </motion.div>
+            )}
+
+            {/* Loading State */}
+            {isLoading && (
+                <div className="flex items-center justify-center py-20">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                        <p className="text-gray-400">Loading your dashboard...</p>
+                    </div>
+                </div>
+            )}
+
+            {!isLoading && (
+                <>
             {/* Top Insight Bar */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <div>
@@ -208,6 +274,8 @@ const EmployerDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
+                </>
+            )}
         </div>
     );
 };

@@ -38,6 +38,8 @@ import Applications from './pages/candidate/Applications';
 import Connections from './pages/candidate/Connections';
 import Messages from './pages/Messages'; // Shared Messages Component
 import CandidateSettings from './pages/candidate/Settings';
+import ReferralDashboard from './pages/candidate/ReferralDashboard';
+import ReferralAdmin from './pages/admin/ReferralAdmin';
 import EmployerLayout from './layouts/EmployerLayout';
 import EmployerDashboard from './pages/employer/Dashboard';
 import JobPostingForm from './pages/employer/JobPostingForm';
@@ -178,6 +180,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
           <Route path="interview/:id" element={<InterviewPage />} />
           <Route path="live-assessment/:jobId" element={<LiveAssessment />} />
           <Route path="assessment-result/:jobId" element={<AssessmentResult />} />
+          <Route path="referrals" element={<ReferralDashboard />} />
         </Route>
 
         {/* Employer Routes */}
@@ -195,6 +198,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
           <Route path="settings" element={<Settings />} />
           <Route path="make-agreement" element={<MakeAgreement />} />
           <Route path="rankings/:jobId" element={<CandidateRankings />} />
+          <Route path="referrals" element={<ReferralDashboard />} />
         </Route>
 
         {/* Educator Routes */}
@@ -227,6 +231,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
           <Route path="pages" element={<PageEditor />} />
           <Route path="upskill-courses" element={<UpskillCourseManagement />} />
           <Route path="upskill-learners" element={<UpskillLearnerProgress />} />
+          <Route path="referrals" element={<ReferralAdmin />} />
         </Route>
 
         {/* 404 Catch-All Route */}

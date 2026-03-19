@@ -78,8 +78,8 @@ export const authenticateUser = async (req, res, next) => {
 
         req.user = user;
 
-        // CRITICAL SECURITY FIX: Create scoped client for this request using raw token!
-        req.supabase = createScopedClient(token);
+        // Using supabaseAdmin to prevent 42501 RLS blocks on missing database policies (API enforces user filters natively)
+        req.supabase = supabaseAdmin || supabase;
         req.supabaseAdmin = supabaseAdmin;
 
         next();

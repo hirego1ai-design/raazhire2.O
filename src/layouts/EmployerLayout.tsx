@@ -54,6 +54,7 @@ const EmployerLayout: React.FC = () => {
         { icon: Users, label: 'Candidates', path: '/employer/candidates' },
         { icon: Calendar, label: 'Interviews', path: '/employer/interviews' },
         { icon: MessageSquare, label: 'Social Feed', path: '/employer/overview' },
+        { icon: Users, label: 'Referrals', path: '/employer/referrals' },
         { icon: SettingsIcon, label: 'Settings', path: '/employer/settings' },
     ];
 

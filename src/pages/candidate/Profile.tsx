@@ -10,6 +10,7 @@ import { endpoints } from '../../lib/api';
 
 const Profile: React.FC = () => {
     const [profile, setProfile] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('summary');
     const [isEmployerView, setIsEmployerView] = useState(false);
 
@@ -49,17 +50,39 @@ const Profile: React.FC = () => {
                     const data = await response.json();
                     if (data.success) {
                         setProfile(data.user);
+                    } else {
+                        throw new Error(data.error || 'Failed to load profile');
                     }
                 } else {
-                    throw new Error('API failed');
+                    let errorMessage = 'API failed';
+                    if (response.status === 401 || response.status === 403) {
+                        errorMessage = 'Unauthorized - Please sign in';
+                    } else {
+                        try {
+                            const errData = await response.json();
+                            errorMessage = errData.error || errData.message || `Server Error: ${response.status}`;
+                        } catch (e) {
+                            errorMessage = `Server Error: ${response.status}`;
+                        }
+                    }
+                    throw new Error(errorMessage);
                 }
-            } catch (error) {
-                console.error('Error fetching profile:', error);
-                // No mock fallback anymore
+            } catch (err: any) {
+                console.error('Error fetching profile:', err);
+                setError(err.name === 'AbortError' ? 'Request timed out' : err.message || 'Failed to load profile');
             }
         };
         fetchProfile();
     }, []);
+
+    if (error) return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+            <ShieldAlert size={48} className="text-red-500 opacity-80" />
+            <h2 className="text-xl font-bold text-red-600">Error Loading Profile</h2>
+            <p className="text-sm font-medium text-[var(--text-muted)]">{error}</p>
+            {error.includes('Unauthorized') && <a href="/signin" className="px-4 py-2 mt-2 bg-[var(--primary)] text-white font-bold rounded-lg text-sm">Go to Login</a>}
+        </div>
+    );
 
     if (!profile && !isEmployerView) return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">

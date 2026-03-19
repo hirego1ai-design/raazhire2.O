@@ -594,8 +594,12 @@ export function setupPortalRoutes(app, supabase, authenticateUser) {
 
             // 1. Get User
             const { data: userData, error: userError } = await supabase.from('users').select('*').eq('id', user_id).single();
-            if (userError) throw userError;
-            user = userData;
+            if (userError && userError.code !== 'PGRST116') throw userError;
+            user = userData || { 
+                id: user_id, 
+                email: req.user.email || '', 
+                name: req.user.user_metadata?.full_name || 'New User' 
+            };
 
             // 2. Get Extended Candidate Profile
             const { data: candidateData } = await supabase.from('candidates').select('*').eq('user_id', user_id).single();

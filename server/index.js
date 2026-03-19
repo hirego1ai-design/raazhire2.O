@@ -22,6 +22,7 @@ import { setupPortalRoutes } from './routes/portal_routes.js';
 import { setupPageRoutes } from './routes/page_routes.js';
 import { setupPaymentRoutes } from './routes/payment_routes.js';
 import { setupEngagementRoutes } from './routes/engagement_routes.js';
+import { setupReferralRoutes } from './routes/referral_routes.js';
 import upskillRoutes from './routes/upskill_routes.js';
 import { syncAIScoresToCandidate, runWatchdog, onCandidateProfileCreated } from './engine/workflow_engine.js';
 import { transcribeVideo, analyzeVideoTranscript, saveVideoResume } from './services/video_resume_service.js';
@@ -1499,6 +1500,9 @@ setupPaymentRoutes(app, supabase, authenticateUser);
 
 // Setup Engagement Routes
 setupEngagementRoutes(app, supabase, authenticateUser);
+
+// Setup Referral Routes
+setupReferralRoutes(app, supabase, authenticateUser);
 
 // Setup Upskill Routes
 // Setup Upskill Routes
