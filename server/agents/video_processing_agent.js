@@ -11,7 +11,17 @@ const __dirname = path.dirname(__filename);
 const TRANSCRIBE_SCRIPT = path.resolve(__dirname, '../services/transcribe.py');
 
 // SECURITY FIX: Use environment variable for Python path instead of hardcoded local path
-const PYTHON_CMD = process.env.PYTHON_PATH || 'python3';
+// Validate that the path doesn't contain suspicious characters
+function validateExecPath(envVar, defaultPath) {
+    const cmdPath = process.env[envVar] || defaultPath;
+    // Only allow alphanumeric, path separators, dots, hyphens, and underscores
+    if (!/^[a-zA-Z0-9/_.\-\\: ]+$/.test(cmdPath)) {
+        console.error(`⚠️ Invalid ${envVar} path: contains disallowed characters. Using default.`);
+        return defaultPath;
+    }
+    return cmdPath;
+}
+const PYTHON_CMD = validateExecPath('PYTHON_PATH', 'python3');
 
 /**
  * Video Processing & Transcription Agent
@@ -135,7 +145,7 @@ async function extractAudio(videoUrl) {
         const outputPath = path.join(outputDir, outputFilename);
 
         // SECURITY FIX: Use execFile with array arguments to prevent command injection
-        let ffmpegCmd = process.env.FFMPEG_PATH || 'ffmpeg';
+        let ffmpegCmd = validateExecPath('FFMPEG_PATH', 'ffmpeg');
         const localFfmpeg = path.join(process.env.LOCALAPPDATA || '', 'ffmpeg', 'bin', 'ffmpeg.exe');
 
         if (fs.existsSync(localFfmpeg)) {

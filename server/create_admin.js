@@ -1,6 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { validatePassword, validateEmail } from './utils/security.js';
 dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -28,9 +29,20 @@ async function createAdmin() {
         process.exit(1);
     }
 
-    // Validate password strength
+    // Validate email format
+    if (!validateEmail(email)) {
+        console.error("❌ Invalid email format.");
+        process.exit(1);
+    }
+
+    // Validate password strength using security utility
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.valid) {
+        console.error(`❌ ${passwordCheck.message}`);
+        process.exit(1);
+    }
     if (password.length < 12) {
-        console.error("❌ Password must be at least 12 characters long.");
+        console.error("❌ Admin password must be at least 12 characters long.");
         process.exit(1);
     }
 

@@ -201,7 +201,9 @@ export function sanitizeSearchParam(input) {
         .trim()
         .replace(/\0/g, '')
         // Remove PostgREST filter metacharacters that could break .or() expressions
-        .replace(/[(),.*\\]/g, '')
+        // Includes parens, commas, dots, asterisks, backslashes, semicolons,
+        // angle brackets, equals, pipes, colons, and curly braces
+        .replace(/[(),.*\\;=|<>:{}[\]]/g, '')
         .substring(0, 200);
 }
 
