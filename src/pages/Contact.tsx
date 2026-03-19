@@ -2,12 +2,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Mail, MapPin, Phone, Globe, TrendingUp, Users, Building2, MessageSquare } from 'lucide-react';
 import Footer from '../components/Footer';
+import { API_BASE_URL } from '../lib/api';
 
 const ContactPage = () => {
     const [dbContent, setDbContent] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        fetch('http://localhost:3000/api/pages/contact')
+        fetch(`${API_BASE_URL}/api/pages/contact`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.page && data.page.content) {

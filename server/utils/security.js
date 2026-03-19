@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -107,17 +107,22 @@ export function validatePassword(password) {
  */
 export function createSecureCORSConfig() {
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
-        ? process.env.ALLOWED_ORIGINS.split(',')
-        : ['http://localhost:5173', 'http://localhost:5179', 'https://your-production-domain.com'];
+        ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+        : ['http://localhost:5173', 'http://localhost:5179', 'https://hiregoai.vercel.app'];
     
     const productionDomains = process.env.PRODUCTION_DOMAINS 
-        ? process.env.PRODUCTION_DOMAINS.split(',')
-        : ['https://hirego-ai.vercel.app'];
+        ? process.env.PRODUCTION_DOMAINS.split(',').map(o => o.trim())
+        : ['https://hiregoai.vercel.app'];
     
     return {
         origin: function (origin, callback) {
-            // Allow requests with no origin (like mobile apps or curl requests)
-            if (!origin) return callback(null, true);
+            // In production, block requests with no Origin header (CSRF prevention)
+            if (!origin) {
+                if (process.env.NODE_ENV === 'production') {
+                    return callback(new Error('Not allowed by CORS policy'));
+                }
+                return callback(null, true);
+            }
             
             // Allow localhost in development
             if (process.env.NODE_ENV !== 'production') {
@@ -143,53 +148,47 @@ export function createSecureCORSConfig() {
 
 // ==================== REQUEST VALIDATION ====================
 
+// ==================== RATE LIMITING ====================
+
 /**
- * Rate limiting middleware to prevent abuse
+ * Creates a rate limiter using express-rate-limit.
+ * @param {object} options - windowMs, max, message
  */
-export function createRateLimiter({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests' } = {}) {
-    const requestCounts = new Map();
-    
-    return (req, res, next) => {
-        const clientId = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-        const now = Date.now();
-        const windowStart = now - windowMs;
-        
-        // Clean up old requests
-        if (requestCounts.has(clientId)) {
-            const requests = requestCounts.get(clientId);
-            const recentRequests = requests.filter(timestamp => timestamp > windowStart);
-            requestCounts.set(clientId, recentRequests);
+export function createRateLimiter({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests, please try again later.' } = {}) {
+    return rateLimit({
+        windowMs,
+        max,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: { error: message },
+        handler: (req, res, next, options) => {
+            const retryAfter = Math.ceil(options.windowMs / 1000);
+            res.set('Retry-After', String(retryAfter));
+            res.status(429).json({ error: options.message?.error || message });
         }
-        
-        // Check limit
-        const currentCount = requestCounts.has(clientId) ? requestCounts.get(clientId).length : 0;
-        if (currentCount >= max) {
-            return res.status(429).json({ error: message });
-        }
-        
-        // Record request
-        if (!requestCounts.has(clientId)) {
-            requestCounts.set(clientId, []);
-        }
-        requestCounts.get(clientId).push(now);
-        next();
-    };
+    });
 }
 
 /**
- * Input sanitization to prevent injection attacks
+ * Input sanitization to prevent XSS and injection attacks.
+ * Encodes all HTML special characters, neutralizing any HTML tags and event handlers.
+ * For rich-text content, use a dedicated library (e.g. sanitize-html) instead.
  */
 export function sanitizeInput(input) {
     if (typeof input !== 'string') return input;
     
     return input
         .trim()
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
-        .replace(/javascript:/gi, '') // Remove javascript: protocol
-        .replace(/vbscript:/gi, '') // Remove vbscript: protocol
-        .replace(/on\w+="[^"]*"/gi, '') // Remove event handlers
-        .replace(/on\w+='[^']*'/gi, '') // Remove event handlers (single quotes)
-        .substring(0, 1000); // Limit length
+        // Remove null bytes
+        .replace(/\0/g, '')
+        // Encode HTML special characters (neutralizes all HTML including tags/attributes)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        // Limit length
+        .substring(0, 1000);
 }
 
 // ==================== AUDIT LOGGING ====================

@@ -3,12 +3,13 @@ import PageHero from '../components/PageHero';
 import { motion } from 'framer-motion';
 import Button3D from '../components/Button3D';
 import { MapPin, ArrowRight } from 'lucide-react';
+import { API_BASE_URL } from '../lib/api';
 
 const CareersPage = () => {
     const [dbContent, setDbContent] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        fetch('http://localhost:3000/api/pages/careers')
+        fetch(`${API_BASE_URL}/api/pages/careers`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.page && data.page.content) {

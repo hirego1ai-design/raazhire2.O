@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import RichTextEditor from '../../components/RichTextEditor';
 import { Save, CheckCircle, AlertCircle, Loader, Eye } from 'lucide-react';
+import { API_BASE_URL } from '../../lib/api';
 
 const PageEditor = () => {
     const [selectedPage, setSelectedPage] = useState('terms');
@@ -299,7 +300,7 @@ const PageEditor = () => {
         setMessage(null);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:3000/api/pages/${slug}`, {
+            const res = await fetch(`${API_BASE_URL}/api/pages/${slug}`, {
                 // headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -327,7 +328,7 @@ const PageEditor = () => {
         setMessage(null);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:3000/api/pages/${selectedPage}`, {
+            const res = await fetch(`${API_BASE_URL}/api/pages/${selectedPage}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

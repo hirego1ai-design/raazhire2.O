@@ -31,7 +31,8 @@ export const supabaseAdmin = (supabaseUrl && supabaseServiceKey)
 if (supabaseServiceKey) {
     // console.log('✅ Admin Supabase client initialized (service role)');
 } else if (process.env.NODE_ENV === 'production') {
-    console.warn('⚠️  No SUPABASE_SERVICE_ROLE_KEY found in production. Admin operations may fail.');
+    console.error('🔴 FATAL: No SUPABASE_SERVICE_ROLE_KEY found in production. Admin operations require this key.');
+    process.exit(1);
 }
 
 /**
