@@ -14,8 +14,9 @@ import Stripe from 'stripe';
 import Razorpay from 'razorpay';
 import { supabase, supabaseAdmin } from './utils/supabaseClient.js';
 import { encrypt, decrypt, ENCRYPTION_KEY } from './utils/encryption.js';
-import { authenticateUser, requireAdmin, ALLOW_DEV_BYPASS } from './middleware/auth.js';
+import { authenticateUser, requireAdmin } from './middleware/auth.js';
 import { validateProductionEnvironment, createSecureCORSConfig, createRateLimiter } from './utils/security.js';
+import { errorHandler } from './middleware/errorHandler.js';
 import { setupAIRoutes } from './routes/ai_routes.js';
 import { setupAdminRoutes } from './routes/admin_routes.js';
 import { setupPortalRoutes } from './routes/portal_routes.js';
@@ -63,9 +64,7 @@ const limiter = rateLimit({
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later.' },
-    // Skip rate limiting for development bypass
-    skip: (req) => ALLOW_DEV_BYPASS && req.path === '/api/test'
+    message: { error: 'Too many requests, please try again later.' }
 });
 app.use(limiter);
 
@@ -93,11 +92,11 @@ if (supabaseAdmin) {
     console.warn('⚠️  No SUPABASE_SERVICE_ROLE_KEY found. Admin operations will use anon client.');
 }
 
-// Attach Supabase clients to request for routes
-// NOTE: authenticateUser middleware will OVERRIDE req.supabase with a scoped client!
+// Attach anon Supabase client for public routes.
+// Note: authenticateUser middleware will OVERRIDE req.supabase with a scoped (RLS) client.
+// req.supabaseAdmin is intentionally NOT set here; it is only attached by requireAdmin.
 app.use((req, res, next) => {
-    req.supabase = supabase;        // Default: Anon client (public routes)
-    req.supabaseAdmin = supabaseAdmin; // Admin client (use sparingly)
+    req.supabase = supabase;
     next();
 });
 
@@ -226,7 +225,7 @@ app.post('/api/auth/register', strictLimiter, authenticateUser, requireAdmin, as
 // ==================== API KEY MANAGEMENT ====================
 
 // Get all API keys (admin only)
-app.get('/api/admin/api-keys', authenticateUser, async (req, res) => {
+app.get('/api/admin/api-keys', authenticateUser, requireAdmin, async (req, res) => {
     try {
         let data = [];
 
@@ -262,7 +261,7 @@ app.get('/api/admin/api-keys', authenticateUser, async (req, res) => {
 });
 
 // Save/Update API keys (admin only)
-app.post('/api/admin/api-keys', authenticateUser, async (req, res) => {
+app.post('/api/admin/api-keys', authenticateUser, requireAdmin, async (req, res) => {
     try {
         const { provider, api_key, client_id, client_secret, access_token, metadata } = req.body;
 
@@ -1501,8 +1500,10 @@ setupPaymentRoutes(app, supabase, authenticateUser);
 setupEngagementRoutes(app, supabase, authenticateUser);
 
 // Setup Upskill Routes
-// Setup Upskill Routes
 app.use('/api/upskill', upskillRoutes);
+
+// Centralized error handler — must be registered AFTER all routes
+app.use(errorHandler);
 
 // Start server only if not in Vercel serverless environment
 if (!process.env.VERCEL) {
