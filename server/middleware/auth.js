@@ -1,6 +1,16 @@
 import { createLogger, format, transports } from 'winston';
 import { supabase, supabaseAdmin, createScopedClient } from '../utils/supabaseClient.js';
 
+const logger = createLogger({
+    level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
+    format: format.combine(
+        format.timestamp(),
+        format.errors({ stack: true }),
+        format.json()
+    ),
+    transports: [new transports.Console()],
+});
+
 
 // ==================== AUTH MIDDLEWARE ====================
 
@@ -58,7 +68,7 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
  * - No bypass paths, no magic tokens, no mock users.
  */
 export const authenticateUser = async (req, res, next) => {
-
+    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
     // Rate limit check before processing any auth
     if (isRateLimited(clientIP)) {
@@ -67,11 +77,13 @@ export const authenticateUser = async (req, res, next) => {
 
     const authHeader = req.headers.authorization;
 
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authorization header missing or invalid' });
     }
 
     const token = authHeader.slice(7); // Remove "Bearer " prefix
     if (!token) {
-
+        return res.status(401).json({ error: 'Bearer token is empty' });
     }
 
     try {
@@ -84,13 +96,20 @@ export const authenticateUser = async (req, res, next) => {
         const { data: { user }, error } = await clientForAuth.auth.getUser(token);
 
         if (error || !user) {
+            recordFailedAttempt(clientIP);
+            logger.warn('Authentication failed', { error: error?.message, ip: clientIP });
+            return res.status(401).json({ error: IS_PRODUCTION ? 'Authentication failed' : (error?.message || 'Invalid token') });
+        }
 
+        clearFailedAttempts(clientIP);
+        req.user = user;
         req.supabase = createScopedClient(token);
         // req.supabaseAdmin is intentionally NOT set here; only requireAdmin attaches it
 
         next();
     } catch (err) {
-
+        logger.error('authenticateUser exception', { message: err.message, stack: err.stack });
+        return res.status(500).json({ error: IS_PRODUCTION ? 'Authentication error' : err.message });
     }
 };
 
@@ -103,7 +122,12 @@ export const requireAdmin = async (req, res, next) => {
         return res.status(401).json({ error: 'Authentication required' });
     }
 
+    if (!supabaseAdmin) {
+        logger.error('requireAdmin: supabaseAdmin not available');
+        return res.status(503).json({ error: 'Admin verification unavailable' });
+    }
 
+    try {
         const { data: userData, error } = await supabaseAdmin
             .from('users')
             .select('role')
@@ -165,5 +189,7 @@ export const requireRole = (...allowedRoles) => async (req, res, next) => {
         req.userRole = userRole;
         next();
     } catch (err) {
-<
+        logger.error('requireRole exception', { userId: req.user?.id, message: err.message });
+        return res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Access denied' : 'Failed to verify role' });
+    }
 };
