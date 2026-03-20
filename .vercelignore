@@ -1,0 +1,32 @@
+# Documentation
+*.md
+!README.md
+
+# SQL files
+*.sql
+
+# Python files
+*.py
+
+# Zip archives
+*.zip
+
+# Cloudflare config
+wrangler.jsonc
+.wrangler
+
+# Dev config
+.env.example
+server/.env.example
+
+# Server non-essentials
+server/uploads/
+server/migrations/
+server/scripts/
+server/local_db.json
+
+# Supabase
+supabase/
+
+# Setup scripts
+setup-backend.bat

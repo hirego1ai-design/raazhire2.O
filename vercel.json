@@ -15,6 +15,17 @@
             "config": {
                 "includeFiles": [
                     "server/**"
+                ],
+                "excludeFiles": [
+                    "server/*.sql",
+                    "server/*.md",
+                    "server/*.py",
+                    "server/uploads/**",
+                    "server/migrations/**",
+                    "server/scripts/**",
+                    "server/package-lock.json",
+                    "server/local_db.json",
+                    "server/.env.example"
                 ]
             }
         }
