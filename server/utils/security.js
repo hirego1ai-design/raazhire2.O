@@ -108,7 +108,7 @@ export function validatePassword(password) {
 export function createSecureCORSConfig() {
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
         ? process.env.ALLOWED_ORIGINS.split(',')
-        : ['http://localhost:5173', 'http://localhost:5179'];
+        : [];
     
     const productionDomains = process.env.PRODUCTION_DOMAINS 
         ? process.env.PRODUCTION_DOMAINS.split(',')

@@ -85,8 +85,11 @@ router.get('/courses', async (req, res) => {
         }
         if (search) {
             // Sanitize search to prevent PostgREST filter injection via .or()
-            const safeSearch = String(search).replace(/[,%()]/g, '').substring(0, 200);
-            query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%,instructor.ilike.%${safeSearch}%`);
+            // Only allow alphanumeric chars, spaces, hyphens, and underscores
+            const safeSearch = String(search).replace(/[^a-zA-Z0-9\s\-_]/g, '').substring(0, 200);
+            if (safeSearch) {
+                query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%,instructor.ilike.%${safeSearch}%`);
+            }
         }
         if (featured === 'true') {
             query = query.eq('is_featured', true);
