@@ -60,12 +60,12 @@ export class YouTubeAgent {
             // Ensure we have a fresh token
             await this.refreshAccessToken();
 
-            const yt = youtube({
+            const youtubeClient = youtube({
                 version: 'v3',
                 auth: this.oauth2Client
             });
 
-            const response = await yt.videos.insert({
+            const response = await youtubeClient.videos.insert({
                 part: 'snippet,status',
                 requestBody: {
                     snippet: {
