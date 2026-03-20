@@ -77,14 +77,16 @@ router.get('/courses', async (req, res) => {
 
         // Apply filters
         if (category && category !== 'All') {
-            query = query.ilike('category', `%${category}%`);
+            const safeCategory = String(category).replace(/[,%()]/g, '');
+            query = query.ilike('category', `%${safeCategory}%`);
         }
         if (difficulty) {
-            query = query.eq('difficulty', difficulty);
+            query = query.eq('difficulty', String(difficulty).replace(/[,%()]/g, ''));
         }
         if (search) {
-            // Search in title, description, or instructor
-            query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,instructor.ilike.%${search}%`);
+            // Sanitize search to prevent PostgREST filter injection via .or()
+            const safeSearch = String(search).replace(/[,%()]/g, '').substring(0, 200);
+            query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%,instructor.ilike.%${safeSearch}%`);
         }
         if (featured === 'true') {
             query = query.eq('is_featured', true);
