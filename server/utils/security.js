@@ -108,11 +108,11 @@ export function validatePassword(password) {
 export function createSecureCORSConfig() {
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
         ? process.env.ALLOWED_ORIGINS.split(',')
-        : ['http://localhost:5173', 'http://localhost:5179', 'https://your-production-domain.com'];
+        : [];
     
     const productionDomains = process.env.PRODUCTION_DOMAINS 
         ? process.env.PRODUCTION_DOMAINS.split(',')
-        : ['https://hirego-ai.vercel.app'];
+        : ['https://hirego-ai.vercel.app', 'https://www.hiregoai.com', 'https://hiregoai.com'];
     
     return {
         origin: function (origin, callback) {

@@ -6,7 +6,7 @@ import {
     Video, Upload, Mic, StopCircle, Play, Loader, TrendingUp,
     RefreshCcw, CheckCircle2, AlertCircle, Clock, Shield, Zap, FileText, Send
 } from 'lucide-react';
-import { endpoints } from '../../lib/api';
+import { endpoints, API_BASE_URL } from '../../lib/api';
 import CandidateAIReport from '../../components/CandidateAIReport';
 
 const VIDEO_LIMIT_SECONDS = 180; // 3 Minutes
@@ -39,7 +39,7 @@ const VideoResume: React.FC = () => {
         const fetchUserData = async () => {
             try {
                 // Use backend API rather than raw Supabase auth to support Developer Bypass sessions perfectly
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/profile`, {
+                const response = await fetch(`${API_BASE_URL}/api/profile`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
                 });
                 

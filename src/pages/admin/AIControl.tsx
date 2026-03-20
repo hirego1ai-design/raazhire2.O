@@ -6,6 +6,7 @@ import {
     FileText, Mic, Target, Shield, UserCheck,
     Layers, AlertTriangle, RefreshCw, ChevronRight, CheckCircle2, XCircle
 } from 'lucide-react';
+import { API_BASE_URL } from '../../lib/api';
 
 // Types
 type AIModel = 'gpt4' | 'gemini' | 'claude' | 'deepseek' | 'kimi';
@@ -63,7 +64,7 @@ const AIControl: React.FC = () => {
 
     const fetchConfig = async () => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/ai-config`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/ai-config`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
             });
             const data = await response.json();
@@ -79,7 +80,7 @@ const AIControl: React.FC = () => {
     const checkHealth = async () => {
         setIsCheckingHealth(true);
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/ai-health`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/ai-health`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
             });
             const data = await response.json();
@@ -96,7 +97,7 @@ const AIControl: React.FC = () => {
     const saveConfig = async (newModel: AIModel, newEnabled?: string[]) => {
         const providers = newEnabled || enabledProviders;
         try {
-            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/ai-config`, {
+            await fetch(`${API_BASE_URL}/api/admin/ai-config`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

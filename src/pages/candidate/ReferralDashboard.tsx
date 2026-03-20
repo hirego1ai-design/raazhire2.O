@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiGet, apiPost } from '../../lib/api';
+import { apiGet, apiPost, API_BASE_URL } from '../../lib/api';
 import { Link2, Users, Briefcase, DollarSign, Activity, FileCheck, Copy, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -13,11 +13,11 @@ const ReferralDashboard: React.FC = () => {
         const fetchDashboardInfo = async () => {
             try {
                 // Fetch the link
-                const linkResponse = await apiGet(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/referrals/link`);
+                const linkResponse = await apiGet(`${API_BASE_URL}/api/referrals/link`);
                 if (linkResponse.success) setReferralLink(linkResponse.link);
 
                 // Fetch full stats
-                const statsResponse = await apiGet(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/referrals/dashboard`);
+                const statsResponse = await apiGet(`${API_BASE_URL}/api/referrals/dashboard`);
                 if (statsResponse.success) setStats(statsResponse.stats);
             } catch (error) {
                 console.error("Failed to fetch referral info", error);
