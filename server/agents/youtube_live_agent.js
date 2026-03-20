@@ -1,4 +1,5 @@
-import { google } from 'googleapis';
+import { youtube } from '@googleapis/youtube';
+import { OAuth2Client } from 'google-auth-library';
 
 /**
  * ============================================
@@ -14,7 +15,7 @@ export class YouTubeLiveAgent {
         this.youtube = null;
 
         if (config && config.client_id && config.client_secret) {
-            this.oauth2Client = new google.auth.OAuth2(
+            this.oauth2Client = new OAuth2Client(
                 this.decrypt(config.client_id),
                 this.decrypt(config.client_secret),
                 process.env.YOUTUBE_OAUTH_REDIRECT_URI || 'http://localhost:3000/api/youtube/oauth/callback'
@@ -24,7 +25,7 @@ export class YouTubeLiveAgent {
                 refresh_token: this.decrypt(config.access_token)
             });
 
-            this.youtube = google.youtube({
+            this.youtube = youtube({
                 version: 'v3',
                 auth: this.oauth2Client
             });

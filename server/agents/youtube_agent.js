@@ -1,4 +1,5 @@
-import { google } from 'googleapis';
+import { youtube } from '@googleapis/youtube';
+import { OAuth2Client } from 'google-auth-library';
 import fs from 'fs';
 import path from 'path';
 
@@ -12,7 +13,7 @@ export class YouTubeAgent {
         this.oauth2Client = null;
 
         if (config && config.client_id && config.client_secret) {
-            this.oauth2Client = new google.auth.OAuth2(
+            this.oauth2Client = new OAuth2Client(
                 this.decrypt(config.client_id),
                 this.decrypt(config.client_secret),
                 process.env.YOUTUBE_OAUTH_REDIRECT_URI || 'http://localhost:3000/api/youtube/oauth/callback' // Redirect URI
@@ -59,12 +60,12 @@ export class YouTubeAgent {
             // Ensure we have a fresh token
             await this.refreshAccessToken();
 
-            const youtube = google.youtube({
+            const yt = youtube({
                 version: 'v3',
                 auth: this.oauth2Client
             });
 
-            const response = await youtube.videos.insert({
+            const response = await yt.videos.insert({
                 part: 'snippet,status',
                 requestBody: {
                     snippet: {

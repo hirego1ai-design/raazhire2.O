@@ -979,8 +979,8 @@ app.get('/api/youtube/oauth/authorize', authenticateUser, async (req, res) => {
         const clientSecret = decrypt(config.client_secret);
 
         // 2. Create OAuth2 client
-        const { google } = await import('googleapis');
-        const oauth2Client = new google.auth.OAuth2(
+        const { OAuth2Client } = await import('google-auth-library');
+        const oauth2Client = new OAuth2Client(
             clientId,
             clientSecret,
             YOUTUBE_OAUTH_REDIRECT_URI
@@ -1079,8 +1079,8 @@ app.get('/api/youtube/oauth/callback', async (req, res) => {
         const clientSecret = decrypt(config.client_secret);
 
         // ---- Exchange authorization code for tokens ----
-        const { google } = await import('googleapis');
-        const oauth2Client = new google.auth.OAuth2(
+        const { OAuth2Client } = await import('google-auth-library');
+        const oauth2Client = new OAuth2Client(
             clientId,
             clientSecret,
             YOUTUBE_OAUTH_REDIRECT_URI
@@ -1188,8 +1188,8 @@ app.get('/api/youtube/oauth/status', authenticateUser, async (req, res) => {
         let tokenValid = false;
         if (hasCredentials && hasToken) {
             try {
-                const { google } = await import('googleapis');
-                const oauth2Client = new google.auth.OAuth2(
+                const { OAuth2Client } = await import('google-auth-library');
+                const oauth2Client = new OAuth2Client(
                     decrypt(config.client_id),
                     decrypt(config.client_secret),
                     YOUTUBE_OAUTH_REDIRECT_URI
