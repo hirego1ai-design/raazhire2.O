@@ -62,6 +62,159 @@ const getApiKey = async (provider) => {
     return null;
 };
 
+// ==================== FALLBACK DEMO COURSES ====================
+const FALLBACK_COURSES = [
+    {
+        id: 'demo-1',
+        title: 'Data Science Fundamentals',
+        description: 'Master the basics of data science including Python, statistics, and machine learning.',
+        category: 'Data & Analytics',
+        difficulty: 'beginner',
+        duration_hours: 40,
+        lessons_count: 24,
+        instructor: 'Dr. Sarah Chen',
+        rating: 4.8,
+        enrolled_count: 12500,
+        thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800',
+        skills: ['Python', 'Statistics', 'Machine Learning', 'Data Visualization'],
+        is_featured: true,
+        price: 0
+    },
+    {
+        id: 'demo-2',
+        title: 'AI & Machine Learning Masterclass',
+        description: 'Deep dive into neural networks, deep learning, and modern AI architectures.',
+        category: 'AI & ML',
+        difficulty: 'intermediate',
+        duration_hours: 60,
+        lessons_count: 36,
+        instructor: 'Prof. James Miller',
+        rating: 4.9,
+        enrolled_count: 8700,
+        thumbnail: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800',
+        skills: ['TensorFlow', 'PyTorch', 'Neural Networks', 'NLP'],
+        is_featured: true,
+        price: 49.99
+    },
+    {
+        id: 'demo-3',
+        title: 'Full Stack Web Development',
+        description: 'Build modern web applications with React, Node.js, and databases.',
+        category: 'Coding',
+        difficulty: 'intermediate',
+        duration_hours: 80,
+        lessons_count: 48,
+        instructor: 'Alex Johnson',
+        rating: 4.7,
+        enrolled_count: 15200,
+        thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800',
+        skills: ['React', 'Node.js', 'PostgreSQL', 'TypeScript'],
+        is_featured: true,
+        price: 0
+    },
+    {
+        id: 'demo-4',
+        title: 'Business Communication Excellence',
+        description: 'Master professional communication, presentations, and stakeholder management.',
+        category: 'Communication',
+        difficulty: 'beginner',
+        duration_hours: 20,
+        lessons_count: 12,
+        instructor: 'Maria Garcia',
+        rating: 4.6,
+        enrolled_count: 9800,
+        thumbnail: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800',
+        skills: ['Presentation', 'Email Writing', 'Public Speaking', 'Negotiation'],
+        is_featured: false,
+        price: 0
+    },
+    {
+        id: 'demo-5',
+        title: 'UI/UX Design Bootcamp',
+        description: 'Learn user interface design, user experience principles, and design tools.',
+        category: 'Design',
+        difficulty: 'beginner',
+        duration_hours: 45,
+        lessons_count: 28,
+        instructor: 'Emma Wilson',
+        rating: 4.8,
+        enrolled_count: 11000,
+        thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800',
+        skills: ['Figma', 'Adobe XD', 'Prototyping', 'User Research'],
+        is_featured: true,
+        price: 0
+    },
+    {
+        id: 'demo-6',
+        title: 'Project Management Professional',
+        description: 'Master project management methodologies including Agile and Scrum.',
+        category: 'Business',
+        difficulty: 'advanced',
+        duration_hours: 50,
+        lessons_count: 30,
+        instructor: 'David Brown',
+        rating: 4.9,
+        enrolled_count: 7800,
+        thumbnail: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800',
+        skills: ['Agile', 'Scrum', 'Risk Management', 'Stakeholder Communication'],
+        is_featured: true,
+        price: 79.99
+    }
+];
+
+/**
+ * Helper: filter fallback courses by query params
+ */
+function filterFallbackCourses({ category, difficulty, search, featured }) {
+    let filtered = [...FALLBACK_COURSES];
+
+    if (category && category !== 'All') {
+        const safeCat = String(category).toLowerCase();
+        filtered = filtered.filter(c => c.category.toLowerCase().includes(safeCat));
+    }
+    if (difficulty) {
+        filtered = filtered.filter(c => c.difficulty === String(difficulty).toLowerCase());
+    }
+    if (search) {
+        const safeSearch = String(search).toLowerCase();
+        filtered = filtered.filter(c =>
+            c.title.toLowerCase().includes(safeSearch) ||
+            c.description.toLowerCase().includes(safeSearch) ||
+            c.instructor.toLowerCase().includes(safeSearch)
+        );
+    }
+    if (String(featured) === 'true') {
+        filtered = filtered.filter(c => c.is_featured);
+    }
+
+    return filtered;
+}
+
+/**
+ * Helper: send fallback courses response
+ */
+function sendFallbackCoursesResponse(res, queryParams) {
+    const fallback = filterFallbackCourses(queryParams);
+    return res.json({
+        success: true,
+        count: fallback.length,
+        courses: fallback
+    });
+}
+
+/**
+ * Helper: aggregate category counts from a list of courses
+ */
+function aggregateCategories(courses) {
+    const categoryMap = {};
+    courses.forEach(c => {
+        const cat = c.category;
+        if (!categoryMap[cat]) categoryMap[cat] = 0;
+        categoryMap[cat]++;
+    });
+    return Object.keys(categoryMap).map(name => ({ name, count: categoryMap[name] }));
+}
+
 // ==================== COURSE ROUTES ====================
 
 /**
@@ -72,6 +225,12 @@ router.get('/courses', async (req, res) => {
     try {
         const { category, difficulty, search, featured } = req.query;
         const supabase = req.supabase;
+
+        // If Supabase is not configured, return fallback courses
+        if (!supabase) {
+            console.log('ℹ️ Supabase not configured, returning fallback courses');
+            return sendFallbackCoursesResponse(res, { category, difficulty, search, featured });
+        }
 
         let query = supabase.from('courses').select('*');
 
@@ -102,19 +261,21 @@ router.get('/courses', async (req, res) => {
 
         if (error) throw error;
 
-        // Fallback for demo if no courses found
+        // Fallback to demo courses if no courses found in DB
         if (!courses || courses.length === 0) {
-            console.log('ℹ️ No courses found in DB, returning empty list (Run seed script!)');
+            console.log('ℹ️ No courses found in DB, returning fallback demo courses');
+            return sendFallbackCoursesResponse(res, { category, difficulty, search, featured });
         }
 
         res.json({
             success: true,
-            count: courses?.length || 0,
-            courses: courses || []
+            count: courses.length,
+            courses: courses
         });
     } catch (error) {
         console.error('Error fetching courses:', error);
-        res.status(500).json({ error: 'Failed to fetch courses' });
+        // Return fallback courses instead of 500 error
+        sendFallbackCoursesResponse(res, req.query);
     }
 });
 
@@ -127,6 +288,15 @@ router.get('/courses/:id', async (req, res) => {
         const { id } = req.params;
         const supabase = req.supabase;
 
+        // If Supabase is not configured, try to find a fallback course
+        if (!supabase) {
+            const fallbackCourse = FALLBACK_COURSES.find(c => c.id === id);
+            if (fallbackCourse) {
+                return res.json({ success: true, course: { ...fallbackCourse, lessons: [] } });
+            }
+            return res.status(404).json({ error: 'Course not found' });
+        }
+
         // Fetch course details
         const { data: course, error: courseError } = await supabase
             .from('courses')
@@ -135,6 +305,11 @@ router.get('/courses/:id', async (req, res) => {
             .single();
 
         if (courseError || !course) {
+            // Try fallback if DB has no match
+            const fallbackCourse = FALLBACK_COURSES.find(c => c.id === id);
+            if (fallbackCourse) {
+                return res.json({ success: true, course: { ...fallbackCourse, lessons: [] } });
+            }
             return res.status(404).json({ error: 'Course not found' });
         }
 
@@ -158,6 +333,11 @@ router.get('/courses/:id', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching course:', error);
+        // Try fallback course on error
+        const fallbackCourse = FALLBACK_COURSES.find(c => c.id === req.params.id);
+        if (fallbackCourse) {
+            return res.json({ success: true, course: { ...fallbackCourse, lessons: [] } });
+        }
         res.status(500).json({ error: 'Failed to fetch course' });
     }
 });
@@ -170,35 +350,29 @@ router.get('/categories', async (req, res) => {
     try {
         const supabase = req.supabase;
 
-        // Get unique categories and their counts
-        // Note: Supabase doesn't support easy GROUP BY with COUNT in standard client, 
-        // so we fetch all courses and aggregate (fine for small datasets) or use RPC.
-        // For scalability, create a check_categories view or rpc function.
+        // If Supabase is not configured, derive categories from fallback courses
+        if (!supabase) {
+            return res.json({ success: true, categories: aggregateCategories(FALLBACK_COURSES) });
+        }
 
+        // Get unique categories and their counts
         const { data: courses, error } = await supabase
             .from('courses')
             .select('category');
 
         if (error) throw error;
 
-        const categoryMap = {};
-        courses.forEach(c => {
-            if (!categoryMap[c.category]) categoryMap[c.category] = 0;
-            categoryMap[c.category]++;
-        });
+        const categoryStats = aggregateCategories(courses || []);
 
-        const categoryStats = Object.keys(categoryMap).map(name => ({
-            name,
-            count: categoryMap[name]
-        }));
+        // Fallback if no categories found
+        if (categoryStats.length === 0) {
+            return res.json({ success: true, categories: aggregateCategories(FALLBACK_COURSES) });
+        }
 
-        res.json({
-            success: true,
-            categories: categoryStats
-        });
+        res.json({ success: true, categories: categoryStats });
     } catch (error) {
         console.error('Error fetching categories:', error);
-        res.status(500).json({ error: 'Failed to fetch categories' });
+        res.json({ success: true, categories: aggregateCategories(FALLBACK_COURSES) });
     }
 });
 
