@@ -35,6 +35,7 @@ build/
 .next/
 out/
 *.exe
+*.zip
 server/.env
 
 # Uploads and temporary assets
