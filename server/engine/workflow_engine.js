@@ -64,15 +64,20 @@ async function logAudit(supabase, actorType, actorId, action, targetTable, targe
  */
 function calculateProfileCompleteness(candidate) {
     const fields = {
-        full_name: 10, name: 10, email: 10, phone: 5,
+        name: 10, email: 10, phone: 5,
         current_job_title: 8, job_profile: 8, total_experience_years: 5,
         technical_skills: 10, soft_skills: 5, degree: 5, university: 5,
         city: 3, linkedin_url: 3, github_url: 3,
         resume_url: 8, video_resume_url: 10, bio: 5
     };
     let score = 0;
+    // Treat full_name as alias for name to avoid double-counting
+    const normalizedCandidate = { ...candidate };
+    if (!normalizedCandidate.name && normalizedCandidate.full_name) {
+        normalizedCandidate.name = normalizedCandidate.full_name;
+    }
     for (const [field, weight] of Object.entries(fields)) {
-        const val = candidate[field];
+        const val = normalizedCandidate[field];
         if (val && val !== '' && val !== '[]' && val !== '{}') {
             if (Array.isArray(val) || (typeof val === 'string' && val.startsWith('['))) {
                 const arr = Array.isArray(val) ? val : JSON.parse(val || '[]');
@@ -309,16 +314,40 @@ export async function onApplicationSubmitted(supabase, applicationId, apiKeys) {
         // Video Score: from AI evaluation
         videoScore = candidate.ai_overall_score || 50;
 
-        // Skill Match Score: intersection calculation
+        // Skill Match Score: normalized token matching (prevents false positives like "Java" matching "JavaScript")
+        const normalizeSkill = (s) => {
+            if (typeof s !== 'string') return '';
+            let normalized = s.toLowerCase().trim()
+                .replace(/\.js$/i, '')      // "react.js" → "react"
+                .replace(/\.ts$/i, '')      // "node.ts" → "node"
+                .replace(/[.\-_]/g, '')     // "vue.js" → "vuejs" → "vuejs"
+                .replace(/\s+/g, '');       // "machine learning" → "machinelearning"
+            // Common aliases
+            const aliases = {
+                'js': 'javascript', 'ts': 'typescript', 'py': 'python',
+                'reactjs': 'react', 'vuejs': 'vue', 'nodejs': 'node',
+                'nextjs': 'next', 'expressjs': 'express', 'angularjs': 'angular',
+                'golang': 'go', 'csharp': 'c#', 'cplusplus': 'c++',
+                'postgres': 'postgresql', 'mongo': 'mongodb',
+                'k8s': 'kubernetes', 'tf': 'terraform',
+                'ml': 'machinelearning', 'ai': 'artificialintelligence',
+                'dl': 'deeplearning', 'aws': 'amazonwebservices',
+                'gcp': 'googlecloudplatform'
+            };
+            return aliases[normalized] || normalized;
+        };
+
         const candidateSkills = Array.isArray(candidate.technical_skills)
-            ? candidate.technical_skills.map(s => s.toLowerCase())
+            ? candidate.technical_skills.map(normalizeSkill).filter(Boolean)
             : [];
         const jobSkills = Array.isArray(job?.skills || job?.required_skills)
-            ? (job.skills || job.required_skills).map(s => typeof s === 'string' ? s.toLowerCase() : '')
+            ? (job.skills || job.required_skills).map(normalizeSkill).filter(Boolean)
             : [];
 
         if (jobSkills.length > 0 && candidateSkills.length > 0) {
-            const matches = candidateSkills.filter(s => jobSkills.some(js => js.includes(s) || s.includes(js)));
+            // Exact normalized token matching — no substring matching
+            const candidateSkillSet = new Set(candidateSkills);
+            const matches = jobSkills.filter(js => candidateSkillSet.has(js));
             skillMatchScore = Math.round((matches.length / jobSkills.length) * 100);
         }
 

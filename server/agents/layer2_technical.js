@@ -75,8 +75,8 @@ export async function analyzeTechnical(candidateData, transcription, apiKeys, ai
         console.error("[Layer 2] AI Analysis Failed:", error.message);
 
         // ---- STEP 5: Return fallback instead of throwing ----
-        // Extract basic keywords from transcription manually
-        const techKeywords = [
+        // Extract basic keywords dynamically based on candidate's skills + job title
+        const defaultTechKeywords = [
             'React', 'Node', 'JavaScript', 'TypeScript', 'Python', 'Java',
             'SQL', 'MongoDB', 'AWS', 'Docker', 'Kubernetes', 'Git',
             'API', 'REST', 'GraphQL', 'Angular', 'Vue', 'CSS', 'HTML',
@@ -84,24 +84,32 @@ export async function analyzeTechnical(candidateData, transcription, apiKeys, ai
             'Agile', 'Scrum', 'Testing', 'TDD', 'Microservices', 'Security'
         ];
 
+        // Gather candidate-specific skills, falling back to general keywords if none provided
+        const candidateSkills = Array.isArray(candidateData.skills) ? candidateData.skills : [];
+        const dynamicKeywords = [...new Set([
+            ...candidateSkills,
+            ...(candidateData.appliedJobTitle ? [candidateData.appliedJobTitle] : []),
+            ...(candidateSkills.length === 0 ? defaultTechKeywords : [])
+        ])].filter(k => typeof k === 'string' && k.length > 1);
+
         const lowerTranscript = (transcription || '').toLowerCase();
-        const detectedTerms = techKeywords.filter(kw =>
+        const detectedTerms = dynamicKeywords.filter(kw =>
             lowerTranscript.includes(kw.toLowerCase())
         );
 
-        const fallbackScore = Math.min(100, Math.max(20, detectedTerms.length * 12 + 20));
+        const fallbackScore = Math.min(100, Math.max(20, detectedTerms.length * 15 + 20));
 
         return {
             score: fallbackScore,
             detectedTerms,
             accuracy: fallbackScore,
-            domainKnowledge: detectedTerms.length >= 5 ? 'Advanced' :
-                detectedTerms.length >= 3 ? 'Intermediate' : 'Basic',
+            domainKnowledge: detectedTerms.length >= 4 ? 'Advanced' :
+                detectedTerms.length >= 2 ? 'Intermediate' : 'Basic',
             details: [
                 `Fallback analysis: AI service unavailable (${error.message})`,
-                `Detected ${detectedTerms.length} technical terms in transcription`,
+                `Detected ${detectedTerms.length} technical terms based on candidate profile skills`,
                 `Keywords found: ${detectedTerms.join(', ') || 'None detected'}`,
-                'Score based on keyword density analysis'
+                'Score dynamically calculated based on profile keyword matches'
             ],
             fallback: true
         };

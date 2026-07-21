@@ -238,13 +238,16 @@ async function saveRankings(jobId, rankedCandidates, supabase) {
         last_updated: new Date().toISOString()
     }));
 
-    // Upsert rankings (insert or update)
-    for (const record of rankingRecords) {
-        await supabase
-            .from('candidate_rankings')
-            .upsert(record, {
-                onConflict: 'candidate_id,job_id'
-            });
+    // Batch upsert all rankings in a single DB call (eliminates N+1 sequential writes)
+    const { error: upsertError } = await supabase
+        .from('candidate_rankings')
+        .upsert(rankingRecords, {
+            onConflict: 'candidate_id,job_id'
+        });
+
+    if (upsertError) {
+        console.error('[Ranking Engine] Batch upsert failed:', upsertError.message);
+        throw upsertError;
     }
 
     console.log('[Ranking Engine] Rankings saved successfully');

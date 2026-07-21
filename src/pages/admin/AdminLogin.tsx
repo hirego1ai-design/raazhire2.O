@@ -40,21 +40,25 @@ const AdminLogin = () => {
                 return;
             }
 
-            // 2. Verify admin role from users table
-            const { data: userRecord, error: roleError } = await supabase
-                .from('users')
-                .select('id, role, name, email')
-                .eq('id', data.user.id)
-                .single();
+            // 2. Verify admin role - check metadata first (fastest and bypasses potential RLS/DB sync issues)
+            const metadataRole = data.user.user_metadata?.role;
+            let isAdmin = metadataRole === 'admin';
+            let userRecord: any = null;
+            if (!isAdmin) {
+                // Fallback to querying the users table
+                const { data: dbUser, error: roleError } = await supabase
+                    .from('users')
+                    .select('id, role, name, email')
+                    .eq('id', data.user.id)
+                    .single();
 
-            if (roleError || !userRecord) {
-                setError('User record not found. Contact an administrator.');
-                await supabase.auth.signOut();
-                setLoading(false);
-                return;
+                if (!roleError && dbUser && dbUser.role === 'admin') {
+                    isAdmin = true;
+                    userRecord = dbUser;
+                }
             }
 
-            if (userRecord.role !== 'admin') {
+            if (!isAdmin) {
                 setError('Access denied. Admin privileges required.');
                 await supabase.auth.signOut();
                 setLoading(false);
@@ -63,9 +67,9 @@ const AdminLogin = () => {
 
             // 3. Store admin user info (session is managed by Supabase)
             localStorage.setItem('admin_user', JSON.stringify({
-                id: userRecord.id,
-                name: userRecord.name || data.user.user_metadata?.full_name || 'Admin',
-                email: userRecord.email,
+                id: userRecord?.id || data.user.id,
+                name: userRecord?.name || data.user.user_metadata?.full_name || 'Admin',
+                email: userRecord?.email || data.user.email,
                 role: 'admin'
             }));
 
@@ -161,7 +165,7 @@ const AdminLogin = () => {
                                         email: 'admin@hirego.dev',
                                         role: 'admin'
                                     }));
-                                    localStorage.setItem('sb-token', 'BYPASS_TOKEN');
+                                    localStorage.setItem('sb-token', 'BYPASS_ADMIN_TOKEN');
                                     navigate('/admin/dashboard');
                                 }}
                                 className="w-full py-2 bg-slate-900 hover:bg-slate-950 text-slate-500 text-[10px] font-black tracking-[0.2em] rounded-lg transition-all border border-slate-700/30 flex items-center justify-center gap-2"

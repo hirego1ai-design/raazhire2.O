@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Briefcase, MapPin, Clock, XCircle, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { API_BASE_URL, endpoints, getAuthHeaders } from '../../lib/api';
@@ -152,9 +153,15 @@ const Applications: React.FC = () => {
                 <div className="saas-card p-12 text-center">
                     <Briefcase className="mx-auto text-[var(--text-muted)] mb-4" size={48} />
                     <h3 className="text-lg font-bold mb-2">No Applications Found</h3>
-                    <p className="text-[var(--text-muted)]">
+                    <p className="text-[var(--text-muted)] mb-6">
                         {filter === 'all' ? "You haven't applied to any jobs yet." : `No applications with status "${filter}".`}
                     </p>
+                    <Link
+                        to="/candidate/jobs"
+                        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white font-semibold text-sm hover:opacity-90 transition-all shadow-md"
+                    >
+                        Browse Jobs
+                    </Link>
                 </div>
             ) : (
                 <div className="space-y-3">

@@ -2,18 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
-import UpskillLanding from './pages/upskill/UpskillLanding';
-import CourseList from './pages/upskill/CourseList';
-import CourseDetail from './pages/upskill/CourseDetail';
-import Lesson from './pages/upskill/Lesson';
-import Assessment from './pages/upskill/Assessment';
-import SkillDashboard from './pages/upskill/SkillDashboard';
-import Certificate from './pages/upskill/Certificate';
-import JobConnection from './pages/upskill/JobConnection';
-import UpskillRegistration from './pages/upskill/UpskillRegistration';
-import UpskillLogin from './pages/upskill/UpskillLogin';
-import UpskillInsights from './pages/upskill/UpskillInsights';
-import SkillAssessment from './pages/upskill/SkillAssessment';
 import NotFound from './pages/NotFound';
 import Landing from './pages/Landing';
 import SignIn from './pages/SignIn';
@@ -62,8 +50,7 @@ import JobPricingControl from './pages/admin/JobPricingControl';
 import CreditSystemControl from './pages/admin/CreditSystemControl';
 import InterviewManagement from './pages/admin/InterviewManagement';
 import VideoStorageConfig from './pages/admin/VideoStorageConfig';
-import UpskillCourseManagement from './pages/admin/UpskillCourseManagement';
-import UpskillLearnerProgress from './pages/admin/UpskillLearnerProgress';
+
 import CandidateRankings from './pages/employer/CandidateRankings';
 import PerformanceAnalytics from './pages/admin/PerformanceAnalytics';
 import MyJobs from './pages/employer/MyJobs';
@@ -109,8 +96,6 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
     location.pathname.startsWith('/employer') ||
     location.pathname.startsWith('/candidate') ||
     location.pathname.startsWith('/educator') ||
-    location.pathname.startsWith('/register/upskill') ||
-    location.pathname.startsWith('/upskill/login') ||
     location.pathname.startsWith('/auth/callback');
 
   return (
@@ -118,19 +103,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
       {!hideNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/skill-development" element={<Navigate to="/upskill" replace />} />
 
-        {/* Upskill Portal Routes */}
-        <Route path="/upskill" element={<UpskillLanding />} />
-        <Route path="/upskill/courses" element={<CourseList />} />
-        <Route path="/upskill/course/:id" element={<CourseDetail />} />
-        <Route path="/upskill/course/:courseId/lesson/:lessonId" element={<Lesson />} />
-        <Route path="/upskill/assessment/:id" element={<Assessment />} />
-        <Route path="/upskill/dashboard" element={<SkillDashboard />} />
-        <Route path="/upskill/certificate/:id" element={<Certificate />} />
-        <Route path="/upskill/jobs" element={<JobConnection />} />
-        <Route path="/upskill/insights" element={<UpskillInsights />} />
-        <Route path="/upskill/assessment" element={<SkillAssessment />} />
 
         {/* Public Pages */}
         <Route path="/pricing" element={<PricingPage />} />
@@ -156,8 +129,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
         <Route path="/signup" element={<SignUp />} />
         <Route path="/register/candidate" element={<CandidateRegister />} />
         <Route path="/register/employer" element={<EmployerRegister />} />
-        <Route path="/register/upskill" element={<UpskillRegistration />} />
-        <Route path="/upskill/login" element={<UpskillLogin />} />
+
         <Route path="/create-account" element={<CreateAccount />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         {/* Candidate Routes */}
@@ -229,8 +201,7 @@ function AppContent({ showLogin, setShowLogin }: { showLogin: boolean; setShowLo
 
           <Route path="analytics" element={<PerformanceAnalytics />} />
           <Route path="pages" element={<PageEditor />} />
-          <Route path="upskill-courses" element={<UpskillCourseManagement />} />
-          <Route path="upskill-learners" element={<UpskillLearnerProgress />} />
+
           <Route path="referrals" element={<ReferralAdmin />} />
         </Route>
 

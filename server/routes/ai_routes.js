@@ -55,31 +55,54 @@ export function setupAIRoutes(app, supabase, decrypt, authenticateUser) {
      */
     app.post('/api/analyze-live-assessment', auth, async (req, res) => {
         try {
-            const { userId, jobId, transcript, questionsAnswered, tabSwitches, totalDuration } = req.body;
+            const { userId, jobId, transcript, questionsAnswered = 1, tabSwitches = 0, totalDuration = 0, question } = req.body;
 
-            // Simple AI analysis (mock for now - integrate with actual AI later)
-            const words = transcript.split(' ').length;
-            const averageWordsPerQuestion = words / questionsAnswered;
+            if (!transcript || typeof transcript !== 'string' || transcript.trim().length < 10) {
+                return res.status(400).json({ error: 'Valid transcript is required for assessment analysis' });
+            }
 
-            const communication = Math.min(100, Math.round(70 + (averageWordsPerQuestion / 10)));
-            const knowledge = Math.min(100, Math.round(75 + Math.random() * 15));
-            const confidence = Math.max(50, Math.min(100, 95 - (tabSwitches * 10)));
-            const clarity = Math.min(100, Math.round(80 + Math.random() * 15));
-            const professionalism = Math.max(60, Math.min(100, 90 - (tabSwitches * 5)));
+            const apiKeys = await getDecryptedApiKeys(supabase, decrypt);
 
-            const overallScore = Math.round(
-                (communication * 0.3) +
-                (knowledge * 0.25) +
-                (confidence * 0.25) +
-                (clarity * 0.1) +
-                (professionalism * 0.1)
-            );
+            let overallScore = 70;
+            let communication = 70;
+            let knowledge = 70;
+            let confidence = Math.max(40, 95 - (tabSwitches * 10));
+            let clarity = 75;
+            let professionalism = Math.max(50, 90 - (tabSwitches * 5));
+            let feedback = 'Assessment analyzed successfully.';
 
-            const feedback = overallScore >= 85
-                ? 'Excellent performance! You demonstrated strong communication skills and technical knowledge.'
-                : overallScore >= 70
-                    ? 'Good performance with room for improvement in some areas.'
-                    : 'Fair performance. Consider practicing more before your next assessment.';
+            if (Object.keys(apiKeys).length > 0) {
+                const evalData = await evaluateCandidateAnswer({
+                    questionId: jobId || 'live-assessment',
+                    question: question || 'Live technical and behavioral interview assessment',
+                    answer: transcript,
+                    skills_tested: ['communication', 'technical_knowledge', 'problem_solving']
+                }, apiKeys, supabase);
+
+                if (evalData && evalData.scores) {
+                    overallScore = evalData.overall_score || overallScore;
+                    communication = evalData.scores.communication || communication;
+                    knowledge = evalData.scores.technical_accuracy || knowledge;
+                    clarity = evalData.scores.communication || clarity;
+                    confidence = Math.max(40, Math.min(100, (evalData.scores.problem_solving || 70) - (tabSwitches * 5)));
+                    feedback = evalData.detailed_feedback || evalData.recommendation || feedback;
+                }
+            } else {
+                // Heuristic calculation if AI keys missing
+                const words = transcript.split(/\s+/).length;
+                const averageWordsPerQuestion = words / Math.max(1, questionsAnswered);
+                communication = Math.min(100, Math.round(65 + (averageWordsPerQuestion / 10)));
+                knowledge = Math.min(100, Math.round(70 + (words > 100 ? 15 : 5)));
+                clarity = Math.min(100, Math.round(75 + (words > 50 ? 10 : 0)));
+                overallScore = Math.round(
+                    (communication * 0.3) +
+                    (knowledge * 0.25) +
+                    (confidence * 0.25) +
+                    (clarity * 0.1) +
+                    (professionalism * 0.1)
+                );
+                feedback = overallScore >= 80 ? 'Strong candidate performance.' : 'Fair candidate performance.';
+            }
 
             res.json({
                 success: true,
@@ -108,22 +131,41 @@ export function setupAIRoutes(app, supabase, decrypt, authenticateUser) {
      */
     app.post('/api/generate-questions', auth, async (req, res) => {
         try {
-            const { jobTitle, jobDescription } = req.body;
-            // In a real scenario, we would use an LLM here.
-            // For now, we return structured questions based on the job title.
+            const { jobTitle, jobDescription, count = 8 } = req.body;
+            const apiKeys = await getDecryptedApiKeys(supabase, decrypt);
 
-            const title = jobTitle || 'this role';
+            let questions = [];
 
-            const questions = [
-                { id: 1, text: `Tell us about your experience with ${title} and why you're interested.`, timeLimit: 180 },
-                { id: 2, text: `Describe a challenging project you worked on that relates to ${title}.`, timeLimit: 180 },
-                { id: 3, text: `What are your key strengths that make you suitable for this role?`, timeLimit: 180 },
-                { id: 4, text: `How do you stay updated with the latest trends in your field?`, timeLimit: 180 },
-                { id: 5, text: `Describe a situation where you had to work in a team. What was your role?`, timeLimit: 180 },
-                { id: 6, text: `What are your career goals for the next 2-3 years?`, timeLimit: 180 },
-                { id: 7, text: `How do you handle tight deadlines and pressure?`, timeLimit: 180 },
-                { id: 8, text: `Why should we hire you for this position?`, timeLimit: 180 }
-            ];
+            if (Object.keys(apiKeys).length > 0) {
+                const result = await generateRealAssessmentQuestions({
+                    title: jobTitle,
+                    description: jobDescription
+                }, apiKeys, count, supabase);
+
+                if (result && result.questions && result.questions.length > 0) {
+                    questions = result.questions.map((q, idx) => ({
+                        id: q.id || idx + 1,
+                        text: q.question,
+                        timeLimit: (q.estimated_time || 3) * 60,
+                        type: q.type || 'technical',
+                        difficulty: q.difficulty || 'medium'
+                    }));
+                }
+            }
+
+            if (questions.length === 0) {
+                const title = jobTitle || 'this role';
+                questions = [
+                    { id: 1, text: `Tell us about your experience with ${title} and why you're interested.`, timeLimit: 180 },
+                    { id: 2, text: `Describe a challenging project you worked on that relates to ${title}.`, timeLimit: 180 },
+                    { id: 3, text: `What are your key strengths that make you suitable for this role?`, timeLimit: 180 },
+                    { id: 4, text: `How do you stay updated with the latest trends in your field?`, timeLimit: 180 },
+                    { id: 5, text: `Describe a situation where you had to work in a team. What was your role?`, timeLimit: 180 },
+                    { id: 6, text: `What are your career goals for the next 2-3 years?`, timeLimit: 180 },
+                    { id: 7, text: `How do you handle tight deadlines and pressure?`, timeLimit: 180 },
+                    { id: 8, text: `Why should we hire you for this position?`, timeLimit: 180 }
+                ];
+            }
 
             res.json({ success: true, questions });
         } catch (error) {

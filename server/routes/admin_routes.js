@@ -13,8 +13,13 @@
                                 */
 
 import express from 'express';
+import { requireAdmin } from '../middleware/auth.js';
 
 export function setupAdminRoutes(app, supabase, authenticateUser, encrypt, decrypt, readLocalDb, writeLocalDb) {
+
+    // ==================== GLOBAL SECURITY GUARD ====================
+    // Enforce both authentication and administrator role checks globally for all /api/admin/* endpoints
+    app.use('/api/admin', authenticateUser, requireAdmin);
 
     // ==================== ADMIN AUTH ====================
     // ==================== ADMIN AUTH ====================

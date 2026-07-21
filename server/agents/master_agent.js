@@ -3,7 +3,7 @@ import { analyzeScreening } from './layer1_screening.js';
 import { analyzeTechnical } from './layer2_technical.js';
 import { analyzeBehavioral } from './layer3_behavioral.js';
 import { analyzeFraud } from './layer4_fraud_detection.js';
-import { getAIConfig } from './ai_utils.js';
+import { getAIConfig, generateAIResponse, safeParseJSON } from './ai_utils.js';
 
 /**
  * Runs the full evaluation pipeline.
@@ -33,32 +33,109 @@ export async function runMasterEvaluation(candidateData, videoData, apiKeys, sup
         throw new Error('Transcript is empty or too short. Audio may not have been captured correctly.');
     }
 
-    // Run all layers in parallel for speed, but catch individual errors
-    // If a CRITICAL layer fails, we should throw.
+    let screeningResult, technicalResult, behavioralResult, fraudResult;
+    let usedFallback = false;
 
-    // Layer 1: Screening (Reviewing candidate profile vs generic standards)
-    const screeningPromise = analyzeScreening(candidateData, apiKeys, aiConfig)
-        .catch(e => { throw new Error(`Layer 1 (Screening) Failed: ${e.message}`); });
+    // ---- STEP 1: Attempt Consolidated Evaluation Call (Fast & Cheap) ----
+    try {
+        console.log(`[Master Agent] Attempting consolidated evaluation...`);
+        const consolidatedPrompt = `
+            You are an expert HR Screener, Technical Lead, and Behavioral Psychologist.
+            Perform a multi-layered recruitment evaluation on the candidate profile and video transcription.
+            
+            Candidate Profile:
+            ${JSON.stringify(candidateData)}
+            
+            Applied Job: ${candidateData.appliedJobTitle || 'Software Engineer'}
+            Target Skills: ${candidateData.skills ? candidateData.skills.join(', ') : 'General Technical'}
 
-    // Layer 2: Technical (CRITICAL - needs transcript)
-    const technicalPromise = analyzeTechnical(candidateData, transcription, apiKeys, aiConfig)
-        .catch(e => { throw new Error(`Layer 2 (Technical) Failed: ${e.message}`); });
+            Evaluate all four layers based on this transcript:
+            "${transcription.substring(0, 4000)}"
 
-    // Layer 3: Behavioral (CRITICAL - needs transcript)
-    const behavioralPromise = analyzeBehavioral(transcription, apiKeys, aiConfig)
-        .catch(e => { throw new Error(`Layer 3 (Behavioral) Failed: ${e.message}`); });
+            Evaluate:
+            Layer 1 (Screening): Score 0-100, completeness 0-100, keyword match 0-100.
+            Layer 2 (Technical): Score 0-100, verify knowledge of target skills, detect technical terms mentioned.
+            Layer 3 (Behavioral): Score 0-100, evaluate communication style, traits, and emotional tone.
+            Layer 4 (Fraud): Identify AI speech probability, check authenticity, set fraud flag if suspicious.
 
-    // Layer 4: Fraud Detection
-    const fraudPromise = analyzeFraud(transcription, apiKeys, aiConfig)
-        .catch(e => { throw new Error(`Layer 4 (Fraud) Failed: ${e.message}`); });
+            You MUST respond with ONLY a valid JSON object matching this structure (do not return any other text, markdown, or markdown blocks):
+            {
+                "layer1": {
+                    "score": 85,
+                    "completeness": 90,
+                    "keywordMatch": 80,
+                    "passed": true,
+                    "details": ["profile is detailed...", "skills are relevant..."]
+                },
+                "layer2": {
+                    "score": 75,
+                    "detectedTerms": ["React", "TypeScript"],
+                    "accuracy": 80,
+                    "domainKnowledge": "Advanced",
+                    "details": ["technical terms are accurate..."]
+                },
+                "layer3": {
+                    "score": 80,
+                    "traits": ["Confident", "Articulate"],
+                    "communicationStyle": "Clear and structured",
+                    "emotionalTone": "Positive",
+                    "details": ["excellent soft skills..."]
+                },
+                "layer4": {
+                    "fraud_flag": false,
+                    "ai_generated_probability": 10,
+                    "authenticity_score": 90,
+                    "fraud_indicators": [],
+                    "confidence": 0.9,
+                    "details": ["highly authentic spoken style..."]
+                }
+            }
+        `;
 
-    // Wait for all
-    const [screeningResult, technicalResult, behavioralResult, fraudResult] = await Promise.all([
-        screeningPromise,
-        technicalPromise,
-        behavioralPromise,
-        fraudPromise
-    ]);
+        const aiResponse = await generateAIResponse(
+            apiKeys,
+            "Evaluate transcription and profile.",
+            consolidatedPrompt,
+            aiConfig
+        );
+
+        if (!aiResponse) throw new Error("Consolidated AI returned empty response");
+
+        const parsed = safeParseJSON(aiResponse);
+        if (!parsed || !parsed.layer1 || !parsed.layer2 || !parsed.layer3 || !parsed.layer4) {
+            throw new Error("Parsed JSON structure does not contain all layers");
+        }
+
+        screeningResult = parsed.layer1;
+        technicalResult = parsed.layer2;
+        behavioralResult = parsed.layer3;
+        fraudResult = parsed.layer4;
+
+        console.log(`[Master Agent] ✅ Consolidated evaluation successful!`);
+    } catch (e) {
+        console.warn(`[Master Agent] Consolidated call failed (${e.message}). Falling back to parallel sub-agents.`);
+        usedFallback = true;
+
+        // ---- STEP 2: Fallback to Parallel Sub-agents (Robust & Backward-Compatible) ----
+        const screeningPromise = analyzeScreening(candidateData, apiKeys, aiConfig)
+            .catch(e => { throw new Error(`Layer 1 (Screening) Failed: ${e.message}`); });
+
+        const technicalPromise = analyzeTechnical(candidateData, transcription, apiKeys, aiConfig)
+            .catch(e => { throw new Error(`Layer 2 (Technical) Failed: ${e.message}`); });
+
+        const behavioralPromise = analyzeBehavioral(transcription, apiKeys, aiConfig)
+            .catch(e => { throw new Error(`Layer 3 (Behavioral) Failed: ${e.message}`); });
+
+        const fraudPromise = analyzeFraud(transcription, apiKeys, aiConfig)
+            .catch(e => { throw new Error(`Layer 4 (Fraud) Failed: ${e.message}`); });
+
+        [screeningResult, technicalResult, behavioralResult, fraudResult] = await Promise.all([
+            screeningPromise,
+            technicalPromise,
+            behavioralPromise,
+            fraudPromise
+        ]);
+    }
 
     // Weighting for each layer (4-layer model)
     const w1 = 0.25;  // Screening
@@ -91,7 +168,7 @@ export async function runMasterEvaluation(candidateData, videoData, apiKeys, sup
         layer3: behavioralResult,
         fraudDetection: fraudResult,
         processingTime: Date.now() - startTime,
-        usedFallback: false,
+        usedFallback: usedFallback,
         transcription: transcription // Store transcript in report for debugging
     };
 

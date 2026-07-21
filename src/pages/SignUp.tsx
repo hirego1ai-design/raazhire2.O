@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 const SignUp = () => {
-    const [userType, setUserType] = useState<'candidate' | 'employer' | 'educator'>('candidate');
+    const [userType, setUserType] = useState<'candidate' | 'employer'>('candidate');
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -20,7 +20,6 @@ const SignUp = () => {
         // Navigate to the appropriate register page with form data
         let targetRoute = '/register/candidate';
         if (userType === 'employer') targetRoute = '/register/employer';
-        if (userType === 'educator') targetRoute = '/register/educator'; // Placeholder or actual educator register
 
         navigate(targetRoute, {
             state: {
@@ -75,14 +74,6 @@ const SignUp = () => {
                                     }`}
                             >
                                 Employer
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setUserType('educator')}
-                                className={`px-4 py-2 rounded-md text-xs font-semibold transition-all ${userType === 'educator' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'
-                                    }`}
-                            >
-                                Educator
                             </button>
                         </div>
                     </div>

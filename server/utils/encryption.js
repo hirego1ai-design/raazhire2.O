@@ -48,12 +48,15 @@ if (process.env.NODE_ENV === 'production') {
 export function encrypt(text) {
     if (!text) return null;
     try {
+        // Fix #3: Use a unique random salt per encryption (stored in output)
+        const salt = crypto.randomBytes(16);
         const iv = crypto.randomBytes(16);
-        const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+        const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
         const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
-        return iv.toString('hex') + ':' + encrypted;
+        // Format: salt:iv:ciphertext
+        return salt.toString('hex') + ':' + iv.toString('hex') + ':' + encrypted;
     } catch (error) {
         console.error('Encryption failed:', error.message);
         return null;
@@ -64,15 +67,33 @@ export function decrypt(text) {
     if (!text) return null;
     try {
         const parts = text.split(':');
-        const iv = Buffer.from(parts.shift(), 'hex');
-        const encryptedText = parts.join(':');
-        const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
-        const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-        let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
-        return decrypted;
+        // Fix #3: Support new format (salt:iv:ciphertext) and legacy (iv:ciphertext)
+        if (parts.length === 3) {
+            // New format: salt:iv:ciphertext
+            const salt = Buffer.from(parts[0], 'hex');
+            const iv = Buffer.from(parts[1], 'hex');
+            const encryptedText = parts[2];
+            const key = crypto.scryptSync(ENCRYPTION_KEY, salt, 32);
+            const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+            let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        } else if (parts.length === 2) {
+            // Legacy format: iv:ciphertext (static salt — for backward compatibility only)
+            const iv = Buffer.from(parts[0], 'hex');
+            const encryptedText = parts[1];
+            const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+            const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+            let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        }
+        // Fix #4: Return null (not original text) on failure — never leak ciphertext as plaintext
+        console.error('Decryption failed: unexpected ciphertext format');
+        return null;
     } catch (error) {
-        // console.error('Decryption failed (possibly not encrypted or wrong key):', error.message);
-        return text; // Return original if decryption fails (fallback for legacy/plain data)
+        // Fix #4: Return null on error instead of leaking the raw ciphertext
+        console.error('Decryption failed:', error.message);
+        return null;
     }
 }

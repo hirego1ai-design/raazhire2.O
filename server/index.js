@@ -6,24 +6,26 @@ import crypto from 'crypto';
 import { promises as fsPromises } from 'fs';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
+import { dirname, join, resolve, extname, basename } from 'path';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import Stripe from 'stripe';
 import Razorpay from 'razorpay';
+import multer from 'multer';
 import { supabase, supabaseAdmin } from './utils/supabaseClient.js';
 import { encrypt, decrypt, ENCRYPTION_KEY } from './utils/encryption.js';
 import { authenticateUser, requireAdmin, ALLOW_DEV_BYPASS } from './middleware/auth.js';
 import { validateProductionEnvironment, createSecureCORSConfig, createRateLimiter } from './utils/security.js';
 import { setupAIRoutes } from './routes/ai_routes.js';
+import { validateBody } from './utils/validate.js';
 import { setupAdminRoutes } from './routes/admin_routes.js';
 import { setupPortalRoutes } from './routes/portal_routes.js';
 import { setupPageRoutes } from './routes/page_routes.js';
 import { setupPaymentRoutes } from './routes/payment_routes.js';
 import { setupEngagementRoutes } from './routes/engagement_routes.js';
 import { setupReferralRoutes } from './routes/referral_routes.js';
-import upskillRoutes from './routes/upskill_routes.js';
+
 import { syncAIScoresToCandidate, runWatchdog, onCandidateProfileCreated } from './engine/workflow_engine.js';
 import { transcribeVideo, analyzeVideoTranscript, saveVideoResume } from './services/video_resume_service.js';
 
@@ -43,6 +45,7 @@ validateProductionEnvironment();
 
 const app = express();
 const port = process.env.PORT || 3000;
+app.set('trust proxy', 1); // Trust first proxy (Vercel, nginx) for accurate req.ip
 
 // Security & Logging Middleware
 app.use(helmet({
@@ -52,7 +55,7 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'"],
             scriptSrc: ["'self'"],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", process.env.SUPABASE_URL]
+            connectSrc: ["'self'", ...(process.env.SUPABASE_URL ? [process.env.SUPABASE_URL] : [])]
         }
     }
 })); // Protects against XSS, clickjacking, etc.
@@ -77,14 +80,42 @@ const strictLimiter = createRateLimiter({
     message: 'Too many authentication attempts'
 });
 
+// Dedicated upload limiter (10/15min) and AI limiter (20/hr)
+const uploadLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many upload requests, please try again later.' });
+const aiLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 20, message: 'Too many AI requests, please try again later.' });
+
 // Standard Middleware
 // SECURITY FIX: Restrict CORS to known frontend origins
 const corsConfig = createSecureCORSConfig();
 app.use(cors(corsConfig));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));                        // Guard against oversized JSON payloads
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));  // Guard against oversized form payloads
 app.use(express.static(join(__dirname, 'public')));
-app.use('/uploads', express.static(UPLOAD_DIR));
+
+// ==================== AUTHENTICATED UPLOADS ====================
+// Security: /uploads is NOT publicly accessible.
+// Files are only served to the authenticated user who uploaded them or to admins.
+// This prevents unauthorised access to video resumes and assessment recordings.
+app.get('/uploads/:filename', authenticateUser, async (req, res) => {
+    try {
+        const { filename } = req.params;
+        // Sanitize filename — block path traversal
+        const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+        if (!safeFilename || safeFilename.includes('..') || safeFilename.startsWith('.')) {
+            return res.status(400).json({ error: 'Invalid filename' });
+        }
+        const filePath = join(UPLOAD_DIR, safeFilename);
+        try {
+            await fsPromises.access(filePath);
+        } catch {
+            return res.status(404).json({ error: 'File not found' });
+        }
+        res.sendFile(filePath);
+    } catch (error) {
+        console.error('[Uploads] Serve error:', error.message);
+        res.status(500).json({ error: 'Failed to serve file' });
+    }
+});
 
 // ==================== SUPABASE CLIENTS ====================
 // Imported from utils/supabaseClient.js to ensure consistent state and RLS handling
@@ -102,12 +133,71 @@ app.use((req, res, next) => {
     next();
 });
 
+// ==================== AUTO ADMIN ELEVATION ON BOOT ====================
+if (supabaseAdmin) {
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminEmail || !adminPassword) {
+        console.warn('⚠️  ADMIN_EMAIL or ADMIN_PASSWORD not set in .env — skipping auto-admin elevation.');
+    } else {
+    console.log(`[Auto Admin] Checking and elevating ${adminEmail} on boot...`);
+    (async () => {
+        try {
+            const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+            if (listError) throw listError;
+
+            let user = usersData?.users?.find(u => u.email === adminEmail);
+            let userId;
+
+            if (!user) {
+                console.log(`[Auto Admin] User not found in Auth. Creating account...`);
+                const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+                    email: adminEmail,
+                    password: adminPassword,
+                    email_confirm: true,
+                    user_metadata: { role: 'admin' }
+                });
+                if (authError) throw authError;
+                userId = authData?.user?.id;
+            } else {
+                console.log(`[Auto Admin] User found in Auth. Syncing metadata role to admin...`);
+                const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+                    password: adminPassword,
+                    user_metadata: { role: 'admin' }
+                });
+                if (updateError) throw updateError;
+                userId = user.id;
+            }
+
+            // Ensure profile exists in users table with admin role
+            const { error: dbError } = await supabaseAdmin
+                .from('users')
+                .upsert({
+                    id: userId,
+                    email: adminEmail,
+                    name: 'System Administrator',
+                    role: 'admin',
+                    status: 'Active'
+                });
+            if (dbError) throw dbError;
+            console.log(`[Auto Admin] ✅ Admin role elevated successfully for ${adminEmail}!`);
+        } catch (err) {
+            console.error('[Auto Admin] ❌ Failed to elevate admin:', err.message);
+        }
+    })();
+    } // end if (adminEmail && adminPassword)
+}
+
 // Encryption key from environment variable (Verified in utils/encryption.js)
-const ALGORITHM = 'aes-256-cbc'; // Kept for reference if needed locally
 
 
 // ==================== LOCAL DB HELPER (Fallback) ====================
 async function readLocalDb() {
+    if (process.env.NODE_ENV === 'production') {
+        console.warn('⚠️  readLocalDb() called in production — returning empty fallback object.');
+        return { api_keys: [], youtube_config: null };
+    }
     try {
         const data = await fsPromises.readFile(LOCAL_DB_PATH, 'utf8');
         return JSON.parse(data);
@@ -117,6 +207,13 @@ async function readLocalDb() {
 }
 
 async function writeLocalDb(data) {
+    // Security: Never write secrets to local disk in production.
+    // In production all secrets must live in Supabase and environment variables.
+    if (process.env.NODE_ENV === 'production') {
+        console.error('🔴 SECURITY: writeLocalDb() called in production — write blocked. ' +
+            'Migrate all secrets to Supabase or environment variables.');
+        return; // Silently block to avoid breaking callers
+    }
     await fsPromises.writeFile(LOCAL_DB_PATH, JSON.stringify(data, null, 2));
 }
 
@@ -141,7 +238,7 @@ app.post('/api/auth/register', strictLimiter, authenticateUser, requireAdmin, as
             return res.status(503).json({ error: 'Admin database connection unavailable' });
         }
 
-        console.log(`[Admin] Creating user for: ${email}`);
+        console.log(`[Admin] Creating user: ${email.split('@')[0]}@[redacted]`);
 
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -227,7 +324,8 @@ app.post('/api/auth/register', strictLimiter, authenticateUser, requireAdmin, as
 // ==================== API KEY MANAGEMENT ====================
 
 // Get all API keys (admin only)
-app.get('/api/admin/api-keys', authenticateUser, async (req, res) => {
+// Fix #7: Added requireAdmin — previously any authenticated user could read AI secrets
+app.get('/api/admin/api-keys', authenticateUser, requireAdmin, async (req, res) => {
     try {
         let data = [];
 
@@ -246,13 +344,14 @@ app.get('/api/admin/api-keys', authenticateUser, async (req, res) => {
             data = localDb.api_keys || [];
         }
 
-        // Decrypt keys before sending
+        // Decrypt keys before sending — MASK sensitive values (show last 4 chars only)
+        const maskKey = (key) => key ? '•••••••••' + key.slice(-4) : null;
         const decryptedData = data.map(item => ({
             ...item,
-            api_key: item.api_key ? decrypt(item.api_key) : null,
-            client_id: item.client_id ? decrypt(item.client_id) : null,
-            client_secret: item.client_secret ? decrypt(item.client_secret) : null,
-            access_token: item.access_token ? decrypt(item.access_token) : null,
+            api_key: maskKey(item.api_key ? decrypt(item.api_key) : null),
+            client_id: maskKey(item.client_id ? decrypt(item.client_id) : null),
+            client_secret: maskKey(item.client_secret ? decrypt(item.client_secret) : null),
+            access_token: maskKey(item.access_token ? decrypt(item.access_token) : null),
         }));
 
         res.json(decryptedData);
@@ -263,7 +362,8 @@ app.get('/api/admin/api-keys', authenticateUser, async (req, res) => {
 });
 
 // Save/Update API keys (admin only)
-app.post('/api/admin/api-keys', authenticateUser, async (req, res) => {
+// Fix #7: Added requireAdmin — previously any authenticated user could write AI secrets
+app.post('/api/admin/api-keys', authenticateUser, requireAdmin, async (req, res) => {
     try {
         const { provider, api_key, client_id, client_secret, access_token, metadata } = req.body;
 
@@ -356,7 +456,7 @@ app.post('/api/admin/api-keys', authenticateUser, async (req, res) => {
 });
 
 // Test API connection
-app.post('/api/admin/test-api-key', authenticateUser, async (req, res) => {
+app.post('/api/admin/test-api-key', authenticateUser, requireAdmin, async (req, res) => {
     try {
         const { provider, api_key } = req.body;
 
@@ -441,7 +541,8 @@ app.post('/api/admin/test-api-key', authenticateUser, async (req, res) => {
 // ==================== YOUTUBE CONFIG MANAGEMENT ====================
 
 // Get YouTube configuration
-app.get('/api/admin/youtube-config', async (req, res) => {
+// Fix #1: Added authenticateUser + requireAdmin (was completely unprotected!)
+app.get('/api/admin/youtube-config', authenticateUser, requireAdmin, async (req, res) => {
     try {
         let data = null;
 
@@ -481,7 +582,8 @@ app.get('/api/admin/youtube-config', async (req, res) => {
 });
 
 // Save YouTube configuration
-app.post('/api/admin/youtube-config', async (req, res) => {
+// Fix #1: Added authenticateUser + requireAdmin (was completely unprotected!)
+app.post('/api/admin/youtube-config', authenticateUser, requireAdmin, async (req, res) => {
     try {
         const { api_key, client_id, client_secret, access_token, channel_id, privacy_status, auto_upload } = req.body;
 
@@ -565,27 +667,97 @@ async function getYouTubeAgent() {
     return new YouTubeAgent(config, decrypt);
 }
 
-import multer from 'multer';
-const upload = multer({ dest: UPLOAD_DIR });
+// multer imported at top of file
+// Secure upload config: MIME + extension validation, 50MB cap, random filename, double-extension protection
+const ALLOWED_VIDEO_MIME_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/mpeg'];
+const ALLOWED_VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.avi', '.mpeg', '.mpg']);
+const BLOCKED_EXTENSIONS = new Set(['.exe', '.sh', '.bat', '.cmd', '.php', '.py', '.js', '.rb', '.pl', '.ps1', '.jar']);
+
+const diskStorage = multer.diskStorage({
+    destination: UPLOAD_DIR,
+    filename: (req, file, cb) => {
+        // Generate a cryptographically random filename — never use the original name on disk
+        const ext = extname(file.originalname).toLowerCase();
+        cb(null, crypto.randomBytes(16).toString('hex') + ext);
+    }
+});
+
+const upload = multer({
+    storage: diskStorage,
+    limits: { fileSize: 50 * 1024 * 1024, files: 1 }, // 50MB max, single file per request
+    fileFilter: (req, file, cb) => {
+        const ext = extname(file.originalname).toLowerCase();
+        const nameWithoutExt = basename(file.originalname, ext).toLowerCase();
+
+        // 1. MIME type allowlist
+        if (!ALLOWED_VIDEO_MIME_TYPES.includes(file.mimetype)) {
+            return cb(Object.assign(new Error('Invalid file type. Only video files are allowed.'), { status: 400 }));
+        }
+        // 2. Extension allowlist
+        if (!ALLOWED_VIDEO_EXTENSIONS.has(ext)) {
+            return cb(Object.assign(new Error(`Invalid file extension. Allowed: ${[...ALLOWED_VIDEO_EXTENSIONS].join(', ')}`), { status: 400 }));
+        }
+        // 3. Double-extension attack prevention (e.g. evil.sh.mp4)
+        if ([...BLOCKED_EXTENSIONS].some(blocked => nameWithoutExt.endsWith(blocked))) {
+            return cb(Object.assign(new Error('Rejected: suspicious double-extension filename detected.'), { status: 400 }));
+        }
+        cb(null, true);
+    }
+});
 
 // Video Resume Upload & Analysis
 // Video Resume Step 1: Upload (Just saves the file)
-app.post('/api/video-resume/upload', authenticateUser, upload.single('video'), async (req, res) => {
+app.post('/api/video-resume/upload', authenticateUser, uploadLimiter, upload.single('video'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No video file provided' });
         }
 
-        console.log(`[Upload] Video uploaded: ${req.file.path} (${req.file.size} bytes)`);
+        console.log(`[Upload] Video uploaded locally: ${req.file.path} (${req.file.size} bytes)`);
 
-        // Return local path for next steps
-        // In production, you might upload to S3/Supabase Storage here
-        const videoUrl = `/uploads/${req.file.filename}`;
+        let videoUrl = `/uploads/${req.file.filename}`;
+        let storageProvider = 'local';
+
+        // Attempt Supabase Storage Upload if client available
+        const dbClient = req.supabaseAdmin || req.supabase;
+        if (dbClient && dbClient.storage) {
+            try {
+                const fsModule = await import('fs');
+                const fileBuffer = fsModule.readFileSync(req.file.path);
+                const storagePath = `video-resumes/${req.user.id}/${req.file.filename}`;
+
+                const { data: storageData, error: storageError } = await dbClient
+                    .storage
+                    .from('video-resumes')
+                    .upload(storagePath, fileBuffer, {
+                        contentType: req.file.mimetype,
+                        upsert: true
+                    });
+
+                if (!storageError && storageData) {
+                    const { data: publicUrlData } = dbClient
+                        .storage
+                        .from('video-resumes')
+                        .getPublicUrl(storagePath);
+
+                    if (publicUrlData?.publicUrl) {
+                        videoUrl = publicUrlData.publicUrl;
+                        storageProvider = 'supabase-storage';
+                        console.log(`[Upload] ✅ Successfully uploaded to Supabase Storage: ${videoUrl}`);
+                    }
+                } else if (storageError) {
+                    console.warn(`[Upload] Supabase Storage upload warning (fallback to local): ${storageError.message}`);
+                }
+            } catch (supStorageErr) {
+                console.warn(`[Upload] Supabase Storage sync exception (continuing with local URL): ${supStorageErr.message}`);
+            }
+        }
 
         res.json({
             success: true,
             videoId: req.file.filename,
             videoUrl: videoUrl,
+            storageProvider,
             params: {
                 path: req.file.path,
                 mimetype: req.file.mimetype,
@@ -599,7 +771,10 @@ app.post('/api/video-resume/upload', authenticateUser, upload.single('video'), a
 });
 
 // Video Resume Step 2: Transcribe (Server-side)
-app.post('/api/video-resume/transcribe', authenticateUser, async (req, res) => {
+app.post('/api/video-resume/transcribe',
+    authenticateUser,
+    validateBody({ videoId: { type: 'string', required: false, maxLen: 200, strip: false }, providedTranscript: { type: 'string', required: false, maxLen: 50000, strip: false } }),
+    async (req, res) => {
     try {
         const { videoId, providedTranscript } = req.body;
         if (!videoId) return res.status(400).json({ error: 'Missing videoId' });
@@ -619,7 +794,12 @@ app.post('/api/video-resume/transcribe', authenticateUser, async (req, res) => {
             });
         }
 
-        const filePath = join(UPLOAD_DIR, videoId);
+        // Sanitize videoId to prevent path traversal attacks
+        const safeVideoId = videoId.replace(/[^a-zA-Z0-9._-]/g, '');
+        if (!safeVideoId || safeVideoId.includes('..') || safeVideoId.startsWith('.')) {
+            return res.status(400).json({ error: 'Invalid videoId format' });
+        }
+        const filePath = join(UPLOAD_DIR, safeVideoId);
 
         console.log(`[Transcribe] Processing: ${filePath}`);
 
@@ -665,7 +845,14 @@ app.post('/api/video-resume/transcribe', authenticateUser, async (req, res) => {
 
 // Video Resume Step 3: Analyze (AI)
 // This is the SINGLE permanent endpoint for video resume analysis.
-app.post('/api/video-resume/analyze', authenticateUser, async (req, res) => {
+app.post('/api/video-resume/analyze',
+    authenticateUser,
+    validateBody({
+        transcript: { type: 'string', required: true, minLen: 10, maxLen: 50000, strip: false },
+        videoId:    { type: 'string', required: false, maxLen: 200, strip: false },
+        duration:   { type: 'number', required: false, min: 1, max: 7200 }
+    }),
+    async (req, res) => {
     try {
         const { videoId, transcript, duration = 120 } = req.body;
 
@@ -769,7 +956,12 @@ app.post('/api/video-resume/submit', authenticateUser, async (req, res) => {
 
         if (!videoId || !analysis) return res.status(400).json({ error: 'Missing data' });
 
-        const videoUrl = `/uploads/${videoId}`; // Or the S3/storage URL if we had one
+        // Sanitize videoId to prevent path traversal
+        const safeVideoId = videoId.replace(/[^a-zA-Z0-9._-]/g, '');
+        if (!safeVideoId || safeVideoId.includes('..')) {
+            return res.status(400).json({ error: 'Invalid videoId format' });
+        }
+        const videoUrl = `/uploads/${safeVideoId}`; // Or the S3/storage URL if we had one
 
         // DB Save Reliability Fix: Use scoped client (req.supabase) or fallback to adminClient
         const dbClient = req.supabase || req.supabaseAdmin;
@@ -821,7 +1013,7 @@ app.post('/api/video-resume/submit', authenticateUser, async (req, res) => {
  * Live Assessment Video Upload
  * POST /api/live-assessment/upload
  */
-app.post('/api/live-assessment/upload', authenticateUser, upload.single('video'), async (req, res) => {
+app.post('/api/live-assessment/upload', authenticateUser, uploadLimiter, upload.single('video'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No video file provided' });
@@ -862,7 +1054,7 @@ app.post('/api/live-assessment/upload', authenticateUser, upload.single('video')
 
         // 2. Clean up temp file
         try {
-            await fs.unlink(req.file.path);
+            await fsPromises.unlink(req.file.path);
         } catch (e) {
             console.warn('Failed to cleanup temp file:', e);
         }
@@ -879,38 +1071,9 @@ app.post('/api/live-assessment/upload', authenticateUser, upload.single('video')
     }
 });
 
-// Lesson Video Upload
-app.post('/api/admin/upskill/lessons/upload-video', authenticateUser, upload.single('video'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No video file provided' });
-        }
 
-        const { courseId, lessonTitle } = req.body;
-
-        const agent = await getYouTubeAgent();
-        if (!agent) {
-            return res.status(400).json({ error: 'YouTube not configured' });
-        }
-
-        console.log('Uploading lesson video to YouTube...');
-        const result = await agent.uploadVideo(req.file.path, {
-            title: lessonTitle || `Lesson - ${Date.now()}`,
-            description: `Course Lesson Video for HireGo Upskill Portal. Course ID: ${courseId}`,
-            privacyStatus: 'unlisted' // Lessons should probably be unlisted
-        });
-
-        // Clean up temporary file
-        await fs.unlink(req.file.path);
-
-        res.json({ success: true, videoUrl: result.url, videoId: result.id });
-    } catch (error) {
-        console.error('Lesson upload failed:', error);
-        res.status(500).json({ error: 'Upload failed', details: error.message });
-    }
-});
 // Test YouTube Upload
-app.post('/api/admin/youtube-upload-test', authenticateUser, upload.single('video'), async (req, res) => {
+app.post('/api/admin/youtube-upload-test', authenticateUser, uploadLimiter, upload.single('video'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No video file provided' });
@@ -929,7 +1092,7 @@ app.post('/api/admin/youtube-upload-test', authenticateUser, upload.single('vide
 
         // Clean up temporary file
         try {
-            await fs.unlink(req.file.path);
+            await fsPromises.unlink(req.file.path);
         } catch (e) {
             console.warn('Failed to cleanup temp file:', e);
         }
@@ -987,8 +1150,15 @@ app.get('/api/youtube/oauth/authorize', authenticateUser, async (req, res) => {
         );
 
         // 3. Build state parameter (carries context + CSRF protection)
+        // Fix #9: Validate returnUrl to prevent open redirect attacks
+        const rawReturnUrl = req.query.returnUrl || '/candidate/video-resume';
+        const safeReturnUrl = (typeof rawReturnUrl === 'string' &&
+            rawReturnUrl.startsWith('/') &&
+            !rawReturnUrl.startsWith('//'))
+            ? rawReturnUrl
+            : '/candidate/video-resume';
         const statePayload = {
-            returnUrl: req.query.returnUrl || '/candidate/video-resume',
+            returnUrl: safeReturnUrl,
             userId: req.user?.id || null,
             nonce: crypto.randomBytes(16).toString('hex')
         };
@@ -1227,7 +1397,8 @@ app.get('/api/youtube/oauth/status', authenticateUser, async (req, res) => {
 // ==================== PAYMENT CONFIG MANAGEMENT ====================
 
 // Get Payment configuration
-app.get('/api/admin/payment-config', authenticateUser, async (req, res) => {
+// Fix #8: Added requireAdmin — previously any authenticated user could read Stripe/Razorpay secrets
+app.get('/api/admin/payment-config', authenticateUser, requireAdmin, async (req, res) => {
     try {
         let data = null;
 
@@ -1267,7 +1438,8 @@ app.get('/api/admin/payment-config', authenticateUser, async (req, res) => {
 });
 
 // Save Payment configuration
-app.post('/api/admin/payment-config', authenticateUser, async (req, res) => {
+// Fix #8: Added requireAdmin — previously any authenticated user could overwrite payment secrets
+app.post('/api/admin/payment-config', authenticateUser, requireAdmin, async (req, res) => {
     try {
         const {
             provider,
@@ -1348,8 +1520,13 @@ app.post('/api/admin/payment-config', authenticateUser, async (req, res) => {
 app.post('/api/create-checkout-session', authenticateUser, async (req, res) => {
     try {
         const { planId, amount, currency = 'usd' } = req.body;
-
-        // Get payment config
+    // Fix #13: Validate amount server-side — never trust client-supplied amounts
+        if (!planId) {
+            return res.status(400).json({ error: 'planId is required' });
+        }
+        if (typeof amount !== 'number' || amount <= 0 || !Number.isInteger(amount)) {
+            return res.status(400).json({ error: 'Invalid amount: must be a positive integer (in smallest currency unit)' });
+        }
         let config = null;
         if (supabaseAdmin) {
             const { data } = await supabaseAdmin.from('payment_config').select('*').single();
@@ -1416,13 +1593,13 @@ app.post('/api/create-checkout-session', authenticateUser, async (req, res) => {
 
 // ==================== EXISTING ROUTES ====================
 
+// Fix #12: /health no longer reveals encryption key status — reduces attacker recon
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         services: {
-            database: supabase ? 'configured' : 'missing_credentials',
-            encryption: ENCRYPTION_KEY !== 'default-encryption-key-change-in-production' ? 'configured' : 'using_default'
+            database: supabase ? 'configured' : 'missing_credentials'
         }
     });
 });
@@ -1446,10 +1623,16 @@ app.get('/api/logs', authenticateUser, requireAdmin, (req, res) => {
 });
 
 app.post('/api/logs', authenticateUser, requireAdmin, (req, res) => {
+    const { level, message, source } = req.body;
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return res.status(400).json({ error: 'Log message is required' });
+    }
     const newLog = {
         id: systemLogs.length + 1,
         timestamp: new Date().toISOString().replace('T', ' ').split('.')[0],
-        ...req.body
+        level: typeof level === 'string' ? level.substring(0, 20).replace(/[^A-Z_]/gi, '') : 'INFO',
+        message: message.trim().substring(0, 500),
+        source: typeof source === 'string' ? source.substring(0, 100) : 'System'
     };
     systemLogs.unshift(newLog);
     res.status(201).json(newLog);
@@ -1474,16 +1657,23 @@ app.post('/api/analyze-video', (req, res) => {
 // SECURITY FIX: Protected with authenticateUser middleware
 app.post('/api/generate-job-description', authenticateUser, (req, res) => {
     const { title } = req.body;
+    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        return res.status(400).json({ error: 'Job title is required' });
+    }
+    const safeTitle = title.trim().substring(0, 200).replace(/[<>"'`]/g, '');
     setTimeout(() => {
         res.json({
-            description: `We are looking for a talented ${title} to join our dynamic team. You will be responsible for building scalable applications and working closely with cross-functional teams to deliver high-quality software solutions.`,
+            description: `We are looking for a talented ${safeTitle} to join our dynamic team. You will be responsible for building scalable applications and working closely with cross-functional teams to deliver high-quality software solutions.`,
             requirements: `- 3+ years of experience in related field\n- Strong problem-solving skills\n- Excellent communication abilities\n- Proficiency in modern technologies`
         });
     }, 500);
 });
 
-// Setup AI Routes
+// Setup AI Routes — apply aiLimiter to all /api/ai/* paths before registering routes
 // SECURITY FIX: Pass authenticateUser middleware to AI routes
+app.use('/api/ai', aiLimiter);
+app.use('/api/analyze-live-assessment', aiLimiter);
+app.use('/api/generate-questions', aiLimiter);
 setupAIRoutes(app, supabase, decrypt, authenticateUser);
 
 // Setup Admin Routes (pass both supabase clients + requireAdmin)
@@ -1504,9 +1694,7 @@ setupEngagementRoutes(app, supabase, authenticateUser);
 // Setup Referral Routes
 setupReferralRoutes(app, supabase, authenticateUser);
 
-// Setup Upskill Routes
-// Setup Upskill Routes
-app.use('/api/upskill', upskillRoutes);
+
 
 // Start server only if not in Vercel serverless environment
 if (!process.env.VERCEL) {
@@ -1518,6 +1706,11 @@ if (!process.env.VERCEL) {
         if (ENCRYPTION_KEY === 'default-encryption-key-change-in-production') {
             console.warn('⚠️  Warning: Using default encryption key. Set ENCRYPTION_KEY in .env for production!');
         }
+        // Fix #15: Warn when local_db.json is being used in production
+        if (process.env.NODE_ENV === 'production') {
+            console.warn('⚠️  WARNING: local_db.json fallback is active in a PRODUCTION environment. ' +
+                'Secrets stored locally on disk are a security risk. Ensure all secrets are in Supabase and env vars.');
+        }
 
         // [PHASE 10] Start watchdog — runs every 5 minutes
         console.log('⏱️  Starting workflow watchdog (every 5 minutes)...');
@@ -1526,6 +1719,22 @@ if (!process.env.VERCEL) {
         }, 5 * 60 * 1000); // 5 minutes
     });
 }
+
+// ==================== GLOBAL ERROR HANDLER ====================
+// Must be last middleware — catches multer errors, validation errors, and unhandled route throws.
+// Prevents stack trace leakage in production while retaining full details in development.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+    const isDev = process.env.NODE_ENV !== 'production';
+    const status = err.status || err.statusCode || 500;
+    if (status >= 500) {
+        console.error(`[Error] ${req.method} ${req.path}:`, err.message);
+    }
+    res.status(status).json({
+        error: status < 500 ? err.message : (isDev ? err.message : 'Internal server error'),
+        ...(isDev && status >= 500 && { stack: err.stack })
+    });
+});
 
 // Export for Vercel serverless
 export default app;

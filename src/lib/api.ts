@@ -1,142 +1,136 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
+import { supabase } from './supabase';
 
-export const endpoints = {
-    health: `${API_BASE_URL}/health`,
-    test: `${API_BASE_URL}/api/test`,
-    logs: `${API_BASE_URL}/api/logs`,
-    generateJobDescription: `${API_BASE_URL}/api/generate-job-description`,
-    videoResume: {
-        upload: `${API_BASE_URL}/api/video-resume/upload`,
-        transcribe: `${API_BASE_URL}/api/video-resume/transcribe`,
-        analyze: `${API_BASE_URL}/api/video-resume/analyze`,
-        submit: `${API_BASE_URL}/api/video-resume/submit`
-    },
-    generateQuestions: `${API_BASE_URL}/api/generate-questions`,
-    uploadLiveAssessment: `${API_BASE_URL}/api/live-assessment/upload`,
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-    // Portal Endpoints
-    jobs: `${API_BASE_URL}/api/jobs`,
-    applications: `${API_BASE_URL}/api/applications`,
-    profile: `${API_BASE_URL}/api/profile`,
-    notifications: `${API_BASE_URL}/api/notifications`,
-    connections: `${API_BASE_URL}/api/connections`,
+interface RequestOptions extends RequestInit {
+    params?: Record<string, string | number | boolean | undefined>;
+    timeoutMs?: number;
+    retries?: number;
+}
 
-    // Employer Endpoints
-    employer: {
-        jobs: `${API_BASE_URL}/api/employer/jobs`,
-        stats: `${API_BASE_URL}/api/employer/stats`,
-        profile: `${API_BASE_URL}/api/employer/profile`,
-    },
+export class APIError extends Error {
+    status: number;
+    data: any;
 
-    // Candidate Endpoints
-    candidate: {
-        stats: `${API_BASE_URL}/api/candidate/stats`,
-        applications: `${API_BASE_URL}/api/applications/candidate`,
-    },
+    constructor(message: string, status: number, data?: any) {
+        super(message);
+        this.name = 'APIError';
+        this.status = status;
+        this.data = data;
+    }
+}
 
-    // Interview Endpoints
-    interviews: {
-        candidate: `${API_BASE_URL}/api/interviews/candidate`,
-        employer: `${API_BASE_URL}/api/interviews/employer`,
-        base: `${API_BASE_URL}/api/interviews`,
-    },
+/**
+ * Gets current Supabase JWT token if user is authenticated
+ */
+async function getAuthToken(): Promise<string | null> {
+    if (!supabase) return null;
+    try {
+        const { data } = await supabase.auth.getSession();
+        return data?.session?.access_token || null;
+    } catch {
+        return null;
+    }
+}
 
-    // Messaging
-    messages: {
-        conversations: `${API_BASE_URL}/api/conversations`,
-        send: `${API_BASE_URL}/api/messages`
-    },
+/**
+ * Production-grade API Client with auth injection, timeouts, and automatic retry logic.
+ */
+export async function apiRequest<T = any>(
+    endpoint: string,
+    options: RequestOptions = {}
+): Promise<T> {
+    const {
+        params,
+        timeoutMs = 15000,
+        retries = 1,
+        headers: customHeaders,
+        ...customConfig
+    } = options;
 
-    // Screening
-    screening: `${API_BASE_URL}/api/screening`,
+    let url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
-    // Gamification
-    gamification: `${API_BASE_URL}/api/upskill/gamification`,
-
-    // Admin Endpoints
-    admin: {
-        login: `${API_BASE_URL}/api/admin/login`,
-        dashboard: `${API_BASE_URL}/api/admin/dashboard/stats`,
-        users: `${API_BASE_URL}/api/admin/users`,
-        apiKeys: `${API_BASE_URL}/api/admin/api-keys`,
-        testApiKey: `${API_BASE_URL}/api/admin/test-api-key`,
-        proctoringConfig: `${API_BASE_URL}/api/admin/proctoring-config`,
-        aiConfig: `${API_BASE_URL}/api/admin/ai-config`,
-        youtubeConfig: `${API_BASE_URL}/api/admin/youtube-config`,
-        youtubeUploadTest: `${API_BASE_URL}/api/admin/youtube-upload-test`,
-        youtubeOAuth: {
-            authorize: `${API_BASE_URL}/api/youtube/oauth/authorize`,
-            callback: `${API_BASE_URL}/api/youtube/oauth/callback`,
-            status: `${API_BASE_URL}/api/youtube/oauth/status`,
-        },
-        emailConfig: `${API_BASE_URL}/api/admin/email-config`,
-        creditConfig: `${API_BASE_URL}/api/admin/credit-config`,
-        jobPricing: `${API_BASE_URL}/api/admin/job-pricing`,
-        upskill: {
-            courses: `${API_BASE_URL}/api/admin/upskill/courses`,
-            learners: `${API_BASE_URL}/api/admin/upskill/learners`,
-            gamification: `${API_BASE_URL}/api/admin/upskill/gamification`,
-            badges: `${API_BASE_URL}/api/admin/upskill/badges`,
-            stats: `${API_BASE_URL}/api/admin/upskill/stats`,
+    if (params) {
+        const searchParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, val]) => {
+            if (val !== undefined && val !== null) {
+                searchParams.append(key, String(val));
+            }
+        });
+        const queryString = searchParams.toString();
+        if (queryString) {
+            url += (url.includes('?') ? '&' : '?') + queryString;
         }
     }
-};
 
-// Helper to get auth headers
-export function getAuthHeaders(): Record<string, string> {
-    const token = localStorage.getItem('sb-token');
-    return {
+    const token = await getAuthToken();
+
+    const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(customHeaders as Record<string, string>),
     };
+
+    let attempt = 0;
+    let lastError: any = null;
+
+    while (attempt <= retries) {
+        attempt++;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            const response = await fetch(url, {
+                ...customConfig,
+                headers,
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            const contentType = response.headers.get('content-type');
+            let data: any = null;
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                data = await response.text();
+            }
+
+            if (!response.ok) {
+                const errorMessage = (typeof data === 'object' && data?.error) || response.statusText || 'API Request Failed';
+                throw new APIError(errorMessage, response.status, data);
+            }
+
+            return data as T;
+        } catch (err: any) {
+            clearTimeout(timeoutId);
+            lastError = err;
+
+            if (err.name === 'AbortError') {
+                lastError = new APIError(`Request timed out after ${timeoutMs}ms`, 408);
+            }
+
+            // Only retry network errors or 5xx server errors
+            const shouldRetry = (err.name === 'AbortError' || (err instanceof APIError && err.status >= 500)) && attempt <= retries;
+            if (!shouldRetry) {
+                break;
+            }
+            await new Promise(res => setTimeout(res, 500 * attempt));
+        }
+    }
+
+    throw lastError;
 }
 
-// Helper for authenticated GET
-export async function apiGet(url: string) {
-    const response = await fetch(url, { headers: getAuthHeaders() });
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-    return response.json();
-}
-
-// Helper for authenticated POST
-export async function apiPost(url: string, body: any) {
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(body)
-    });
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-    return response.json();
-}
-
-// Helper for authenticated PUT
-export async function apiPut(url: string, body: any) {
-    const response = await fetch(url, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(body)
-    });
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-    return response.json();
-}
-
-// Helper for authenticated PATCH
-export async function apiPatch(url: string, body?: any) {
-    const response = await fetch(url, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        ...(body ? { body: JSON.stringify(body) } : {})
-    });
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-    return response.json();
-}
-
-// Helper for authenticated DELETE
-export async function apiDelete(url: string) {
-    const response = await fetch(url, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-    });
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-    return response.json();
-}
+export const api = {
+    get: <T = any>(endpoint: string, options?: RequestOptions) =>
+        apiRequest<T>(endpoint, { ...options, method: 'GET' }),
+    post: <T = any>(endpoint: string, body?: any, options?: RequestOptions) =>
+        apiRequest<T>(endpoint, { ...options, method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+    put: <T = any>(endpoint: string, body?: any, options?: RequestOptions) =>
+        apiRequest<T>(endpoint, { ...options, method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
+    patch: <T = any>(endpoint: string, body?: any, options?: RequestOptions) =>
+        apiRequest<T>(endpoint, { ...options, method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
+    delete: <T = any>(endpoint: string, options?: RequestOptions) =>
+        apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
+};

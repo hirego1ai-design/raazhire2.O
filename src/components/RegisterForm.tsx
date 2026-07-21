@@ -22,6 +22,14 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ userType }) => {
     const [step, setStep] = useState(1);
     const [selectedRole, setSelectedRole] = useState<'candidate' | 'employer' | ''>(userType || '');
 
+    // OTP and verification states
+    const [otpCode, setOtpCode] = useState('');
+    const [tempUserId, setTempUserId] = useState('');
+    const [isSigningUp, setIsSigningUp] = useState(false);
+    const [verificationError, setVerificationError] = useState('');
+    const [resendStatus, setResendStatus] = useState('');
+    const [mockOtp, setMockOtp] = useState('');
+
     // Handle initial data from SignUp page
     React.useEffect(() => {
         const initialData = location.state?.initialData;

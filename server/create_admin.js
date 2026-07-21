@@ -19,8 +19,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 async function createAdmin() {
-    const email = 'admin@hirego.com';
-    const password = 'AdminPassword123!';
+    const email = 'hirego1ai@gmail.com';
+    const password = 'Momraaz@857430';
 
     console.log(`Attempting to create/update admin user: ${email}`);
 

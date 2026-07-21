@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
 dotenv.config();
 
 /**
@@ -116,8 +117,16 @@ export function createSecureCORSConfig() {
     
     return {
         origin: function (origin, callback) {
-            // Allow requests with no origin (like mobile apps or curl requests)
-            if (!origin) return callback(null, true);
+            const isProduction = process.env.NODE_ENV === 'production';
+
+            // Fix #6: In production, REJECT requests with no Origin header (bots, curl, scripts)
+            // In development, allow no-origin for local tooling
+            if (!origin) {
+                if (isProduction) {
+                    return callback(new Error('Requests without an Origin header are not permitted'));
+                }
+                return callback(null, true);
+            }
             
             // Allow localhost in development
             if (process.env.NODE_ENV !== 'production') {
@@ -144,36 +153,18 @@ export function createSecureCORSConfig() {
 // ==================== REQUEST VALIDATION ====================
 
 /**
- * Rate limiting middleware to prevent abuse
+ * Rate limiting middleware to prevent abuse.
+ * Fix #11: Use express-rate-limit instead of a custom in-memory Map,
+ * which resets on restart and doesn't work across multiple server instances.
  */
 export function createRateLimiter({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests' } = {}) {
-    const requestCounts = new Map();
-    
-    return (req, res, next) => {
-        const clientId = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-        const now = Date.now();
-        const windowStart = now - windowMs;
-        
-        // Clean up old requests
-        if (requestCounts.has(clientId)) {
-            const requests = requestCounts.get(clientId);
-            const recentRequests = requests.filter(timestamp => timestamp > windowStart);
-            requestCounts.set(clientId, recentRequests);
-        }
-        
-        // Check limit
-        const currentCount = requestCounts.has(clientId) ? requestCounts.get(clientId).length : 0;
-        if (currentCount >= max) {
-            return res.status(429).json({ error: message });
-        }
-        
-        // Record request
-        if (!requestCounts.has(clientId)) {
-            requestCounts.set(clientId, []);
-        }
-        requestCounts.get(clientId).push(now);
-        next();
-    };
+    return rateLimit({
+        windowMs,
+        max,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: { error: message }
+    });
 }
 
 /**
@@ -199,12 +190,17 @@ export function sanitizeInput(input) {
  */
 export async function logSecurityEvent(supabase, eventType, userId, details = {}) {
     try {
+        // Redact sensitive fields before persisting to prevent credential leakage in logs
+        const safeDetails = { ...details };
+        const SENSITIVE_KEYS = ['password', 'token', 'api_key', 'secret', 'authorization', 'cookie', 'key', 'access_token'];
+        SENSITIVE_KEYS.forEach(k => { if (safeDetails[k]) safeDetails[k] = '[REDACTED]'; });
+
         await supabase.from('security_logs').insert({
             event_type: eventType,
             user_id: userId,
             ip_address: details.ip || 'unknown',
             user_agent: details.userAgent || 'unknown',
-            details: details,
+            details: safeDetails,
             timestamp: new Date().toISOString()
         });
     } catch (error) {

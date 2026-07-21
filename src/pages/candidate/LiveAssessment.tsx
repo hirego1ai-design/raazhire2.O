@@ -121,6 +121,21 @@ const LiveAssessment: React.FC = () => {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [hasStarted]);
 
+    // Cleanup camera and microphone stream tracks on component unmount
+    useEffect(() => {
+        return () => {
+            if (recognitionRef.current) {
+                try { recognitionRef.current.stop(); } catch (e) {}
+            }
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                try { mediaRecorderRef.current.stop(); } catch (e) {}
+            }
+            if (mediaRecorderRef.current?.stream) {
+                mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, []);
+
     // Timer countdown
     useEffect(() => {
         if (!isRecording) return;

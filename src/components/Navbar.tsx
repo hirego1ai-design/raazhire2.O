@@ -29,7 +29,7 @@ export default function Navbar() {
     }, []);
 
     const isHomePage = location.pathname === '/';
-    const isSkillsPage = location.pathname === '/upskill' || location.pathname.startsWith('/upskill/');
+
 
     return (
         <motion.nav
@@ -57,15 +57,7 @@ export default function Navbar() {
                     <div className="hidden md:flex items-center gap-6">
                         {/* Navigation Links */}
                         <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => navigate('/upskill')}
-                                className={`text-sm font-semibold transition-colors ${isSkillsPage
-                                    ? 'text-electric-indigo-600'
-                                    : 'text-gray-600 hover:text-gray-900'
-                                    }`}
-                            >
-                                Skills
-                            </button>
+    
 
                             <button
                                 onClick={() => navigate('/jobs')}
@@ -128,15 +120,7 @@ export default function Navbar() {
                         animate={{ opacity: 1, y: 0 }}
                         className="md:hidden mt-4 space-y-3 pb-4 border-t border-gray-100 pt-4"
                     >
-                        <button
-                            onClick={() => { navigate('/upskill'); setIsOpen(false); }}
-                            className={`w-full px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-3 ${isSkillsPage
-                                ? 'bg-gray-50 text-electric-indigo-600'
-                                : 'text-gray-600 hover:bg-gray-50'
-                                }`}
-                        >
-                            Skills
-                        </button>
+
 
                         <button
                             onClick={() => { navigate('/jobs'); setIsOpen(false); }}

@@ -14,27 +14,14 @@ import fs from 'fs';
 import path from 'path';
 import { authenticateUser } from '../middleware/auth.js';
 import { supabaseAdmin } from '../utils/supabaseClient.js';
+// Fix #14: Use shared decrypt from utils/encryption.js (consistent key derivation)
+import { decrypt } from '../utils/encryption.js';
 
 const router = express.Router();
 
 // ==================== CONFIG & UTILS ====================
 
-// Decryption helper
-const decrypt = (text) => {
-    if (!text) return null;
-    try {
-        const textParts = text.split(':');
-        const iv = Buffer.from(textParts.shift(), 'hex');
-        const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-        const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production'), iv);
-        let decrypted = decipher.update(encryptedText);
-        decrypted = Buffer.concat([decrypted, decipher.final()]);
-        return decrypted.toString();
-    } catch (error) {
-        console.error('Decryption error:', error);
-        return text; // Return original if decryption fails (fallback)
-    }
-};
+// Fix #14: Removed inline decrypt — now using shared decrypt() from utils/encryption.js
 
 // Helper to get API keys
 const getApiKey = async (provider) => {

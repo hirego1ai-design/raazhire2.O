@@ -33,7 +33,7 @@ export const authenticateUser = async (req, res, next) => {
             const devClient = supabaseAdmin || supabase;
             if (!devClient) return res.status(503).json({ error: 'Database service unavailable for dev bypass' });
 
-            req.user = { id: 'demo-candidate-001', role: 'admin', email: 'candidate@hirego.demo', name: 'Demo Candidate' };
+            req.user = { id: 'demo-candidate-001', role: 'candidate', email: 'candidate@hirego.demo', name: 'Demo Candidate' };
             req.supabase = devClient;
             req.supabaseAdmin = supabaseAdmin;
             return next();
@@ -47,16 +47,26 @@ export const authenticateUser = async (req, res, next) => {
     }
 
     // Bypass check for testing when Supabase is down
-    if (token === 'BYPASS_TOKEN') {
+    if (token === 'BYPASS_TOKEN' || token === 'BYPASS_ADMIN_TOKEN') {
         if (!ALLOW_DEV_BYPASS) {
-            console.warn(`🔴 SECURITY: Attempt to use BYPASS_TOKEN in environment where ALLOW_DEV_BYPASS is false. IP: ${clientIP}`);
+            console.warn(`🔴 SECURITY: Attempt to use ${token} in environment where ALLOW_DEV_BYPASS is false. IP: ${clientIP}`);
             return res.status(403).json({ error: 'Auth bypass is disabled in this environment' });
         }
-        console.warn('⚠️ [DEV BYPASS] Using BYPASS_TOKEN for:', req.path);
+        console.warn(`⚠️ [DEV BYPASS] Using ${token} for:`, req.path);
         const devClient = supabaseAdmin || supabase;
         if (!devClient) return res.status(503).json({ error: 'Database service unavailable for dev bypass' });
 
-        req.user = { id: 'demo-candidate-001', role: 'admin', email: 'candidate@hirego.demo', name: 'Demo Candidate' };
+        if (token === 'BYPASS_ADMIN_TOKEN' || req.path.startsWith('/api/admin')) {
+            req.user = { 
+                id: 'bypass-admin-id', 
+                role: 'admin', 
+                email: 'admin@hirego.dev', 
+                name: 'Dev Admin',
+                user_metadata: { role: 'admin' }
+            };
+        } else {
+            req.user = { id: 'demo-candidate-001', role: 'candidate', email: 'candidate@hirego.demo', name: 'Demo Candidate' };
+        }
         req.supabase = devClient;
         req.supabaseAdmin = supabaseAdmin;
         return next();
@@ -78,8 +88,10 @@ export const authenticateUser = async (req, res, next) => {
 
         req.user = user;
 
-        // Using supabaseAdmin to prevent 42501 RLS blocks on missing database policies (API enforces user filters natively)
-        req.supabase = supabaseAdmin || supabase;
+        // SECURITY FIX: Use scoped client that respects RLS for user-facing operations.
+        // Routes that need admin privileges should explicitly use req.supabaseAdmin.
+        const scopedClient = createScopedClient(token);
+        req.supabase = scopedClient || supabase;
         req.supabaseAdmin = supabaseAdmin;
 
         next();
