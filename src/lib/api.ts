@@ -1,6 +1,62 @@
 import { supabase } from './supabase';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+export function getAuthHeaders(): Record<string, string> {
+    const token = typeof window !== 'undefined'
+        ? (localStorage.getItem('token') || localStorage.getItem('supabase.auth.token') || '')
+        : '';
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
+}
+
+export const endpoints = {
+    jobs: `${API_BASE_URL}/api/jobs`,
+    applications: `${API_BASE_URL}/api/applications`,
+    profile: `${API_BASE_URL}/api/candidate/profile`,
+    gamification: `${API_BASE_URL}/api/gamification`,
+    connections: `${API_BASE_URL}/api/connections`,
+    generateJobDescription: `${API_BASE_URL}/api/ai/generate-job-description`,
+    generateQuestions: `${API_BASE_URL}/api/ai/generate-questions`,
+    uploadLiveAssessment: `${API_BASE_URL}/api/candidate/live-assessment/upload`,
+    test: `${API_BASE_URL}/api/test`,
+    logs: `${API_BASE_URL}/api/admin/system-logs`,
+    candidate: {
+        applications: `${API_BASE_URL}/api/candidate/applications`,
+        stats: `${API_BASE_URL}/api/candidate/stats`,
+    },
+    employer: {
+        stats: `${API_BASE_URL}/api/employer/stats`,
+    },
+    interviews: {
+        candidate: `${API_BASE_URL}/api/interviews/candidate`,
+        employer: `${API_BASE_URL}/api/interviews/employer`,
+    },
+    videoResume: {
+        upload: `${API_BASE_URL}/api/video-resume/upload`,
+        transcribe: `${API_BASE_URL}/api/video-resume/transcribe`,
+        analyze: `${API_BASE_URL}/api/video-resume/analyze`,
+        submit: `${API_BASE_URL}/api/video-resume/submit`,
+    },
+    messages: {
+        conversations: `${API_BASE_URL}/api/messages/conversations`,
+        send: `${API_BASE_URL}/api/messages/send`,
+    },
+    admin: {
+        youtubeConfig: `${API_BASE_URL}/api/admin/youtube-config`,
+        youtubeUploadTest: `${API_BASE_URL}/api/admin/youtube-upload-test`,
+        apiKeys: `${API_BASE_URL}/api/admin/api-keys`,
+        testApiKey: `${API_BASE_URL}/api/admin/test-api-key`,
+        upskill: {
+            courses: `${API_BASE_URL}/api/admin/upskill/courses`,
+            learners: `${API_BASE_URL}/api/admin/upskill/learners`,
+            gamification: `${API_BASE_URL}/api/admin/upskill/gamification`,
+            badges: `${API_BASE_URL}/api/admin/upskill/badges`,
+        }
+    }
+};
 
 interface RequestOptions extends RequestInit {
     params?: Record<string, string | number | boolean | undefined>;
@@ -120,6 +176,14 @@ export async function apiRequest<T = any>(
     }
 
     throw lastError;
+}
+
+export async function apiGet<T = any>(endpoint: string, headers?: Record<string, string>): Promise<T> {
+    return apiRequest<T>(endpoint, { method: 'GET', headers });
+}
+
+export async function apiPost<T = any>(endpoint: string, body?: any, headers?: Record<string, string>): Promise<T> {
+    return apiRequest<T>(endpoint, { method: 'POST', body: body ? JSON.stringify(body) : undefined, headers });
 }
 
 export const api = {
