@@ -343,6 +343,7 @@ export function setupPortalRoutes(app, supabase, authenticateUser) {
         try {
             // Seed into employer_job_posts
             const postsToInsert = REAL_JOBS.map(j => ({
+                employer_id: 'demo-employer-001',
                 title: j.title,
                 description: j.description,
                 requirements: j.requirements,

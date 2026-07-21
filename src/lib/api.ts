@@ -15,7 +15,7 @@ export function getAuthHeaders(): Record<string, string> {
 export const endpoints = {
     jobs: `${API_BASE_URL}/api/jobs`,
     applications: `${API_BASE_URL}/api/applications`,
-    profile: `${API_BASE_URL}/api/candidate/profile`,
+    profile: `${API_BASE_URL}/api/profile`,
     gamification: `${API_BASE_URL}/api/gamification`,
     connections: `${API_BASE_URL}/api/connections`,
     generateJobDescription: `${API_BASE_URL}/api/ai/generate-job-description`,
